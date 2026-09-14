@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Database · Details Loyalty Hub</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<header class="hero">
+  <img src="assets/hero/from-golf-court.avif" alt="Golf course" />
+  <div class="hero-content">
+    <div class="hero-eyebrow">Consulting Lab · Nova SBE × Details</div>
+    <h1 class="hero-title">Loyalty Programme Database</h1>
+    <p class="hero-body">A shared, living benchmark of loyalty programmes across hospitality, golf, F&amp;B and leisure — built by the team, for the team.</p>
+  </div>
+</header>
+
+<section class="kpi-bar">
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-item">
+      <div class="kpi-label">Programmes Logged</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Industries Covered</div>
+      <div class="kpi-value" id="kpi-industries">—</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Countries Covered</div>
+      <div class="kpi-value" id="kpi-countries">—</div>
+    </div>
+  </div>
+</section>
+
+<div class="filter-bar-wrap">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Industry</span>
+      <select class="filter-select" id="filter-industry"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Geography</span>
+      <select class="filter-select" id="filter-geography"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Type</span>
+      <select class="filter-select" id="filter-type"><option value="">All</option></select>
+    </div>
+    <button class="btn-clear-filters" id="btn-clear-filters" type="button">Clear filters</button>
+    <input class="search-input" id="search-input" type="search" placeholder="Search programme or company…" />
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Programmes</h2>
+    <div style="display:flex; align-items:center; gap:18px;">
+      <span class="section-count" id="section-count"></span>
+      <button class="btn-primary" id="btn-add-programme" type="button">+ Add Programme</button>
+    </div>
+  </div>
+  <div id="card-grid" class="card-grid">
+    <div class="loading-state">Loading programmes…</div>
+  </div>
+</section>
+
+<div id="add-programme-root"></div>
+
+<script type="module" src="assets/database.js"></script>
+</body>
+</html>
