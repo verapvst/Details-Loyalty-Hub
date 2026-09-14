@@ -80,15 +80,21 @@ function tiersBlockHTML() {
 
 function render() {
   const sub = [programme.company, programme.country].filter(Boolean).join(' · ');
+  const logo = (!editing && programme.cover_image_url)
+    ? `<div class="record-logo"><img src="${escapeHtml(programme.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
+    : '';
 
   root.innerHTML = `
     <div class="record-head">
       <div class="record-head-inner">
         <a href="index.html" class="record-back">&larr; Back to Database</a>
         <div class="record-top">
-          <div>
-            <div class="record-title">${escapeHtml(programme.programme_name)}</div>
-            <div class="record-sub">${escapeHtml(sub)}</div>
+          <div style="display: flex; align-items: center; gap: 18px;">
+            ${logo}
+            <div>
+              <div class="record-title">${escapeHtml(programme.programme_name)}</div>
+              <div class="record-sub">${escapeHtml(sub)}</div>
+            </div>
           </div>
           <div class="record-actions">
             ${editing
@@ -101,9 +107,6 @@ function render() {
     </div>
     <form id="record-form">
       <div class="record-body">
-        ${(!editing && programme.cover_image_url)
-          ? `<div class="record-cover" id="record-cover-img"><img src="${escapeHtml(programme.cover_image_url)}" alt="" onerror="this.closest('.record-cover').remove()" /></div>`
-          : ''}
         ${PROGRAMME_FIELDS.map(section => recordBlockHTML(section) + (section.section === 'Tier Structure' ? tiersBlockHTML() : '')).join('')}
       </div>
     </form>

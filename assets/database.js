@@ -48,16 +48,18 @@ function renderCard(p) {
     p.industry ? `<span class="card-meta-item">${escapeHtml(p.industry)}</span>` : ''
   ].join('');
 
-  const cover = p.cover_image_url
-    ? `<div class="card-cover"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>` : '';
+  const logo = p.cover_image_url
+    ? `<div class="card-logo"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>` : '';
 
   return `
     <div class="programme-card" data-id="${p.id}">
-      ${cover}
       <div class="card-top">
-        <div>
-          <div class="card-name">${escapeHtml(p.programme_name)}</div>
-          <div class="card-company">${escapeHtml(p.company || '')}</div>
+        <div class="card-heading">
+          ${logo}
+          <div>
+            <div class="card-name">${escapeHtml(p.programme_name)}</div>
+            <div class="card-company">${escapeHtml(p.company || '')}</div>
+          </div>
         </div>
         ${badge}
       </div>

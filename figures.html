@@ -20,7 +20,30 @@
   </div>
 </div>
 
+<div class="filter-bar-wrap">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Type</span>
+      <select class="filter-select" id="filter-type"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Topic</span>
+      <select class="filter-select" id="filter-topic"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Subtopic</span>
+      <select class="filter-select" id="filter-subtopic"><option value="">All</option></select>
+    </div>
+    <button class="btn-clear-filters" id="btn-clear-filters" type="button">Clear filters</button>
+    <input class="search-input" id="search-input" type="search" placeholder="Search market or statistic…" />
+  </div>
+</div>
+
 <section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Figures</h2>
+    <span class="section-count" id="section-count"></span>
+  </div>
   <div id="no-sources-note" class="empty-state" hidden>
     <div class="em-title">Add a source first</div>
     <p>Figures must be linked to a source. <a href="sources.html" style="color: var(--accent); text-decoration: underline;">Go to Sources</a> to add one.</p>

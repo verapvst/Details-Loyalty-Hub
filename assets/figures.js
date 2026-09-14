@@ -2,19 +2,44 @@ import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { FIGURE_FIELDS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml } from './fields.js';
+import { loadCustomOptions } from './customOptions.js';
 
 initNav('figures');
+await loadCustomOptions();
 
 const listEl = document.getElementById('figure-list');
 const noSourcesNote = document.getElementById('no-sources-note');
 const addBtn = document.getElementById('btn-add-figure');
+const sectionCount = document.getElementById('section-count');
+const filterType = document.getElementById('filter-type');
+const filterTopic = document.getElementById('filter-topic');
+const filterSubtopic = document.getElementById('filter-subtopic');
+const searchInput = document.getElementById('search-input');
 
 let sources = [];
+let allFigures = [];
+
+function distinctSorted(list, key) {
+  return [...new Set(list.map(f => f[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function populateFilterOptions() {
+  const fill = (selectEl, values) => {
+    const current = selectEl.value;
+    selectEl.innerHTML = '<option value="">All</option>' +
+      values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    selectEl.value = current;
+  };
+  fill(filterType, distinctSorted(allFigures, 'data_type'));
+  fill(filterTopic, distinctSorted(allFigures, 'topic'));
+  fill(filterSubtopic, distinctSorted(allFigures, 'subtopic'));
+}
 
 function renderRow(f) {
   const citationTag = f.sources ? f.sources.citation_tag : null;
   const sourceLink = f.sources ? f.sources.link_or_path : null;
   const isUrl = /^https?:\/\//i.test(sourceLink || '');
+  const tags = [f.data_type, f.topic, f.subtopic].filter(Boolean);
 
   return `
     <div class="list-row">
@@ -27,11 +52,41 @@ function renderRow(f) {
       </div>
       <div class="list-row-body">${escapeHtml(f.statistic)}</div>
       <div class="list-row-meta">
-        ${citationTag ? `<span class="badge badge-green">${escapeHtml(citationTag)}</span>` : ''}
+        ${tags.map(t => `<span class="badge badge-green">${escapeHtml(t)}</span>`).join('')}
+        ${citationTag ? `<span class="badge badge-muted">${escapeHtml(citationTag)}</span>` : ''}
         ${f.created_by ? `<span>Added by ${escapeHtml(f.created_by)}</span>` : ''}
       </div>
     </div>
   `;
+}
+
+function applyFiltersAndRender() {
+  const type = filterType.value;
+  const topic = filterTopic.value;
+  const subtopic = filterSubtopic.value;
+  const q = searchInput.value.trim().toLowerCase();
+
+  const filtered = allFigures.filter(f => {
+    if (type && f.data_type !== type) return false;
+    if (topic && f.topic !== topic) return false;
+    if (subtopic && f.subtopic !== subtopic) return false;
+    if (q) {
+      const hay = `${f.market || ''} ${f.statistic || ''} ${f.value || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  sectionCount.textContent = `${filtered.length} of ${allFigures.length}`;
+
+  if (!filtered.length) {
+    listEl.innerHTML = allFigures.length
+      ? `<div class="empty-state"><div class="em-title">No figures match</div><p>Try adjusting or clearing the filters.</p></div>`
+      : `<div class="empty-state"><div class="em-title">No figures yet</div><p>Add the first market stat once you have a source to link it to.</p></div>`;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(renderRow).join('');
 }
 
 async function loadSources() {
@@ -52,13 +107,20 @@ async function loadFigures() {
     return;
   }
 
-  if (!data || !data.length) {
-    listEl.innerHTML = `<div class="empty-state"><div class="em-title">No figures yet</div><p>Add the first market stat once you have a source to link it to.</p></div>`;
-    return;
-  }
-
-  listEl.innerHTML = data.map(renderRow).join('');
+  allFigures = data || [];
+  populateFilterOptions();
+  applyFiltersAndRender();
 }
+
+[filterType, filterTopic, filterSubtopic].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+searchInput.addEventListener('input', applyFiltersAndRender);
+document.getElementById('btn-clear-filters').addEventListener('click', () => {
+  filterType.value = '';
+  filterTopic.value = '';
+  filterSubtopic.value = '';
+  searchInput.value = '';
+  applyFiltersAndRender();
+});
 
 function openAddModal() {
   const root = document.getElementById('add-figure-root');

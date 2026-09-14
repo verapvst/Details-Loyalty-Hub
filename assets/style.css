@@ -99,12 +99,12 @@ ul { list-style: none; }
 .hero img { width: 100%; height: 100%; object-fit: cover; }
 .hero::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(26,25,22,0.15) 0%, rgba(26,25,22,0.15) 40%, rgba(26,25,22,0.82) 100%);
+  background: linear-gradient(180deg, rgba(20,19,16,0.15) 0%, rgba(20,19,16,0.35) 40%, rgba(20,19,16,0.88) 100%);
 }
-.hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 0 40px 52px; color: var(--white); max-width: 1280px; margin: 0 auto; }
-.hero-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 16px; }
-.hero-title { font-family: 'Bodoni Moda', Georgia, serif; font-size: clamp(44px, 6vw, 76px); font-weight: 300; line-height: 0.98; letter-spacing: -0.02em; margin-bottom: 18px; max-width: 760px; }
-.hero-body { font-size: 15px; font-weight: 300; color: rgba(255,255,255,0.82); max-width: 560px; line-height: 1.7; }
+.hero-content { position: absolute; z-index: 1; bottom: 0; left: 0; right: 0; padding: 0 40px 52px; color: var(--white); max-width: 1280px; margin: 0 auto; }
+.hero-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.9); margin-bottom: 16px; text-shadow: 0 1px 10px rgba(0,0,0,0.5); }
+.hero-title { font-family: 'Bodoni Moda', Georgia, serif; font-size: clamp(44px, 6vw, 76px); font-weight: 500; line-height: 0.98; letter-spacing: -0.02em; margin-bottom: 18px; max-width: 760px; text-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 8px 30px rgba(0,0,0,0.6); }
+.hero-body { font-size: 15px; font-weight: 300; color: rgba(255,255,255,0.92); max-width: 560px; line-height: 1.7; text-shadow: 0 1px 10px rgba(0,0,0,0.45); }
 
 /* ---------- KPI bar ---------- */
 .kpi-bar { background: var(--white); border-bottom: 1px solid var(--border); }
@@ -172,7 +172,7 @@ ul { list-style: none; }
   color: var(--accent); background: var(--accent-light); padding: 5px 12px; border-radius: 20px; white-space: nowrap;
 }
 .card-name { font-family: 'Bodoni Moda', Georgia, serif; font-size: 24px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 4px; }
-.card-company { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+.card-company { font-size: 12px; color: var(--muted); }
 .card-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; border-top: 1px solid var(--border); padding-top: 14px; }
 .card-meta-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
 .card-meta-item strong { color: var(--dark); font-weight: 500; }
@@ -375,9 +375,15 @@ ul { list-style: none; }
 .settings-add-row input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); font-size: 13px; outline: none; }
 .settings-add-row input:focus { border-color: var(--dark); }
 
-/* ---------- Programme cover image ---------- */
-.card-cover { height: 150px; margin: -24px -24px 18px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; overflow: hidden; background: var(--beige); }
-.record-cover { height: 220px; border-radius: var(--radius-lg); overflow: hidden; background: var(--beige); margin-bottom: 22px; }
+/* ---------- Programme cover image ----------
+   Small and unboxed on purpose: most of these are brand logos on a transparent
+   background, so a cropped/bordered photo-style frame looks wrong. object-fit:
+   contain keeps the whole mark visible with no visible edge behind it. */
+.card-heading { display: flex; align-items: center; gap: 14px; }
+.card-logo { width: 44px; height: 44px; flex-shrink: 0; }
+.card-logo img { width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+.record-logo { width: 60px; height: 60px; flex-shrink: 0; }
+.record-logo img { width: 100%; height: 100%; object-fit: contain; object-position: left center; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {

@@ -41,10 +41,19 @@ export const OPTIONS = {
     'North America', 'Middle East', 'Asia-Pacific', 'Global', 'Other'
   ],
   industry: [
-    'Hotels & Hospitality', 'Golf', 'Airlines & Travel', 'Luxury', 'Retail',
+    'Hotels & Hospitality', 'Golf', 'Tourism & Leisure', 'Airlines & Travel', 'Luxury', 'Retail',
     'Banking & Financial Services (incl. Credit Cards)', 'Fitness & Wellness',
     'Restaurants & F&B', 'Automotive', 'Entertainment & Media',
     "Private Members' Clubs", 'Subscription Businesses', 'Other'
+  ],
+  // Used for Figures & Data's "Type" and "Topic" classification, so stats/quotes can be
+  // filtered and found quickly when pulling numbers for slides and the thesis.
+  figure_type: [
+    'Statistic', 'Citation / Quote', 'Amount', 'Fact', 'Forecast', 'Benchmark', 'Other'
+  ],
+  figure_topic: [
+    'Loyalty Programmes', 'Market Sizing', 'Consumer Trends', 'Competitive Landscape',
+    'Technology & Innovation', 'Regulation & Compliance', 'Other'
   ],
   programme_type: [
     'Points-based', 'Tier-based', 'Cashback-based', 'Paid membership', 'Subscription',
@@ -152,6 +161,9 @@ export const SOURCE_FIELDS = [
 
 // source_id is added dynamically once sources are loaded (see figures.js)
 export const FIGURE_FIELDS = [
+  { key: 'data_type', label: 'Type', type: 'select', options: 'figure_type', required: true },
+  { key: 'topic', label: 'Topic', type: 'select', options: 'figure_topic', required: true },
+  { key: 'subtopic', label: 'Subtopic', type: 'select', options: 'industry' },
   { key: 'market', label: 'Market', type: 'text', required: true },
   { key: 'statistic', label: 'Statistic', type: 'textarea', full: true, required: true },
   { key: 'value', label: 'Value', type: 'text', required: true }

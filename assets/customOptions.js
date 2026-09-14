@@ -22,7 +22,9 @@ export const LIST_LABELS = {
   single_brand_vs_ecosystem: 'Single-Brand vs Ecosystem',
   relevance_to_details: 'Relevance to Details',
   meeting_type: 'Meeting Type',
-  task_type: 'Task Type'
+  task_type: 'Task Type',
+  figure_type: 'Figure Type',
+  figure_topic: 'Figure Topic'
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.

@@ -30,6 +30,89 @@ function formatTime(t) {
   return t ? t.slice(0, 5) : '';
 }
 
+// Formats a Date as a local YYYY-MM-DD string. Deliberately not toISOString(),
+// which converts to UTC first and can shift the date by a day off UTC.
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Expands a single start date into every occurrence date up to (and including)
+// repeatUntil, at the given cadence. Returns [startDate] when not repeating.
+function generateOccurrenceDates(startDate, repeat, repeatUntil) {
+  if (!startDate || !repeat || repeat === 'none' || !repeatUntil) return [startDate];
+  const until = new Date(repeatUntil + 'T00:00:00');
+  const dates = [];
+  let cur = new Date(startDate + 'T00:00:00');
+  let guard = 0;
+  while (cur <= until && guard < 500) {
+    dates.push(toDateStr(cur));
+    if (repeat === 'daily') cur.setDate(cur.getDate() + 1);
+    else if (repeat === 'weekly') cur.setDate(cur.getDate() + 7);
+    else if (repeat === 'biweekly') cur.setDate(cur.getDate() + 14);
+    else if (repeat === 'monthly') cur.setMonth(cur.getMonth() + 1);
+    else break;
+    guard++;
+  }
+  return dates;
+}
+
+// Builds candidate poll slots across a day range × hour range, stepped by slotMinutes.
+// A "to" time of 00:00 is treated as midnight at the end of that day (24:00).
+function generateSlots(startDate, endDate, fromTime, toTime, slotMinutes) {
+  const slots = [];
+  if (!startDate || !fromTime || !toTime || !slotMinutes) return slots;
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date((endDate || startDate) + 'T00:00:00');
+  if (end < start) return slots;
+
+  const [fh, fm] = fromTime.split(':').map(Number);
+  const [th, tm] = toTime.split(':').map(Number);
+  const startMin = fh * 60 + fm;
+  const endMin = (th === 0 && tm === 0) ? 24 * 60 : th * 60 + tm;
+  if (endMin <= startMin) return slots;
+
+  let guard = 0;
+  for (let d = new Date(start); d <= end && guard < 60; d.setDate(d.getDate() + 1), guard++) {
+    const dateStr = toDateStr(d);
+    for (let mins = startMin; mins < endMin; mins += slotMinutes) {
+      const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+      const mm = String(mins % 60).padStart(2, '0');
+      slots.push({ slot_date: dateStr, slot_time: `${hh}:${mm}` });
+    }
+  }
+  return slots;
+}
+
+function repeatFieldsHTML() {
+  return `
+    <div class="form-field">
+      <label>Repeat</label>
+      <select name="repeat">
+        <option value="none">Does not repeat</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="biweekly">Every 2 weeks</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="form-field" id="repeat-until-field" hidden>
+      <label>Repeat Until</label>
+      <input type="date" name="repeat_until" />
+    </div>
+  `;
+}
+
+function wireRepeatToggle(formEl) {
+  const repeatSel = formEl.elements['repeat'];
+  const untilField = formEl.querySelector('#repeat-until-field');
+  repeatSel.addEventListener('change', () => {
+    untilField.hidden = repeatSel.value === 'none';
+  });
+}
+
 // ---------------- Agenda ----------------
 
 function buildAgendaItems() {
@@ -107,7 +190,7 @@ function openAddMeetingModal() {
         <form id="form">
           <div class="form-modal-body">
             <div class="form-error" id="form-error" hidden></div>
-            <div class="form-grid">${fieldsHTML}</div>
+            <div class="form-grid">${fieldsHTML}${repeatFieldsHTML()}</div>
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -123,6 +206,7 @@ function openAddMeetingModal() {
   document.getElementById('close-btn').addEventListener('click', close);
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  wireRepeatToggle(document.getElementById('form'));
 
   document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -132,11 +216,17 @@ function openAddMeetingModal() {
     data.created_by = identity;
     data.created_at = new Date().toISOString();
 
+    const repeat = e.target.elements['repeat'].value;
+    const repeatUntil = e.target.elements['repeat_until'].value || null;
+    const occurrenceDates = generateOccurrenceDates(data.meeting_date, repeat, repeatUntil);
+    const recurrenceId = occurrenceDates.length > 1 ? crypto.randomUUID() : null;
+    const rows = occurrenceDates.map(date => ({ ...data, meeting_date: date, recurrence_id: recurrenceId }));
+
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { error } = await supabase.from('meetings').insert(data);
+    const { error } = await supabase.from('meetings').insert(rows);
     if (error) {
       errorEl.textContent = `Couldn't save meeting: ${error.message}`;
       errorEl.hidden = false;
@@ -145,7 +235,7 @@ function openAddMeetingModal() {
       return;
     }
     close();
-    showToast('Meeting added.');
+    showToast(rows.length > 1 ? `${rows.length} meetings added.` : 'Meeting added.');
     await loadMeetings();
     renderAgenda();
   });
@@ -265,16 +355,6 @@ async function confirmSlot(pollId, slotId) {
   renderPolls();
 }
 
-function slotRowHTML() {
-  return `
-    <div class="tier-row">
-      <input type="date" data-slot="date" />
-      <input type="time" data-slot="time" />
-      <button type="button" class="tier-remove">&times;</button>
-    </div>
-  `;
-}
-
 function openAddPollModal() {
   const root = document.getElementById('add-poll-root');
   root.innerHTML = `
@@ -289,8 +369,20 @@ function openAddPollModal() {
               <div class="form-field full"><label>Description</label><textarea name="description" rows="2"></textarea></div>
             </div>
             <div class="form-section-label">Candidate Slots</div>
-            <div class="tier-rows" id="slot-rows">${slotRowHTML()}</div>
-            <button type="button" class="btn-add-tier" id="btn-add-slot">+ Add slot</button>
+            <div class="form-grid">
+              <div class="form-field"><label>Start Date *</label><input type="date" name="start_date" required /></div>
+              <div class="form-field"><label>End Date</label><input type="date" name="end_date" /></div>
+              <div class="form-field"><label>From *</label><input type="time" name="from_time" value="09:00" required /></div>
+              <div class="form-field"><label>To *</label><input type="time" name="to_time" value="18:00" required /></div>
+              <div class="form-field"><label>Slot Length</label>
+                <select name="slot_minutes">
+                  <option value="15">15 min</option>
+                  <option value="30" selected>30 min</option>
+                  <option value="60">60 min</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-hint" id="slot-preview" style="margin: 8px 0 0;">Pick a date and time range to see how many candidate slots this creates.</div>
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -307,34 +399,45 @@ function openAddPollModal() {
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  const slotRows = document.getElementById('slot-rows');
-  const wireRemove = () => {
-    slotRows.querySelectorAll('.tier-remove').forEach(btn => {
-      btn.onclick = () => { if (slotRows.children.length > 1) btn.closest('.tier-row').remove(); };
-    });
-  };
-  wireRemove();
-  document.getElementById('btn-add-slot').addEventListener('click', () => {
-    slotRows.insertAdjacentHTML('beforeend', slotRowHTML());
-    wireRemove();
+  const form = document.getElementById('form');
+  const preview = document.getElementById('slot-preview');
+
+  function currentSlots() {
+    return generateSlots(
+      form.elements['start_date'].value,
+      form.elements['end_date'].value,
+      form.elements['from_time'].value,
+      form.elements['to_time'].value,
+      Number(form.elements['slot_minutes'].value)
+    );
+  }
+
+  function updatePreview() {
+    const count = currentSlots().length;
+    preview.textContent = count
+      ? `This will create ${count} candidate slot${count === 1 ? '' : 's'}.`
+      : 'Pick a date and time range to see how many candidate slots this creates.';
+  }
+  ['start_date', 'end_date', 'from_time', 'to_time', 'slot_minutes'].forEach(name => {
+    form.elements[name].addEventListener('input', updatePreview);
   });
 
-  document.getElementById('form').addEventListener('submit', async (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const errorEl = document.getElementById('form-error');
     errorEl.hidden = true;
 
-    const title = e.target.elements.title.value.trim();
-    const description = e.target.elements.description.value.trim() || null;
-    const slots = [...slotRows.querySelectorAll('.tier-row')]
-      .map(row => ({
-        slot_date: row.querySelector('[data-slot="date"]').value,
-        slot_time: row.querySelector('[data-slot="time"]').value || null
-      }))
-      .filter(s => s.slot_date);
+    const title = form.elements['title'].value.trim();
+    const description = form.elements['description'].value.trim() || null;
+    const slots = currentSlots();
 
     if (!slots.length) {
-      errorEl.textContent = 'Add at least one candidate slot with a date.';
+      errorEl.textContent = 'No candidate slots in that range — check your dates and times.';
+      errorEl.hidden = false;
+      return;
+    }
+    if (slots.length > 300) {
+      errorEl.textContent = `That range would create ${slots.length} slots — narrow the dates, hours, or use a longer slot length.`;
       errorEl.hidden = false;
       return;
     }
@@ -363,7 +466,7 @@ function openAddPollModal() {
     if (slotError) showToast(`Poll created, but slots failed: ${slotError.message}`, true);
 
     close();
-    showToast('Poll created.');
+    showToast(`Poll created with ${slots.length} candidate slot${slots.length === 1 ? '' : 's'}.`);
     await loadPolls();
     renderPolls();
   });
@@ -390,7 +493,7 @@ function renderTasks() {
       <div class="task-row" data-task-id="${t.id}">
         <span class="badge ${t.task_type === 'Deliverable' ? 'badge-red' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
         <div class="task-main">
-          <div class="task-title">${escapeHtml(t.title)}</div>
+          <div class="task-title">${escapeHtml(t.title)}${t.recurrence_id ? ' <span class="badge badge-muted" style="margin-left:6px;">Recurring</span>' : ''}</div>
           <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>
         </div>
         <div class="task-due">${t.due_date ? `${t.due_date}${dr ? ` · ${dr.text}` : ''}` : 'No due date'}</div>
@@ -436,7 +539,7 @@ function openAddTaskModal() {
         <form id="form">
           <div class="form-modal-body">
             <div class="form-error" id="form-error" hidden></div>
-            <div class="form-grid">${fieldsHTML}</div>
+            <div class="form-grid">${fieldsHTML}${repeatFieldsHTML()}</div>
             <div class="form-section-label">Assignees</div>
             <div class="checkbox-row">${checkboxesHTML}</div>
           </div>
@@ -454,6 +557,7 @@ function openAddTaskModal() {
   document.getElementById('close-btn').addEventListener('click', close);
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  wireRepeatToggle(document.getElementById('form'));
 
   document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -465,11 +569,24 @@ function openAddTaskModal() {
     data.created_by = identity;
     data.created_at = new Date().toISOString();
 
+    const repeat = e.target.elements['repeat'].value;
+    const repeatUntil = e.target.elements['repeat_until'].value || null;
+
+    if (repeat !== 'none' && !data.due_date) {
+      errorEl.textContent = 'Set a due date to repeat this task.';
+      errorEl.hidden = false;
+      return;
+    }
+
+    const occurrenceDates = generateOccurrenceDates(data.due_date, repeat, repeatUntil);
+    const recurrenceId = occurrenceDates.length > 1 ? crypto.randomUUID() : null;
+    const rows = occurrenceDates.map(date => ({ ...data, due_date: date, recurrence_id: recurrenceId }));
+
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { error } = await supabase.from('tasks').insert(data);
+    const { error } = await supabase.from('tasks').insert(rows);
     if (error) {
       errorEl.textContent = `Couldn't save task: ${error.message}`;
       errorEl.hidden = false;
@@ -478,7 +595,7 @@ function openAddTaskModal() {
       return;
     }
     close();
-    showToast('Task added.');
+    showToast(rows.length > 1 ? `${rows.length} tasks added.` : 'Task added.');
     await loadTasks();
     renderTasks();
     renderAgenda();
