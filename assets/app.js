@@ -24,6 +24,8 @@ function initials(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
 }
 
+const MOBILE_QUERY = '(max-width: 860px)';
+
 function renderNav(activeKey) {
   const root = document.getElementById('nav-root');
   if (!root) return;
@@ -35,7 +37,10 @@ function renderNav(activeKey) {
   root.innerHTML = `
     <nav class="nav">
       <div class="nav-inner">
-        <a href="index.html" class="nav-logo">Details <span>Loyalty Hub</span></a>
+        <a href="index.html" class="nav-logo" id="nav-logo">
+          Details <span>Loyalty Hub</span>
+          <span class="nav-logo-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        </a>
         <div class="nav-links">${links}</div>
         <div class="nav-right">
           <button class="identity-btn" id="identity-btn" type="button">
@@ -46,6 +51,62 @@ function renderNav(activeKey) {
       </div>
     </nav>
   `;
+
+  renderMobileDrawer(activeKey);
+
+  document.getElementById('nav-logo').addEventListener('click', (e) => {
+    if (window.matchMedia(MOBILE_QUERY).matches) {
+      e.preventDefault();
+      openMobileDrawer();
+    }
+  });
+}
+
+function renderMobileDrawer(activeKey) {
+  let root = document.getElementById('mobile-drawer-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'mobile-drawer-root';
+    document.body.appendChild(root);
+  }
+
+  const links = NAV_LINKS.map(l =>
+    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${l.label}</a>`
+  ).join('');
+
+  root.innerHTML = `
+    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" hidden>
+      <div class="mobile-drawer">
+        <div class="mobile-drawer-head">
+          <span class="nav-logo">Details <span>Loyalty Hub</span></span>
+          <button class="mobile-drawer-close" id="mobile-drawer-close" type="button" aria-label="Close menu">&times;</button>
+        </div>
+        <nav class="mobile-drawer-links">${links}</nav>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('mobile-drawer-overlay');
+  document.getElementById('mobile-drawer-close').addEventListener('click', closeMobileDrawer);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMobileDrawer(); });
+}
+
+function openMobileDrawer() {
+  const overlay = document.getElementById('mobile-drawer-overlay');
+  if (!overlay) return;
+  overlay.hidden = false;
+  document.addEventListener('keydown', handleDrawerEscape);
+}
+
+function closeMobileDrawer() {
+  const overlay = document.getElementById('mobile-drawer-overlay');
+  if (!overlay) return;
+  overlay.hidden = true;
+  document.removeEventListener('keydown', handleDrawerEscape);
+}
+
+function handleDrawerEscape(e) {
+  if (e.key === 'Escape') closeMobileDrawer();
 }
 
 function renderIdentityModal({ forceChoice }) {
