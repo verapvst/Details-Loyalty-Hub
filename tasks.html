@@ -10,15 +10,49 @@
 
 <div id="nav-root"></div>
 
-<div class="placeholder-hero">
-  <div class="tag">Coming Soon</div>
-  <h1>Schedules &amp; Tasks</h1>
-  <p>Track who's doing what and by when — assign tasks, set due dates, and keep the team's Consulting Lab workstream on schedule.</p>
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1>Schedules &amp; Tasks</h1>
+      <p>Meetings, deliverables, and the team's day-to-day tasks, all in one place.</p>
+    </div>
+  </div>
 </div>
 
-<script type="module">
-  import { initNav } from './assets/app.js';
-  initNav('tasks');
-</script>
+<section class="section" style="padding-bottom: 24px;">
+  <div class="section-head">
+    <h2 class="section-title">Upcoming</h2>
+    <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
+  </div>
+  <div id="agenda-list">
+    <div class="loading-state">Loading…</div>
+  </div>
+</section>
+
+<section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+  <div class="section-head">
+    <h2 class="section-title">Meeting Polls</h2>
+    <button class="btn-outline" id="btn-add-poll" type="button">+ New Poll</button>
+  </div>
+  <div id="poll-list">
+    <div class="loading-state">Loading…</div>
+  </div>
+</section>
+
+<section class="section" style="padding-top: 24px;">
+  <div class="section-head">
+    <h2 class="section-title">Tasks</h2>
+    <button class="btn-primary" id="btn-add-task" type="button">+ Add Task</button>
+  </div>
+  <div id="task-list">
+    <div class="loading-state">Loading…</div>
+  </div>
+</section>
+
+<div id="add-meeting-root"></div>
+<div id="add-poll-root"></div>
+<div id="add-task-root"></div>
+
+<script type="module" src="assets/tasks.js"></script>
 </body>
 </html>

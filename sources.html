@@ -10,15 +10,24 @@
 
 <div id="nav-root"></div>
 
-<div class="placeholder-hero">
-  <div class="tag">Coming Soon</div>
-  <h1>Sources</h1>
-  <p>Every citation and reference the team collects, in one place, so findings can be traced back and reused across deliverables.</p>
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1>Sources</h1>
+      <p>Every citation and reference the team collects. Add a source here first, then attach it to a stat or quote in Figures &amp; Data.</p>
+    </div>
+    <button class="btn-primary" id="btn-add-source" type="button">+ Add Source</button>
+  </div>
 </div>
 
-<script type="module">
-  import { initNav } from './assets/app.js';
-  initNav('sources');
-</script>
+<section class="section">
+  <div id="source-list" class="list-rows">
+    <div class="loading-state">Loading sources…</div>
+  </div>
+</section>
+
+<div id="add-source-root"></div>
+
+<script type="module" src="assets/sources.js"></script>
 </body>
 </html>

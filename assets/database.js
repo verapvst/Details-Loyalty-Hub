@@ -2,8 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import { PROGRAMME_FIELDS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml } from './fields.js';
+import { loadCustomOptions } from './customOptions.js';
 
 initNav('database');
+await loadCustomOptions();
 
 const ALL_FIELDS = PROGRAMME_FIELDS.flatMap(s => s.fields);
 
@@ -46,8 +48,12 @@ function renderCard(p) {
     p.industry ? `<span class="card-meta-item">${escapeHtml(p.industry)}</span>` : ''
   ].join('');
 
+  const cover = p.cover_image_url
+    ? `<div class="card-cover"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>` : '';
+
   return `
     <div class="programme-card" data-id="${p.id}">
+      ${cover}
       <div class="card-top">
         <div>
           <div class="card-name">${escapeHtml(p.programme_name)}</div>
@@ -157,10 +163,11 @@ function openAddModal() {
         <form id="add-form">
           <div class="form-modal-body">
             <div class="form-error" id="add-form-error" hidden></div>
-            ${PROGRAMME_FIELDS.map(fieldSectionHTML).join('')}
-            <div class="form-section-label">Programme Tiers</div>
-            <div class="tier-rows" id="tier-rows">${tierRowHTML()}</div>
-            <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
+            ${PROGRAMME_FIELDS.map(section => fieldSectionHTML(section) + (section.section === 'Tier Structure' ? `
+              <div class="form-section-label">Programme Tiers</div>
+              <div class="tier-rows" id="tier-rows">${tierRowHTML()}</div>
+              <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
+            ` : '')).join('')}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="add-cancel">Cancel</button>

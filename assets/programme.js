@@ -2,8 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import { PROGRAMME_FIELDS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml } from './fields.js';
+import { loadCustomOptions } from './customOptions.js';
 
 initNav('database');
+await loadCustomOptions();
 
 const ALL_FIELDS = PROGRAMME_FIELDS.flatMap(s => s.fields);
 const root = document.getElementById('record-root');
@@ -99,8 +101,10 @@ function render() {
     </div>
     <form id="record-form">
       <div class="record-body">
-        ${PROGRAMME_FIELDS.map(recordBlockHTML).join('')}
-        ${tiersBlockHTML()}
+        ${(!editing && programme.cover_image_url)
+          ? `<div class="record-cover" id="record-cover-img"><img src="${escapeHtml(programme.cover_image_url)}" alt="" onerror="this.closest('.record-cover').remove()" /></div>`
+          : ''}
+        ${PROGRAMME_FIELDS.map(section => recordBlockHTML(section) + (section.section === 'Tier Structure' ? tiersBlockHTML() : '')).join('')}
       </div>
     </form>
   `;

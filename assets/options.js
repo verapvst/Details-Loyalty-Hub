@@ -3,12 +3,38 @@
 
 export const TEAM_MEMBERS = ['André', 'Alice', 'Cá', 'Chica', 'Maria', 'Vera'];
 
+// Shown pinned at the top of the Country dropdown, in this order — the markets this
+// project benchmarks most often. Everything else follows alphabetically below them.
+export const PINNED_COUNTRIES = ['Portugal', 'United States', 'United Kingdom', 'Spain', 'France'];
+
 export const OPTIONS = {
   country: [
-    'Portugal', 'Spain', 'United Kingdom', 'France', 'Germany', 'Italy', 'Netherlands',
-    'Belgium', 'Ireland', 'Switzerland', 'Austria', 'Sweden', 'Denmark', 'Norway',
-    'United States', 'Canada', 'United Arab Emirates', 'Qatar', 'Singapore', 'Hong Kong',
-    'Japan', 'China', 'Brazil', 'Other'
+    'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina',
+    'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados',
+    'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana',
+    'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon',
+    'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros',
+    'Congo (DRC)', 'Congo (Republic)', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czechia',
+    'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
+    'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
+    'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea',
+    'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India',
+    'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan',
+    'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon',
+    'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi',
+    'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico',
+    'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar',
+    'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria',
+    'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama',
+    'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Romania',
+    'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines',
+    'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles',
+    'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa',
+    'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland',
+    'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga',
+    'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine',
+    'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
+    'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
   geography_market: [
     'Portugal', 'Iberia', 'Southern Europe', 'Western Europe', 'Europe (other)',
@@ -16,7 +42,7 @@ export const OPTIONS = {
   ],
   industry: [
     'Hotels & Hospitality', 'Golf', 'Airlines & Travel', 'Luxury', 'Retail',
-    'Banking & Financial Services', 'Credit Cards', 'Fitness & Wellness',
+    'Banking & Financial Services (incl. Credit Cards)', 'Fitness & Wellness',
     'Restaurants & F&B', 'Automotive', 'Entertainment & Media',
     "Private Members' Clubs", 'Subscription Businesses', 'Other'
   ],
@@ -54,7 +80,10 @@ export const OPTIONS = {
     'Single-brand', 'Cross-brand within group', 'Cross-industry ecosystem',
     'Coalition (multi-company, shared currency)'
   ],
-  relevance_to_details: ['Low', 'Medium', 'High']
+  relevance_to_details: ['Low', 'Medium', 'High'],
+  meeting_type: ['Client', 'Group', 'Professor'],
+  task_status: ['Not started', 'In progress', 'Blocked', 'Done'],
+  task_type: ['Task', 'Deliverable']
 };
 
 // Drives both the Add Programme form and the record-sheet view/edit layout,
@@ -67,15 +96,14 @@ export const PROGRAMME_FIELDS = [
     { key: 'country', label: 'Country', type: 'select', options: 'country' },
     { key: 'geography_market', label: 'Geography / Market', type: 'select', options: 'geography_market' },
     { key: 'industry', label: 'Industry', type: 'select', options: 'industry' },
-    { key: 'sub_industry', label: 'Sub-Industry', type: 'text' }
+    { key: 'sub_industry', label: 'Sub-Industry', type: 'text' },
+    { key: 'cover_image_url', label: 'Cover Image URL', type: 'text', full: true }
   ]},
   { section: 'Programme Type & Model', fields: [
     { key: 'primary_programme_type', label: 'Primary Programme Type', type: 'select', options: 'programme_type' },
     { key: 'secondary_programme_type', label: 'Secondary Programme Type', type: 'select', options: 'programme_type' },
     { key: 'membership_model', label: 'Membership Model', type: 'select', options: 'membership_model' },
-    { key: 'free_vs_paid', label: 'Free vs Paid', type: 'select', options: 'free_vs_paid' },
-    { key: 'number_of_fee_tiers', label: 'Number of Fee Tiers', type: 'number' },
-    { key: 'fee_range', label: 'Fee Range', type: 'select', options: 'fee_range' }
+    { key: 'free_vs_paid', label: 'Free vs Paid', type: 'select', options: 'free_vs_paid' }
   ]},
   { section: 'Target & Positioning', fields: [
     { key: 'main_target_customer', label: 'Main Target Customer', type: 'select', options: 'main_target_customer' },
@@ -92,7 +120,9 @@ export const PROGRAMME_FIELDS = [
   { section: 'Tier Structure', fields: [
     { key: 'number_of_tiers', label: 'Number of Tiers', type: 'number' },
     { key: 'tier_qualification_basis', label: 'Tier Qualification Basis', type: 'select', options: 'tier_qualification_basis' },
-    { key: 'single_brand_vs_ecosystem', label: 'Single-Brand vs Ecosystem', type: 'select', options: 'single_brand_vs_ecosystem' }
+    { key: 'single_brand_vs_ecosystem', label: 'Single-Brand vs Ecosystem', type: 'select', options: 'single_brand_vs_ecosystem' },
+    { key: 'number_of_fee_tiers', label: 'Number of Fee Tiers', type: 'number' },
+    { key: 'fee_range', label: 'Fee Range', type: 'select', options: 'fee_range' }
   ]},
   { section: 'Partners & Value Flow', fields: [
     { key: 'partner_companies', label: 'Partner Companies', type: 'textarea', full: true },
@@ -106,4 +136,33 @@ export const PROGRAMME_FIELDS = [
     { key: 'sources', label: 'Sources', type: 'textarea', full: true },
     { key: 'date_checked', label: 'Date Checked', type: 'date' }
   ]}
+];
+
+export const SOURCE_FIELDS = [
+  { key: 'citation_tag', label: 'Citation Tag', type: 'text', required: true },
+  { key: 'full_citation', label: 'Full Citation', type: 'textarea', full: true, required: true },
+  { key: 'link_or_path', label: 'Link or Path (paste a URL to show a "Visit Website" button)', type: 'text', full: true }
+];
+
+// source_id is added dynamically once sources are loaded (see figures.js)
+export const FIGURE_FIELDS = [
+  { key: 'market', label: 'Market', type: 'text', required: true },
+  { key: 'statistic', label: 'Statistic', type: 'textarea', full: true, required: true },
+  { key: 'value', label: 'Value', type: 'text', required: true }
+];
+
+export const MEETING_FIELDS = [
+  { key: 'title', label: 'Meeting Title', type: 'text', required: true },
+  { key: 'meeting_type', label: 'Type', type: 'select', options: 'meeting_type', required: true },
+  { key: 'meeting_date', label: 'Date', type: 'date', required: true },
+  { key: 'meeting_time', label: 'Time', type: 'time' },
+  { key: 'notes', label: 'Notes', type: 'textarea', full: true }
+];
+
+export const TASK_FIELDS = [
+  { key: 'title', label: 'Task Title', type: 'text', required: true },
+  { key: 'description', label: 'Description', type: 'textarea', full: true },
+  { key: 'due_date', label: 'Due Date', type: 'date' },
+  { key: 'status', label: 'Status', type: 'select', options: 'task_status', required: true },
+  { key: 'task_type', label: 'Task Type', type: 'select', options: 'task_type', required: true }
 ];

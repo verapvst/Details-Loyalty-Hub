@@ -8,7 +8,8 @@ const NAV_LINKS = [
   { key: 'favorites', label: 'Favorites', href: 'favorites.html' },
   { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
   { key: 'figures', label: 'Figures & Data', href: 'figures.html' },
-  { key: 'sources', label: 'Sources', href: 'sources.html' }
+  { key: 'sources', label: 'Sources', href: 'sources.html' },
+  { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
 
 export function getIdentity() {
