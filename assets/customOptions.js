@@ -22,8 +22,10 @@ export const LIST_LABELS = {
   single_brand_vs_ecosystem: 'Single-Brand vs Ecosystem',
   relevance_to_details: 'Relevance to Details',
   meeting_type: 'Meeting Type',
-  task_status: 'Task Status',
   task_type: 'Task Type'
+  // task_status is deliberately not editable here: tasks.status has a pre-existing
+  // database CHECK constraint (todo / in_progress / done only), so a custom addition
+  // would just fail to save.
 };
 
 export async function loadCustomOptions() {
@@ -43,7 +45,7 @@ export function getOptionList(key) {
   if (!custom.length) return base;
 
   const sentinels = ['Other', 'None'];
-  const trailingIdx = base.findIndex(v => sentinels.includes(v));
+  const trailingIdx = base.findIndex(v => typeof v === 'string' && sentinels.includes(v));
   if (trailingIdx === -1) return [...base, ...custom];
   return [...base.slice(0, trailingIdx), ...custom, ...base.slice(trailingIdx)];
 }

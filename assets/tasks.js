@@ -162,7 +162,7 @@ function formatSlot(slot) {
 async function loadPolls() {
   const { data, error } = await supabase
     .from('meeting_polls')
-    .select('*, poll_slots(*, poll_responses(*))')
+    .select('*, poll_slots!poll_slots_poll_id_fkey(*, poll_responses(*))')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -385,7 +385,7 @@ function renderTasks() {
 
   el.innerHTML = tasks.map(t => {
     const dr = t.due_date ? daysRemaining(t.due_date) : null;
-    const statusOptions = getOptionList('task_status').map(s => `<option value="${s}" ${s === t.status ? 'selected' : ''}>${s}</option>`).join('');
+    const statusOptions = getOptionList('task_status').map(s => `<option value="${s.value}" ${s.value === t.status ? 'selected' : ''}>${s.label}</option>`).join('');
     return `
       <div class="task-row" data-task-id="${t.id}">
         <span class="badge ${t.task_type === 'Deliverable' ? 'badge-red' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
@@ -422,7 +422,7 @@ function openAddTaskModal() {
   const fieldsHTML = TASK_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${inputHTML(f, f.key === 'status' ? 'Not started' : (f.key === 'task_type' ? 'Task' : ''))}
+      ${inputHTML(f, f.key === 'status' ? 'todo' : (f.key === 'task_type' ? 'Task' : ''))}
     </div>
   `).join('');
   const checkboxesHTML = TEAM_MEMBERS.map(name => `

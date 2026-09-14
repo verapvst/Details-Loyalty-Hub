@@ -82,7 +82,13 @@ export const OPTIONS = {
   ],
   relevance_to_details: ['Low', 'Medium', 'High'],
   meeting_type: ['Client', 'Group', 'Professor'],
-  task_status: ['Not started', 'In progress', 'Blocked', 'Done'],
+  // The tasks.status column has a pre-existing database CHECK constraint allowing only
+  // these three machine values — the labels are just how they're shown in the UI.
+  task_status: [
+    { value: 'todo', label: 'To Do' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'done', label: 'Done' }
+  ],
   task_type: ['Task', 'Deliverable']
 };
 

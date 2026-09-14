@@ -10,8 +10,13 @@ export function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// A picklist entry is normally a plain string (value === label). A few lists — ones tied
+// to a fixed database constraint, like task status — use { value, label } instead so the
+// stored value can stay machine-friendly while the dropdown shows a nicer label.
 function optionTag(o, selected) {
-  return `<option value="${escapeHtml(o)}" ${o === selected ? 'selected' : ''}>${escapeHtml(o)}</option>`;
+  const value = typeof o === 'object' ? o.value : o;
+  const label = typeof o === 'object' ? o.label : o;
+  return `<option value="${escapeHtml(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
 }
 
 function selectOptionsHTML(optionKey, selected) {
