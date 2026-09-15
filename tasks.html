@@ -14,19 +14,30 @@
   <div class="page-header-inner">
     <div>
       <h1>Schedules &amp; Tasks</h1>
-      <p>Meetings, deliverables, and the team's day-to-day tasks, all in one place.</p>
+      <p>The team's shared project calendar and task list, from now through thesis submission.</p>
     </div>
   </div>
 </div>
 
-<section class="section" style="padding-bottom: 24px;">
-  <div class="section-head">
-    <h2 class="section-title">Upcoming</h2>
-    <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
-  </div>
-  <div id="agenda-list">
+<section class="section" style="padding-bottom: 0;">
+  <div id="milestone-strip">
     <div class="loading-state">Loading…</div>
   </div>
+</section>
+
+<section class="section" style="padding-top: 20px; padding-bottom: 24px;">
+  <div class="section-head">
+    <h2 class="section-title">Calendar</h2>
+    <div class="view-toggle" id="calendar-view-toggle">
+      <button type="button" data-view="agenda" class="active">Agenda</button>
+      <button type="button" data-view="month">Month</button>
+    </div>
+    <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
+  </div>
+  <div id="calendar-agenda">
+    <div class="loading-state">Loading…</div>
+  </div>
+  <div id="calendar-month" hidden></div>
 </section>
 
 <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
@@ -50,8 +61,10 @@
 </section>
 
 <div id="add-meeting-root"></div>
+<div id="edit-meeting-root"></div>
 <div id="add-poll-root"></div>
 <div id="add-task-root"></div>
+<div id="edit-task-root"></div>
 
 <script type="module" src="assets/tasks.js"></script>
 </body>

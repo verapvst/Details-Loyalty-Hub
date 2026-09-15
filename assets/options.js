@@ -108,15 +108,29 @@ export const OPTIONS = {
     'Anchoring', 'Loss Aversion', 'Social Proof', 'Scarcity', 'Status / Signalling',
     'Switching Costs / Lock-in', 'Goal-Gradient', 'Variable Reward', 'Convenience', 'Reciprocity'
   ],
-  meeting_type: ['Client', 'Group', 'Professor'],
-  // The tasks.status column has a pre-existing database CHECK constraint allowing only
-  // these three machine values — the labels are just how they're shown in the UI.
+  meeting_type: ['Team', 'Professor', 'Client'],
+  meeting_format: ['Online', 'In-person'],
+  // The tasks.status column has a database CHECK constraint allowing only these four
+  // machine values (see 009_calendar_and_milestones.sql) — the labels are just how
+  // they're shown in the UI. 'cancelled' keeps a cancelled occurrence visible/muted
+  // rather than deleting it.
   task_status: [
     { value: 'todo', label: 'To Do' },
     { value: 'in_progress', label: 'In Progress' },
-    { value: 'done', label: 'Done' }
+    { value: 'done', label: 'Done' },
+    { value: 'cancelled', label: 'Cancelled' }
   ],
-  task_type: ['Task', 'Deliverable']
+  task_type: ['Task', 'Deliverable'],
+  milestone_type: [
+    { value: 'deadline', label: 'Deadline' },
+    { value: 'steering', label: 'Steering' },
+    { value: 'presentation', label: 'Presentation' }
+  ],
+  milestone_precision: [
+    { value: 'exact', label: 'Exact date' },
+    { value: 'window', label: 'Approximate window' },
+    { value: 'tbd', label: 'TBD' }
+  ]
 };
 
 // ---------------- Programme form structure ----------------
@@ -168,11 +182,14 @@ export const FIGURE_FIELDS = [
   { key: 'value', label: 'Value', type: 'text', required: true }
 ];
 
+// format/location/online_link/participants are deliberately not here — they're
+// rendered with bespoke conditional logic (see wireFormatToggle in tasks.js).
 export const MEETING_FIELDS = [
   { key: 'title', label: 'Meeting Title', type: 'text', required: true },
   { key: 'meeting_type', label: 'Type', type: 'select', options: 'meeting_type', required: true },
   { key: 'meeting_date', label: 'Date', type: 'date', required: true },
-  { key: 'meeting_time', label: 'Time', type: 'time' },
+  { key: 'meeting_time', label: 'Start Time', type: 'time' },
+  { key: 'end_time', label: 'End Time', type: 'time' },
   { key: 'notes', label: 'Notes', type: 'textarea', full: true }
 ];
 
