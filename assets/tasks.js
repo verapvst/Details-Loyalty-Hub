@@ -1087,15 +1087,18 @@ function renderTasks() {
     const statusOptions = getOptionList('task_status').map(s => `<option value="${s.value}" ${s.value === t.status ? 'selected' : ''}>${s.label}</option>`).join('');
     const cancelled = t.status === 'cancelled';
     const compact = !isNearTerm(t.due_date);
+    // Status color only on the select itself, and only for this-week/next-week tasks —
+    // distant tasks stay neutral so the list isn't awash in color.
+    const statusClass = compact ? '' : `status-${t.status}`;
     return `
-      <div class="task-row status-${t.status} ${cancelled ? 'cancelled' : ''} ${compact ? 'compact' : ''}" data-task-id="${t.id}">
+      <div class="task-row ${cancelled ? 'cancelled' : ''} ${compact ? 'compact' : ''}" data-task-id="${t.id}">
         <span class="badge ${t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
         <div class="task-main" data-task-open="${t.id}">
           <div class="task-title">${escapeHtml(t.title)}${t.recurrence_id ? ' <span class="badge badge-muted" style="margin-left:6px;">Recurring</span>' : ''}</div>
           <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>
         </div>
         <div class="task-due">${t.due_date ? `${t.due_date}${dr ? ` · ${dr.text}` : ''}` : 'No due date'}</div>
-        <select class="task-status-select status-${t.status}" data-task-status="${t.id}">${statusOptions}</select>
+        <select class="task-status-select ${statusClass}" data-task-status="${t.id}">${statusOptions}</select>
         <button type="button" class="task-remove" data-task-remove="${t.id}">&times;</button>
       </div>
     `;
