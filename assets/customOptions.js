@@ -8,19 +8,16 @@ const cache = {};
 
 export const LIST_LABELS = {
   country: 'Country',
-  geography_market: 'Geography / Market',
   industry: 'Industry',
-  programme_type: 'Programme Type (mechanism)',
-  membership_model: 'Membership Model',
-  free_vs_paid: 'Free vs Paid',
-  fee_range: 'Fee Range',
-  main_target_customer: 'Main Target Customer',
   programme_positioning: 'Programme Positioning',
-  benefit: 'Benefit',
+  target_customer: 'Target Customer',
+  geographic_scope: 'Geographic Scope',
+  membership_type: 'Membership Type',
+  access_registration: 'Access / Registration',
+  mechanisms: 'Mechanisms',
+  benefits: 'Benefits',
   discount_type: 'Discount Type',
-  tier_qualification_basis: 'Tier Qualification Basis',
-  single_brand_vs_ecosystem: 'Single-Brand vs Ecosystem',
-  relevance_to_details: 'Relevance to Details',
+  qualification_unit: 'Tier Qualification Unit',
   meeting_type: 'Meeting Type',
   task_type: 'Task Type',
   figure_type: 'Figure Type',
@@ -28,6 +25,7 @@ export const LIST_LABELS = {
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.
+  // sub_industry is dependent on Industry and isn't Settings-extensible for now.
 };
 
 export async function loadCustomOptions() {

@@ -1,11 +1,31 @@
 // Shared reference data: team members and dropdown picklists.
-// Keep wording exact — it must match the historical Excel data-validation lists.
+// Keep wording exact — it must match the staging workbook's Pick Lists sheet.
 
 export const TEAM_MEMBERS = ['André', 'Alice', 'Cá', 'Chica', 'Maria', 'Vera'];
 
 // Shown pinned at the top of the Country dropdown, in this order — the markets this
 // project benchmarks most often. Everything else follows alphabetically below them.
 export const PINNED_COUNTRIES = ['Portugal', 'United States', 'United Kingdom', 'Spain', 'France'];
+
+// Industry -> Sub-Industry. Matches the staging workbook exactly.
+export const INDUSTRY_SUBS = {
+  'Hotels & Hospitality': ['Hotels & Resorts', 'Serviced Apartments', 'Hostels', 'Vacation Rentals', 'Hospitality Groups', 'Other'],
+  'Golf': ['Golf Clubs & Resorts', 'Golf Coaching / Academies', 'Golf Equipment & Retail', 'Other'],
+  'Tourism & Leisure': ['Attractions & Theme Parks', 'Tourism Experiences & Tours', 'Cultural Institutions', 'Events & Festivals', 'Recreation Clubs', 'Other'],
+  'Airlines & Travel': ['Airlines', 'Rail', 'Car Rental', 'Cruises', 'Travel Agencies & Platforms', 'Other'],
+  'Luxury': ['Luxury Goods & Fashion', 'Luxury Hospitality', 'Luxury Automotive', 'Other'],
+  'Retail': ['General Retail', 'Fashion & Apparel', 'Beauty & Cosmetics', 'Sportswear & Outdoor', 'Grocery & Supermarkets', 'Home & Furniture', 'Electronics', 'Other'],
+  'Banking & Financial Services (incl. Credit Cards)': ['Banking', 'Credit Cards', 'Payments & Fintech', 'Insurance', 'Investment & Wealth Management', 'Other'],
+  'Fitness & Wellness': ['Gyms & Fitness Clubs', 'Fitness Apps', 'Spas & Wellness', 'Wearables & Health Tech', 'Other'],
+  'Restaurants & F&B': ['Restaurants', 'Cafes & Coffee', 'QSR / Fast Food', 'Food Delivery', 'Bars & Nightlife', 'Other'],
+  'Automotive': ['Automotive Manufacturers', 'Dealerships', 'Mobility & Ride-hailing', 'EV & Charging', 'Other'],
+  'Entertainment & Media': ['Streaming', 'Music', 'Gaming', 'Publishing & News', 'Cinema', 'Other'],
+  "Private Members' Clubs": ['Social Clubs', 'Business Clubs', 'Other'],
+  'Education': ['Higher Education', 'Online Learning Platforms', 'Professional Training', 'Other'],
+  'Telecommunications': ['Mobile Operators', 'Broadband / Internet', 'Cable', 'Other'],
+  'Healthcare': ['Hospitals & Clinics', 'Pharmacies', 'Health Insurance', 'Digital Health Platforms', 'Other'],
+  'Other': ['Other']
+};
 
 export const OPTIONS = {
   country: [
@@ -36,16 +56,7 @@ export const OPTIONS = {
     'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
-  geography_market: [
-    'Portugal', 'Iberia', 'Southern Europe', 'Western Europe', 'Europe (other)',
-    'North America', 'Middle East', 'Asia-Pacific', 'Global', 'Other'
-  ],
-  industry: [
-    'Hotels & Hospitality', 'Golf', 'Tourism & Leisure', 'Airlines & Travel', 'Luxury', 'Retail',
-    'Banking & Financial Services (incl. Credit Cards)', 'Fitness & Wellness',
-    'Restaurants & F&B', 'Automotive', 'Entertainment & Media',
-    "Private Members' Clubs", 'Subscription Businesses', 'Other'
-  ],
+  industry: Object.keys(INDUSTRY_SUBS),
   // Used for Figures & Data's "Type" and "Topic" classification, so stats/quotes can be
   // filtered and found quickly when pulling numbers for slides and the thesis.
   figure_type: [
@@ -55,41 +66,42 @@ export const OPTIONS = {
     'Loyalty Programmes', 'Market Sizing', 'Consumer Trends', 'Competitive Landscape',
     'Technology & Innovation', 'Regulation & Compliance', 'Other'
   ],
-  programme_type: [
-    'Points-based', 'Tier-based', 'Cashback-based', 'Paid membership', 'Subscription',
-    'Coalition / partner ecosystem', 'Hybrid', 'Other', 'None'
-  ],
-  membership_model: [
-    'Open / automatic enrolment', 'Application-based', 'Invitation-only', 'Fee-based'
-  ],
-  free_vs_paid: ['Free', 'Paid', 'Freemium / hybrid'],
-  fee_range: [
-    'Free (no paid tier)', 'Under EUR10/mo', 'EUR10-25/mo', 'EUR25-50/mo', 'EUR50-100/mo',
-    'EUR100+/mo', 'Other'
-  ],
-  main_target_customer: [
-    'Mass market', 'Affluent / premium', 'High-net-worth', 'Frequent traveller',
-    'Young / next-gen', 'Family', 'Corporate / B2B', 'Niche enthusiast', 'Other'
-  ],
   programme_positioning: ['Mass', 'Mid-market', 'Premium', 'Luxury'],
-  benefit: [
-    'Free product/nights/service credit', 'Discounts', 'Upgrades', 'Priority access',
-    'Complimentary services', 'Access/exclusivity (lounge, members-only)',
-    'Experiences/events', 'Personalised benefits', 'Partner/cross-brand benefits',
-    'Other', 'None'
+  target_customer: [
+    'Mass Market', 'Families', 'Students', 'Young Adults', 'Professionals',
+    'Business Customers', 'High-Value Customers', 'Frequent Customers',
+    'Price-Sensitive Customers', 'Enthusiasts / Hobbyists', 'Local Customers',
+    'International Customers', 'Premium / Luxury Customers', 'Other'
+  ],
+  geographic_scope: [
+    'Portugal', 'Europe', 'North America', 'Latin America & Caribbean',
+    'Middle East', 'Africa', 'Asia', 'Oceania', 'Global'
+  ],
+  membership_type: ['Free', 'Paid', 'Subscription', 'Hybrid', 'Other'],
+  access_registration: [
+    'Open registration', 'Application required', 'Request membership',
+    'Invitation only', 'Referral required'
+  ],
+  mechanisms: [
+    'Points', 'Cashback', 'Discounts', 'Tiering', 'Partnerships', 'Exclusivity',
+    'Community', 'Gamification', 'Personalisation', 'Experiences', 'Early Access',
+    'Referral', 'Status Recognition', 'Cross-brand / Ecosystem Access'
+  ],
+  benefits: [
+    'Free Product / Service Credit', 'Discounts', 'Cashback', 'Points / Redeemable Rewards',
+    'Upgrades', 'Priority Access', 'Complimentary Services', 'Access / Exclusivity',
+    'Experiences / Events', 'Personalised Benefits', 'Partner Benefits', 'Other'
   ],
   discount_type: [
-    'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tier-based discount',
+    'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',
     'Preferential pricing', 'None'
   ],
-  tier_qualification_basis: [
-    'Spend', 'Nights/visits', 'Points accumulated', 'Invitation-only', 'Fee-based', 'Other'
+  currency: ['EUR', 'USD', 'GBP', 'Other'],
+  qualification_unit: [
+    'Spend (EUR)', 'Nights', 'Points', 'Events attended', 'Transactions',
+    'Automatic / No qualification', 'Invitation only', 'Other'
   ],
-  single_brand_vs_ecosystem: [
-    'Single-brand', 'Cross-brand within group', 'Cross-industry ecosystem',
-    'Coalition (multi-company, shared currency)'
-  ],
-  relevance_to_details: ['Low', 'Medium', 'High'],
+  yes_no: ['Yes', 'No'],
   meeting_type: ['Client', 'Group', 'Professor'],
   // The tasks.status column has a pre-existing database CHECK constraint allowing only
   // these three machine values — the labels are just how they're shown in the UI.
@@ -101,56 +113,37 @@ export const OPTIONS = {
   task_type: ['Task', 'Deliverable']
 };
 
-// Drives both the Add Programme form and the record-sheet view/edit layout,
-// so field metadata (label, input type, dropdown source) lives in one place.
-export const PROGRAMME_FIELDS = [
-  { section: 'Identity', fields: [
-    { key: 'programme_name', label: 'Programme Name', type: 'text', required: true },
-    { key: 'company', label: 'Company', type: 'text', required: true },
-    { key: 'parent_company', label: 'Parent Company', type: 'text' },
-    { key: 'country', label: 'Country', type: 'select', options: 'country' },
-    { key: 'geography_market', label: 'Geography / Market', type: 'select', options: 'geography_market' },
-    { key: 'industry', label: 'Industry', type: 'select', options: 'industry' },
-    { key: 'sub_industry', label: 'Sub-Industry', type: 'text' },
-    { key: 'cover_image_url', label: 'Cover Image URL', type: 'text', full: true }
-  ]},
-  { section: 'Programme Type & Model', fields: [
-    { key: 'primary_programme_type', label: 'Primary Programme Type', type: 'select', options: 'programme_type' },
-    { key: 'secondary_programme_type', label: 'Secondary Programme Type', type: 'select', options: 'programme_type' },
-    { key: 'membership_model', label: 'Membership Model', type: 'select', options: 'membership_model' },
-    { key: 'free_vs_paid', label: 'Free vs Paid', type: 'select', options: 'free_vs_paid' }
-  ]},
-  { section: 'Target & Positioning', fields: [
-    { key: 'main_target_customer', label: 'Main Target Customer', type: 'select', options: 'main_target_customer' },
-    { key: 'target_customer_notes', label: 'Target Customer Notes', type: 'textarea', full: true },
-    { key: 'programme_positioning', label: 'Programme Positioning', type: 'select', options: 'programme_positioning' }
-  ]},
-  { section: 'Offer & Benefits', fields: [
-    { key: 'main_core_offer', label: 'Main Core Offer', type: 'textarea', full: true },
-    { key: 'primary_benefit', label: 'Primary Benefit', type: 'select', options: 'benefit' },
-    { key: 'secondary_benefit', label: 'Secondary Benefit', type: 'select', options: 'benefit' },
-    { key: 'tertiary_benefit', label: 'Tertiary Benefit', type: 'select', options: 'benefit' },
-    { key: 'discount_type', label: 'Discount Type', type: 'select', options: 'discount_type' }
-  ]},
-  { section: 'Tier Structure', fields: [
-    { key: 'number_of_tiers', label: 'Number of Tiers', type: 'number' },
-    { key: 'tier_qualification_basis', label: 'Tier Qualification Basis', type: 'select', options: 'tier_qualification_basis' },
-    { key: 'single_brand_vs_ecosystem', label: 'Single-Brand vs Ecosystem', type: 'select', options: 'single_brand_vs_ecosystem' },
-    { key: 'number_of_fee_tiers', label: 'Number of Fee Tiers', type: 'number' },
-    { key: 'fee_range', label: 'Fee Range', type: 'select', options: 'fee_range' }
-  ]},
-  { section: 'Partners & Value Flow', fields: [
-    { key: 'partner_companies', label: 'Partner Companies', type: 'textarea', full: true },
-    { key: 'primary_partner_industry', label: 'Primary Partner Industry', type: 'select', options: 'industry' },
-    { key: 'secondary_partner_industry', label: 'Secondary Partner Industry', type: 'select', options: 'industry' },
-    { key: 'how_value_moves', label: 'How Value Moves', type: 'textarea', full: true }
-  ]},
-  { section: 'Strategic Notes', fields: [
-    { key: 'key_differentiator', label: 'Key Differentiator', type: 'textarea', full: true },
-    { key: 'relevance_to_details', label: 'Relevance to Details', type: 'select', options: 'relevance_to_details' },
-    { key: 'sources', label: 'Sources', type: 'textarea', full: true },
-    { key: 'date_checked', label: 'Date Checked', type: 'date' }
-  ]}
+// ---------------- Programme form structure ----------------
+// Simple fields (no conditional logic) — driven generically like other forms.
+// Mechanisms/Benefits/Tiers/Features have bespoke rendering (progressive disclosure,
+// repeatable rows) and are handled directly in database.js / programme.js.
+
+export const PROGRAMME_IDENTITY_FIELDS = [
+  { key: 'programme_name', label: 'Programme Name', type: 'text', required: true },
+  { key: 'company', label: 'Company', type: 'text', required: true },
+  { key: 'parent_company', label: 'Parent Company', type: 'text' },
+  { key: 'cover_image_url', label: 'Logo / Image URL', type: 'text', full: true },
+  { key: 'launch_year', label: 'Launch Year', type: 'number' }
+];
+
+// Note: sub_industry is deliberately NOT here — it's rendered separately with a
+// change-listener on Industry so its options stay dependent (see database.js / programme.js).
+export const PROGRAMME_CLASSIFICATION_FIELDS = [
+  { key: 'industry', label: 'Industry', type: 'select', options: 'industry', required: true },
+  { key: 'programme_positioning', label: 'Programme Positioning', type: 'select', options: 'programme_positioning' }
+];
+
+export const PROGRAMME_GEOGRAPHY_FIELDS = [
+  { key: 'country', label: 'Company Country', type: 'select', options: 'country', required: true }
+];
+
+export const PROGRAMME_MEMBERSHIP_FIELDS = [
+  { key: 'membership_type', label: 'Membership Type', type: 'select', options: 'membership_type', required: true },
+  { key: 'access_registration', label: 'Access / Registration', type: 'select', options: 'access_registration', required: true }
+];
+
+export const PROGRAMME_SOURCE_FIELDS = [
+  { key: 'source_url', label: 'Source / Programme URL', type: 'text', full: true }
 ];
 
 export const SOURCE_FIELDS = [

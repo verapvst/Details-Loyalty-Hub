@@ -1,13 +1,14 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
-import { PROGRAMME_FIELDS } from './options.js';
-import { inputHTML, readFormValues, escapeHtml } from './fields.js';
-import { loadCustomOptions } from './customOptions.js';
+import {
+  PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
+} from './options.js';
+import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
+import { loadCustomOptions, getOptionList } from './customOptions.js';
 
 initNav('database');
 await loadCustomOptions();
-
-const ALL_FIELDS = PROGRAMME_FIELDS.flatMap(s => s.fields);
 
 let allProgrammes = [];
 
@@ -22,6 +23,12 @@ function distinctSorted(list, key) {
   return [...new Set(list.map(p => p[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+function distinctFromArrays(list, key) {
+  const set = new Set();
+  list.forEach(p => (p[key] || []).forEach(v => v && set.add(v)));
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 function populateFilterOptions() {
   const fill = (selectEl, values) => {
     const current = selectEl.value;
@@ -30,8 +37,8 @@ function populateFilterOptions() {
     selectEl.value = current;
   };
   fill(filterIndustry, distinctSorted(allProgrammes, 'industry'));
-  fill(filterGeography, distinctSorted(allProgrammes, 'geography_market'));
-  fill(filterType, distinctSorted(allProgrammes, 'primary_programme_type'));
+  fill(filterGeography, distinctFromArrays(allProgrammes, 'geographic_scope'));
+  fill(filterType, distinctFromArrays(allProgrammes, 'mechanisms'));
 }
 
 function updateKPIs(list) {
@@ -41,8 +48,8 @@ function updateKPIs(list) {
 }
 
 function renderCard(p) {
-  const badge = p.primary_programme_type
-    ? `<span class="card-badge">${escapeHtml(p.primary_programme_type)}</span>` : '';
+  const badge = (p.mechanisms && p.mechanisms[0])
+    ? `<span class="card-badge">${escapeHtml(p.mechanisms[0])}</span>` : '';
   const meta = [
     p.country ? `<span class="card-meta-item">${escapeHtml(p.country)}</span>` : '',
     p.industry ? `<span class="card-meta-item">${escapeHtml(p.industry)}</span>` : ''
@@ -76,8 +83,8 @@ function applyFiltersAndRender() {
 
   const filtered = allProgrammes.filter(p => {
     if (industry && p.industry !== industry) return false;
-    if (geography && p.geography_market !== geography) return false;
-    if (type && p.primary_programme_type !== type) return false;
+    if (geography && !(p.geographic_scope || []).includes(geography)) return false;
+    if (type && !(p.mechanisms || []).includes(type)) return false;
     if (q) {
       const hay = `${p.programme_name || ''} ${p.company || ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -107,7 +114,7 @@ function applyFiltersAndRender() {
 async function loadProgrammes() {
   const { data, error } = await supabase
     .from('programmes')
-    .select('*')
+    .select('*, programme_tiers(*), programme_features(*)')
     .order('programme_name', { ascending: true });
 
   if (error) {
@@ -133,24 +140,157 @@ document.getElementById('btn-clear-filters').addEventListener('click', () => {
 
 // ---------------- Add Programme modal ----------------
 
-function fieldSectionHTML(section) {
-  const fields = section.fields.map(f => `
+function fieldsGridHTML(fields, values = {}) {
+  return fields.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${inputHTML(f, '')}
+      ${inputHTML(f, values[f.key])}
     </div>
   `).join('');
-  return `<div class="form-section-label">${section.section}</div><div class="form-grid">${fields}</div>`;
 }
 
-function tierRowHTML() {
+function subIndustryOptionsHTML(industry, selected) {
+  const subs = INDUSTRY_SUBS[industry] || [];
+  return '<option value=""></option>' + subs.map(s =>
+    `<option value="${escapeHtml(s)}" ${s === selected ? 'selected' : ''}>${escapeHtml(s)}</option>`
+  ).join('');
+}
+
+function wireSubIndustryCascade(form, initialSubIndustry) {
+  const industrySel = form.elements['industry'];
+  const subSel = form.elements['sub_industry'];
+  industrySel.addEventListener('change', () => {
+    subSel.innerHTML = subIndustryOptionsHTML(industrySel.value, null);
+  });
+  subSel.innerHTML = subIndustryOptionsHTML(industrySel.value, initialSubIndustry);
+}
+
+function tierRowHTML(t = {}) {
   return `
-    <div class="tier-row">
-      <input type="text" placeholder="Tier name" data-tier="name" />
-      <input type="number" step="0.01" placeholder="Tier price" data-tier="price" />
+    <div class="tier-row-v2">
+      <input type="text" placeholder="Tier name" data-tier="name" value="${escapeHtml(t.tier_name)}" />
+      <input type="number" step="0.01" placeholder="Fee" data-tier="fee" value="${t.tier_price ?? ''}" />
+      <select data-tier="currency">${getOptionList('currency').map(c => `<option ${c === (t.currency || 'EUR') ? 'selected' : ''}>${c}</option>`).join('')}</select>
+      <input type="number" step="0.01" placeholder="Qualification amount" data-tier="qual_amount" value="${t.qualification_amount ?? ''}" />
+      <select data-tier="qual_unit"><option value=""></option>${getOptionList('qualification_unit').map(u => `<option ${u === t.qualification_unit ? 'selected' : ''}>${u}</option>`).join('')}</select>
+      <input type="text" placeholder="Note (optional)" data-tier="note" value="${escapeHtml(t.note)}" />
       <button type="button" class="tier-remove">&times;</button>
     </div>
   `;
+}
+
+function featureRowHTML(f = {}) {
+  return `
+    <div class="feature-row">
+      <input type="text" placeholder="Feature name" data-feature="name" value="${escapeHtml(f.feature_name)}" />
+      <button type="button" class="tier-remove">&times;</button>
+    </div>
+  `;
+}
+
+function wireRepeatingRows(container, addBtn, rowHTML, rowSelector) {
+  const wireRemove = () => {
+    container.querySelectorAll('.tier-remove').forEach(btn => {
+      btn.onclick = () => { if (container.children.length > 1) btn.closest(rowSelector).remove(); };
+    });
+  };
+  wireRemove();
+  addBtn.addEventListener('click', () => {
+    container.insertAdjacentHTML('beforeend', rowHTML());
+    wireRemove();
+  });
+  return wireRemove;
+}
+
+const MECHANISM_BLOCKS = {
+  Points: 'block-points',
+  Discounts: 'block-discounts',
+  Partnerships: 'block-partnerships',
+  Tiering: 'block-tiering'
+};
+
+function wireMechanismToggle(form) {
+  function sync() {
+    const checked = readCheckboxGroup(form, 'mechanisms');
+    Object.entries(MECHANISM_BLOCKS).forEach(([mech, blockId]) => {
+      const el = document.getElementById(blockId);
+      if (el) el.hidden = !checked.includes(mech);
+    });
+  }
+  form.querySelectorAll('input[name="mechanisms"]').forEach(cb => cb.addEventListener('change', sync));
+  sync();
+}
+
+function mechanismsBenefitsSectionHTML(p = {}) {
+  const tiers = p.programme_tiers && p.programme_tiers.length ? p.programme_tiers : [{}];
+  return `
+    <div class="form-section-label">Mechanisms</div>
+    ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, p.mechanisms)}
+
+    <div id="block-points" class="mech-block" hidden>
+      <div class="form-section-label" style="margin-top:20px;">Points</div>
+      <div class="form-grid">
+        <div class="form-field"><label>Expires?</label>${inputHTML({ key: 'points_expires', type: 'select', options: 'yes_no' }, p.points_expires === true ? 'Yes' : (p.points_expires === false ? 'No' : ''))}</div>
+        <div class="form-field"><label>Expiration Period</label>${inputHTML({ key: 'points_expiration_period', type: 'text' }, p.points_expiration_period)}</div>
+        <div class="form-field full"><label>Earning / Redemption Notes</label>${inputHTML({ key: 'points_notes', type: 'textarea' }, p.points_notes)}</div>
+      </div>
+    </div>
+
+    <div id="block-discounts" class="mech-block" hidden>
+      <div class="form-section-label" style="margin-top:20px;">Discounts</div>
+      ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, p.discount_types)}
+    </div>
+
+    <div id="block-partnerships" class="mech-block" hidden>
+      <div class="form-section-label" style="margin-top:20px;">Partnerships</div>
+      <div class="form-field full"><label>Partner Companies (separate with ;)</label>
+        <input type="text" name="partner_companies" placeholder="Emirates; Uber; Booking.com" value="${escapeHtml((p.partner_companies || []).join('; '))}" />
+      </div>
+    </div>
+
+    <div id="block-tiering" class="mech-block" hidden>
+      <div class="form-section-label" style="margin-top:20px;">Tier Structure</div>
+      <div class="tier-rows" id="tier-rows">${tiers.map(tierRowHTML).join('')}</div>
+      <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
+    </div>
+
+    <div class="form-section-label" style="margin-top:20px;">Benefits</div>
+    ${inputHTML({ key: 'benefits', type: 'multiselect', options: 'benefits' }, p.benefits)}
+  `;
+}
+
+function featuresSectionHTML(features = []) {
+  const rows = features.length ? features : [{}];
+  return `
+    <div class="form-section-label">Features</div>
+    <div class="tier-rows" id="feature-rows">${rows.map(featureRowHTML).join('')}</div>
+    <button type="button" class="btn-add-tier" id="btn-add-feature">+ Add feature</button>
+  `;
+}
+
+function gatherTierRows(container) {
+  return [...container.querySelectorAll('.tier-row-v2')].map((row, idx) => {
+    const name = row.querySelector('[data-tier="name"]').value.trim();
+    if (!name) return null;
+    const fee = row.querySelector('[data-tier="fee"]').value.trim();
+    const qualAmount = row.querySelector('[data-tier="qual_amount"]').value.trim();
+    return {
+      tier_order: idx + 1,
+      tier_name: name,
+      tier_price: fee === '' ? null : Number(fee),
+      currency: row.querySelector('[data-tier="currency"]').value || 'EUR',
+      qualification_amount: qualAmount === '' ? null : Number(qualAmount),
+      qualification_unit: row.querySelector('[data-tier="qual_unit"]').value || null,
+      note: row.querySelector('[data-tier="note"]').value.trim() || null
+    };
+  }).filter(Boolean);
+}
+
+function gatherFeatureRows(container) {
+  return [...container.querySelectorAll('.feature-row')].map(row => {
+    const name = row.querySelector('[data-feature="name"]').value.trim();
+    return name ? { feature_name: name } : null;
+  }).filter(Boolean);
 }
 
 function openAddModal() {
@@ -165,11 +305,30 @@ function openAddModal() {
         <form id="add-form">
           <div class="form-modal-body">
             <div class="form-error" id="add-form-error" hidden></div>
-            ${PROGRAMME_FIELDS.map(section => fieldSectionHTML(section) + (section.section === 'Tier Structure' ? `
-              <div class="form-section-label">Programme Tiers</div>
-              <div class="tier-rows" id="tier-rows">${tierRowHTML()}</div>
-              <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
-            ` : '')).join('')}
+
+            <div class="form-section-label">Identity</div>
+            <div class="form-grid">${fieldsGridHTML(PROGRAMME_IDENTITY_FIELDS)}</div>
+
+            <div class="form-section-label" style="margin-top:20px;">Classification</div>
+            <div class="form-grid">
+              ${fieldsGridHTML(PROGRAMME_CLASSIFICATION_FIELDS.filter(f => f.key === 'industry'))}
+              <div class="form-field"><label>Sub-Industry *</label><select name="sub_industry" required></select></div>
+              ${fieldsGridHTML(PROGRAMME_CLASSIFICATION_FIELDS.filter(f => f.key !== 'industry'))}
+            </div>
+            <div class="form-field full" style="margin-top:10px;"><label>Target Customer</label>${inputHTML({ key: 'target_customer', type: 'multiselect', options: 'target_customer' }, [])}</div>
+
+            <div class="form-section-label" style="margin-top:20px;">Geography</div>
+            <div class="form-grid">${fieldsGridHTML(PROGRAMME_GEOGRAPHY_FIELDS)}</div>
+            <div class="form-field full" style="margin-top:10px;"><label>Geographic Scope</label>${inputHTML({ key: 'geographic_scope', type: 'multiselect', options: 'geographic_scope' }, [])}</div>
+
+            <div class="form-section-label" style="margin-top:20px;">Membership</div>
+            <div class="form-grid">${fieldsGridHTML(PROGRAMME_MEMBERSHIP_FIELDS)}</div>
+
+            ${mechanismsBenefitsSectionHTML()}
+            ${featuresSectionHTML()}
+
+            <div class="form-section-label" style="margin-top:20px;">Source</div>
+            <div class="form-grid">${fieldsGridHTML(PROGRAMME_SOURCE_FIELDS)}</div>
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="add-cancel">Cancel</button>
@@ -182,49 +341,50 @@ function openAddModal() {
 
   const overlay = document.getElementById('add-modal');
   const closeModal = () => root.innerHTML = '';
-
   document.getElementById('add-modal-close').addEventListener('click', closeModal);
   document.getElementById('add-cancel').addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 
+  const form = document.getElementById('add-form');
+  wireSubIndustryCascade(form, null);
+  wireMechanismToggle(form);
+
   const tierRows = document.getElementById('tier-rows');
-  document.getElementById('btn-add-tier').addEventListener('click', () => {
-    tierRows.insertAdjacentHTML('beforeend', tierRowHTML());
-    wireTierRemove();
-  });
+  wireRepeatingRows(tierRows, document.getElementById('btn-add-tier'), tierRowHTML, '.tier-row-v2');
+  const featureRows = document.getElementById('feature-rows');
+  wireRepeatingRows(featureRows, document.getElementById('btn-add-feature'), featureRowHTML, '.feature-row');
 
-  function wireTierRemove() {
-    tierRows.querySelectorAll('.tier-remove').forEach(btn => {
-      btn.onclick = () => {
-        if (tierRows.children.length > 1) btn.closest('.tier-row').remove();
-      };
-    });
-  }
-  wireTierRemove();
-
-  document.getElementById('add-form').addEventListener('submit', async (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const form = e.target;
     const errorEl = document.getElementById('add-form-error');
     errorEl.hidden = true;
 
-    const programmeData = readFormValues(form, ALL_FIELDS);
+    const data = {
+      ...readFormValues(form, PROGRAMME_IDENTITY_FIELDS),
+      ...readFormValues(form, PROGRAMME_CLASSIFICATION_FIELDS),
+      ...readFormValues(form, PROGRAMME_GEOGRAPHY_FIELDS),
+      ...readFormValues(form, PROGRAMME_MEMBERSHIP_FIELDS),
+      ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
+      sub_industry: form.elements['sub_industry'].value || null,
+      target_customer: readCheckboxGroup(form, 'target_customer'),
+      geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
+      mechanisms: readCheckboxGroup(form, 'mechanisms'),
+      benefits: readCheckboxGroup(form, 'benefits'),
+      discount_types: readCheckboxGroup(form, 'discount_types'),
+      points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
+      points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,
+      points_notes: form.elements['points_notes'].value.trim() || null,
+      partner_companies: form.elements['partner_companies'].value.split(';').map(s => s.trim()).filter(Boolean)
+    };
 
-    const tiers = [...tierRows.querySelectorAll('.tier-row')].map((row, idx) => {
-      const name = row.querySelector('[data-tier="name"]').value.trim();
-      const price = row.querySelector('[data-tier="price"]').value.trim();
-      return name ? { tier_order: idx + 1, tier_name: name, tier_price: price === '' ? null : Number(price) } : null;
-    }).filter(Boolean);
+    const tiers = gatherTierRows(tierRows);
+    const features = gatherFeatureRows(featureRows);
 
     const submitBtn = document.getElementById('add-submit');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { data: inserted, error } = await supabase
-      .from('programmes')
-      .insert(programmeData)
-      .select()
-      .single();
+    const { data: inserted, error } = await supabase.from('programmes').insert(data).select().single();
 
     if (error) {
       errorEl.textContent = `Couldn't save programme: ${error.message}`;
@@ -235,11 +395,12 @@ function openAddModal() {
     }
 
     if (tiers.length) {
-      const tierRowsPayload = tiers.map(t => ({ ...t, programme_id: inserted.id }));
-      const { error: tierError } = await supabase.from('programme_tiers').insert(tierRowsPayload);
-      if (tierError) {
-        showToast(`Programme saved, but tiers failed: ${tierError.message}`, true);
-      }
+      const { error: tierError } = await supabase.from('programme_tiers').insert(tiers.map(t => ({ ...t, programme_id: inserted.id })));
+      if (tierError) showToast(`Programme saved, but tiers failed: ${tierError.message}`, true);
+    }
+    if (features.length) {
+      const { error: featError } = await supabase.from('programme_features').insert(features.map(f => ({ ...f, programme_id: inserted.id })));
+      if (featError) showToast(`Programme saved, but features failed: ${featError.message}`, true);
     }
 
     closeModal();

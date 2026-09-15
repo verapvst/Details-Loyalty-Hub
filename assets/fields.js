@@ -34,6 +34,23 @@ function selectOptionsHTML(optionKey, selected) {
   return blank + list.map(o => optionTag(o, selected)).join('');
 }
 
+// Renders a checkbox group for a multi-select field. `selected` is an array.
+export function checkboxGroupHTML(fieldKey, optionKey, selected) {
+  const list = getOptionList(optionKey);
+  const sel = Array.isArray(selected) ? selected : [];
+  return `<div class="checkbox-row">${list.map(o => {
+    const value = typeof o === 'object' ? o.value : o;
+    const label = typeof o === 'object' ? o.label : o;
+    const checked = sel.includes(value) ? 'checked' : '';
+    return `<label class="checkbox-item"><input type="checkbox" name="${fieldKey}" value="${escapeHtml(value)}" ${checked} /> ${escapeHtml(label)}</label>`;
+  }).join('')}</div>`;
+}
+
+// Reads every checked checkbox for a given field name into an array of values.
+export function readCheckboxGroup(formEl, fieldKey) {
+  return [...formEl.querySelectorAll(`input[name="${fieldKey}"]:checked`)].map(cb => cb.value);
+}
+
 // Renders a bare input/select/textarea (no wrapping label) for a given field def + current value.
 export function inputHTML(field, value) {
   const v = value === null || value === undefined ? '' : value;
@@ -41,6 +58,8 @@ export function inputHTML(field, value) {
   switch (field.type) {
     case 'select':
       return `<select name="${field.key}" ${req}>${selectOptionsHTML(field.options, v)}</select>`;
+    case 'multiselect':
+      return checkboxGroupHTML(field.key, field.options, value);
     case 'textarea':
       return `<textarea name="${field.key}" rows="3" ${req}>${escapeHtml(v)}</textarea>`;
     case 'number':
@@ -57,6 +76,7 @@ export function inputHTML(field, value) {
 export function readFormValues(formEl, allFields) {
   const data = {};
   allFields.forEach(field => {
+    if (field.type === 'multiselect') return; // read separately via readCheckboxGroup
     const el = formEl.elements[field.key];
     if (!el) return;
     const raw = el.value.trim();

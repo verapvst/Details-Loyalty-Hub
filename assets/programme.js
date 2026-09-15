@@ -1,19 +1,22 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
-import { PROGRAMME_FIELDS } from './options.js';
-import { inputHTML, readFormValues, escapeHtml } from './fields.js';
-import { loadCustomOptions } from './customOptions.js';
+import {
+  PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
+} from './options.js';
+import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
+import { loadCustomOptions, getOptionList } from './customOptions.js';
 
 initNav('database');
 await loadCustomOptions();
 
-const ALL_FIELDS = PROGRAMME_FIELDS.flatMap(s => s.fields);
 const root = document.getElementById('record-root');
 const params = new URLSearchParams(window.location.search);
 const programmeId = params.get('id');
 
 let programme = null;
 let tiers = [];
+let features = [];
 let editing = false;
 
 if (!programmeId) {
@@ -21,61 +24,232 @@ if (!programmeId) {
   throw new Error('Missing programme id');
 }
 
-function fieldValueDisplay(value) {
-  if (value === null || value === undefined || value === '') return `<span class="value empty">—</span>`;
-  return `<span class="value">${escapeHtml(value)}</span>`;
+function valueOrEmpty(v) {
+  if (v === null || v === undefined || v === '') return `<span class="value empty">—</span>`;
+  return `<span class="value">${escapeHtml(v)}</span>`;
 }
 
-function recordBlockHTML(section) {
-  const fields = section.fields.map(f => `
+function chipsOrEmpty(arr) {
+  if (!Array.isArray(arr) || !arr.length) return `<span class="value empty">—</span>`;
+  return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>`;
+}
+
+function simpleFieldsBlockHTML(title, fields) {
+  const cells = fields.map(f => `
     <div class="record-field ${f.full ? 'full' : ''} ${editing ? 'editing' : ''}">
       <label>${f.label}</label>
-      ${editing ? inputHTML(f, programme[f.key]) : fieldValueDisplay(programme[f.key])}
+      ${editing ? inputHTML(f, programme[f.key]) : valueOrEmpty(programme[f.key])}
     </div>
   `).join('');
-  return `<div class="record-block"><h3>${section.section}</h3><div class="record-grid">${fields}</div></div>`;
+  return `<div class="record-block"><h3>${title}</h3><div class="record-grid">${cells}</div></div>`;
 }
 
-function tierRowEditHTML(t) {
+function classificationBlockHTML() {
+  const industryField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'industry');
+  const positioningField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'programme_positioning');
+  const subOptions = editing
+    ? '<option value=""></option>' + (INDUSTRY_SUBS[programme.industry] || []).map(s =>
+        `<option value="${escapeHtml(s)}" ${s === programme.sub_industry ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')
+    : '';
+
   return `
-    <div class="tier-row">
+    <div class="record-block">
+      <h3>Classification</h3>
+      <div class="record-grid">
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Industry</label>
+          ${editing ? inputHTML(industryField, programme.industry) : valueOrEmpty(programme.industry)}
+        </div>
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Sub-Industry</label>
+          ${editing ? `<select name="sub_industry" id="record-sub-industry" required>${subOptions}</select>` : valueOrEmpty(programme.sub_industry)}
+        </div>
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Programme Positioning</label>
+          ${editing ? inputHTML(positioningField, programme.programme_positioning) : valueOrEmpty(programme.programme_positioning)}
+        </div>
+        <div class="record-field full">
+          <label>Target Customer</label>
+          ${editing ? inputHTML({ key: 'target_customer', type: 'multiselect', options: 'target_customer' }, programme.target_customer) : chipsOrEmpty(programme.target_customer)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function geographyBlockHTML() {
+  const countryField = PROGRAMME_GEOGRAPHY_FIELDS.find(f => f.key === 'country');
+  return `
+    <div class="record-block">
+      <h3>Geography</h3>
+      <div class="record-grid">
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Company Country</label>
+          ${editing ? inputHTML(countryField, programme.country) : valueOrEmpty(programme.country)}
+        </div>
+        <div class="record-field full">
+          <label>Geographic Scope</label>
+          ${editing ? inputHTML({ key: 'geographic_scope', type: 'multiselect', options: 'geographic_scope' }, programme.geographic_scope) : chipsOrEmpty(programme.geographic_scope)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function tierRowEditHTML(t = {}) {
+  return `
+    <div class="tier-row-v2">
       <input type="text" placeholder="Tier name" data-tier="name" value="${escapeHtml(t.tier_name)}" />
-      <input type="number" step="0.01" placeholder="Tier price" data-tier="price" value="${t.tier_price ?? ''}" />
+      <input type="number" step="0.01" placeholder="Fee" data-tier="fee" value="${t.tier_price ?? ''}" />
+      <select data-tier="currency">${getOptionList('currency').map(c => `<option ${c === (t.currency || 'EUR') ? 'selected' : ''}>${c}</option>`).join('')}</select>
+      <input type="number" step="0.01" placeholder="Qualification amount" data-tier="qual_amount" value="${t.qualification_amount ?? ''}" />
+      <select data-tier="qual_unit"><option value=""></option>${getOptionList('qualification_unit').map(u => `<option ${u === t.qualification_unit ? 'selected' : ''}>${u}</option>`).join('')}</select>
+      <input type="text" placeholder="Note (optional)" data-tier="note" value="${escapeHtml(t.note)}" />
       <button type="button" class="tier-remove">&times;</button>
     </div>
   `;
 }
 
-function tiersBlockHTML() {
-  if (editing) {
-    const rows = (tiers.length ? tiers : [{ tier_name: '', tier_price: '' }]).map(tierRowEditHTML).join('');
+function featureRowEditHTML(f = {}) {
+  return `
+    <div class="feature-row">
+      <input type="text" placeholder="Feature name" data-feature="name" value="${escapeHtml(f.feature_name)}" />
+      <button type="button" class="tier-remove">&times;</button>
+    </div>
+  `;
+}
+
+const MECHANISM_BLOCKS = { Points: 'r-block-points', Discounts: 'r-block-discounts', Partnerships: 'r-block-partnerships', Tiering: 'r-block-tiering' };
+
+function mechanismsBenefitsBlockHTML() {
+  const mechanisms = programme.mechanisms || [];
+
+  if (!editing) {
+    const pointsInfo = mechanisms.includes('Points') && (programme.points_expires !== null || programme.points_notes)
+      ? `<div class="record-field full"><label>Points Details</label><span class="value">${
+          programme.points_expires === true ? `Expires${programme.points_expiration_period ? ` (${escapeHtml(programme.points_expiration_period)})` : ''}` :
+          programme.points_expires === false ? 'Does not expire' : ''
+        }${programme.points_notes ? ` — ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
+    const discountInfo = mechanisms.includes('Discounts') && programme.discount_types && programme.discount_types.length
+      ? `<div class="record-field full"><label>Discount Type</label>${chipsOrEmpty(programme.discount_types)}</div>` : '';
+    const partnerInfo = mechanisms.includes('Partnerships') && programme.partner_companies && programme.partner_companies.length
+      ? `<div class="record-field full"><label>Partner Companies</label>${chipsOrEmpty(programme.partner_companies)}</div>` : '';
+
     return `
       <div class="record-block">
-        <h3>Programme Tiers</h3>
-        <div class="tier-rows" id="tier-rows">${rows}</div>
-        <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
+        <h3>Mechanisms &amp; Benefits</h3>
+        <div class="record-grid">
+          <div class="record-field full"><label>Mechanisms</label>${chipsOrEmpty(mechanisms)}</div>
+          ${pointsInfo}${discountInfo}${partnerInfo}
+          <div class="record-field full"><label>Benefits</label>${chipsOrEmpty(programme.benefits)}</div>
+        </div>
       </div>
+      ${tiersDisplayBlockHTML()}
     `;
   }
-  if (!tiers.length) {
-    return `<div class="record-block"><h3>Programme Tiers</h3><p class="value empty">No tiers recorded</p></div>`;
-  }
+
+  const tierList = tiers.length ? tiers : [{}];
+  return `
+    <div class="record-block">
+      <h3>Mechanisms &amp; Benefits</h3>
+      <div class="form-section-label" style="margin-top:0;">Mechanisms</div>
+      ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, mechanisms)}
+
+      <div id="r-block-points" class="mech-block" hidden>
+        <div class="form-section-label">Points</div>
+        <div class="form-grid">
+          <div class="form-field"><label>Expires?</label>${inputHTML({ key: 'points_expires', type: 'select', options: 'yes_no' }, programme.points_expires === true ? 'Yes' : (programme.points_expires === false ? 'No' : ''))}</div>
+          <div class="form-field"><label>Expiration Period</label>${inputHTML({ key: 'points_expiration_period', type: 'text' }, programme.points_expiration_period)}</div>
+          <div class="form-field full"><label>Earning / Redemption Notes</label>${inputHTML({ key: 'points_notes', type: 'textarea' }, programme.points_notes)}</div>
+        </div>
+      </div>
+
+      <div id="r-block-discounts" class="mech-block" hidden>
+        <div class="form-section-label">Discounts</div>
+        ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, programme.discount_types)}
+      </div>
+
+      <div id="r-block-partnerships" class="mech-block" hidden>
+        <div class="form-section-label">Partnerships</div>
+        <div class="form-field full"><label>Partner Companies (separate with ;)</label>
+          <input type="text" name="partner_companies" value="${escapeHtml((programme.partner_companies || []).join('; '))}" />
+        </div>
+      </div>
+
+      <div id="r-block-tiering" class="mech-block" hidden>
+        <div class="form-section-label">Tier Structure</div>
+        <div class="tier-rows" id="tier-rows">${tierList.map(tierRowEditHTML).join('')}</div>
+        <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
+      </div>
+
+      <div class="form-section-label">Benefits</div>
+      ${inputHTML({ key: 'benefits', type: 'multiselect', options: 'benefits' }, programme.benefits)}
+    </div>
+  `;
+}
+
+function tiersDisplayBlockHTML() {
+  if (!tiers.length) return '';
   const rows = tiers.map(t => `
     <tr>
       <td class="tier-order-num">${t.tier_order ?? ''}</td>
       <td>${escapeHtml(t.tier_name)}</td>
-      <td>${t.tier_price === null || t.tier_price === undefined ? '—' : t.tier_price}</td>
+      <td>${t.tier_price === null || t.tier_price === undefined ? '—' : `${t.tier_price} ${escapeHtml(t.currency || 'EUR')}`}</td>
+      <td>${t.qualification_amount !== null && t.qualification_amount !== undefined ? `${t.qualification_amount} ` : ''}${escapeHtml(t.qualification_unit) || '—'}</td>
+      <td>${escapeHtml(t.note) || ''}</td>
     </tr>
   `).join('');
   return `
     <div class="record-block">
       <h3>Programme Tiers</h3>
       <table class="record-tier-table">
-        <thead><tr><th>Order</th><th>Tier Name</th><th>Price</th></tr></thead>
+        <thead><tr><th>Order</th><th>Tier Name</th><th>Fee</th><th>Qualification</th><th>Note</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
   `;
+}
+
+function featuresBlockHTML() {
+  if (!editing) {
+    if (!features.length) return `<div class="record-block"><h3>Features</h3><p class="value empty">No features recorded</p></div>`;
+    return `<div class="record-block"><h3>Features</h3><div class="chip-row" style="margin-bottom:0;">${features.map(f => `<span class="badge badge-green">${escapeHtml(f.feature_name)}</span>`).join('')}</div></div>`;
+  }
+  const rows = features.length ? features : [{}];
+  return `
+    <div class="record-block">
+      <h3>Features</h3>
+      <div class="tier-rows" id="feature-rows">${rows.map(featureRowEditHTML).join('')}</div>
+      <button type="button" class="btn-add-tier" id="btn-add-feature">+ Add feature</button>
+    </div>
+  `;
+}
+
+function sourceBlockHTML() {
+  if (!editing) {
+    const isUrl = /^https?:\/\//i.test(programme.source_url || '');
+    return `
+      <div class="record-block">
+        <h3>Source</h3>
+        ${isUrl
+          ? `<a href="${escapeHtml(programme.source_url)}" target="_blank" rel="noopener" class="btn-outline">Visit Website</a>`
+          : valueOrEmpty(programme.source_url)}
+      </div>
+    `;
+  }
+  return simpleFieldsBlockHTML('Source', PROGRAMME_SOURCE_FIELDS);
+}
+
+function wireMechanismToggle(container) {
+  function sync() {
+    const checked = readCheckboxGroup(container, 'mechanisms');
+    Object.entries(MECHANISM_BLOCKS).forEach(([mech, blockId]) => {
+      const el = document.getElementById(blockId);
+      if (el) el.hidden = !checked.includes(mech);
+    });
+  }
+  container.querySelectorAll('input[name="mechanisms"]').forEach(cb => cb.addEventListener('change', sync));
+  sync();
 }
 
 function render() {
@@ -107,51 +281,83 @@ function render() {
     </div>
     <form id="record-form">
       <div class="record-body">
-        ${PROGRAMME_FIELDS.map(section => recordBlockHTML(section) + (section.section === 'Tier Structure' ? tiersBlockHTML() : '')).join('')}
+        ${simpleFieldsBlockHTML('Identity', PROGRAMME_IDENTITY_FIELDS)}
+        ${classificationBlockHTML()}
+        ${geographyBlockHTML()}
+        ${simpleFieldsBlockHTML('Membership', PROGRAMME_MEMBERSHIP_FIELDS)}
+        ${mechanismsBenefitsBlockHTML()}
+        ${featuresBlockHTML()}
+        ${sourceBlockHTML()}
       </div>
     </form>
   `;
 
   if (editing) {
+    const form = document.getElementById('record-form');
+    const industrySel = form.elements['industry'];
+    industrySel.addEventListener('change', () => {
+      const subSel = document.getElementById('record-sub-industry');
+      subSel.innerHTML = '<option value=""></option>' + (INDUSTRY_SUBS[industrySel.value] || []).map(s => `<option>${escapeHtml(s)}</option>`).join('');
+    });
+
+    wireMechanismToggle(form);
+
     const tierRows = document.getElementById('tier-rows');
-    const wireRemove = () => {
+    const wireTierRemove = () => {
       tierRows.querySelectorAll('.tier-remove').forEach(btn => {
-        btn.onclick = () => {
-          if (tierRows.children.length > 1) btn.closest('.tier-row').remove();
-        };
+        btn.onclick = () => { if (tierRows.children.length > 1) btn.closest('.tier-row-v2').remove(); };
       });
     };
-    wireRemove();
+    wireTierRemove();
     document.getElementById('btn-add-tier').addEventListener('click', () => {
-      tierRows.insertAdjacentHTML('beforeend', tierRowEditHTML({ tier_name: '', tier_price: '' }));
-      wireRemove();
+      tierRows.insertAdjacentHTML('beforeend', tierRowEditHTML());
+      wireTierRemove();
     });
-    document.getElementById('btn-cancel-edit').addEventListener('click', () => {
-      editing = false;
-      render();
+
+    const featureRows = document.getElementById('feature-rows');
+    const wireFeatureRemove = () => {
+      featureRows.querySelectorAll('.tier-remove').forEach(btn => {
+        btn.onclick = () => { if (featureRows.children.length > 1) btn.closest('.feature-row').remove(); };
+      });
+    };
+    wireFeatureRemove();
+    document.getElementById('btn-add-feature').addEventListener('click', () => {
+      featureRows.insertAdjacentHTML('beforeend', featureRowEditHTML());
+      wireFeatureRemove();
     });
+
+    document.getElementById('btn-cancel-edit').addEventListener('click', () => { editing = false; render(); });
     document.getElementById('btn-save').addEventListener('click', saveChanges);
   } else {
-    document.getElementById('btn-edit').addEventListener('click', () => {
-      editing = true;
-      render();
-    });
+    document.getElementById('btn-edit').addEventListener('click', () => { editing = true; render(); });
   }
 }
 
 async function saveChanges() {
   const form = document.getElementById('record-form');
-  const updated = readFormValues(form, ALL_FIELDS);
+  const updated = {
+    ...readFormValues(form, PROGRAMME_IDENTITY_FIELDS),
+    ...readFormValues(form, PROGRAMME_CLASSIFICATION_FIELDS),
+    ...readFormValues(form, PROGRAMME_GEOGRAPHY_FIELDS),
+    ...readFormValues(form, PROGRAMME_MEMBERSHIP_FIELDS),
+    ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
+    sub_industry: document.getElementById('record-sub-industry').value || null,
+    target_customer: readCheckboxGroup(form, 'target_customer'),
+    geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
+    mechanisms: readCheckboxGroup(form, 'mechanisms'),
+    benefits: readCheckboxGroup(form, 'benefits'),
+    discount_types: readCheckboxGroup(form, 'discount_types'),
+    points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
+    points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,
+    points_notes: form.elements['points_notes'].value.trim() || null,
+    partner_companies: form.elements['partner_companies'].value.split(';').map(s => s.trim()).filter(Boolean)
+  };
 
   const saveBtn = document.getElementById('btn-save');
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving…';
 
-  const { error: updateError } = await supabase
-    .from('programmes')
-    .update(updated)
-    .eq('id', programmeId);
-
+  const { error: updateError } = await supabase.from('programmes').update(updated).eq('id', programmeId);
   if (updateError) {
     showToast(`Couldn't save: ${updateError.message}`, true);
     saveBtn.disabled = false;
@@ -159,10 +365,21 @@ async function saveChanges() {
     return;
   }
 
-  const tierRows = [...document.querySelectorAll('#tier-rows .tier-row')].map((row, idx) => {
+  const tierRows = [...document.querySelectorAll('#tier-rows .tier-row-v2')].map((row, idx) => {
     const name = row.querySelector('[data-tier="name"]').value.trim();
-    const price = row.querySelector('[data-tier="price"]').value.trim();
-    return name ? { tier_order: idx + 1, tier_name: name, tier_price: price === '' ? null : Number(price), programme_id: programmeId } : null;
+    if (!name) return null;
+    const fee = row.querySelector('[data-tier="fee"]').value.trim();
+    const qualAmount = row.querySelector('[data-tier="qual_amount"]').value.trim();
+    return {
+      tier_order: idx + 1,
+      tier_name: name,
+      tier_price: fee === '' ? null : Number(fee),
+      currency: row.querySelector('[data-tier="currency"]').value || 'EUR',
+      qualification_amount: qualAmount === '' ? null : Number(qualAmount),
+      qualification_unit: row.querySelector('[data-tier="qual_unit"]').value || null,
+      note: row.querySelector('[data-tier="note"]').value.trim() || null,
+      programme_id: programmeId
+    };
   }).filter(Boolean);
 
   await supabase.from('programme_tiers').delete().eq('programme_id', programmeId);
@@ -171,36 +388,41 @@ async function saveChanges() {
     if (tierError) showToast(`Saved programme, but tiers failed: ${tierError.message}`, true);
   }
 
+  const featureRows = [...document.querySelectorAll('#feature-rows .feature-row')].map(row => {
+    const name = row.querySelector('[data-feature="name"]').value.trim();
+    return name ? { feature_name: name, programme_id: programmeId } : null;
+  }).filter(Boolean);
+
+  await supabase.from('programme_features').delete().eq('programme_id', programmeId);
+  if (featureRows.length) {
+    const { error: featError } = await supabase.from('programme_features').insert(featureRows);
+    if (featError) showToast(`Saved programme, but features failed: ${featError.message}`, true);
+  }
+
   Object.assign(programme, updated);
-  await loadTiers();
+  await loadTiersAndFeatures();
   editing = false;
   render();
   showToast('Programme saved.');
 }
 
-async function loadTiers() {
-  const { data } = await supabase
-    .from('programme_tiers')
-    .select('*')
-    .eq('programme_id', programmeId)
-    .order('tier_order', { ascending: true });
-  tiers = data || [];
+async function loadTiersAndFeatures() {
+  const [{ data: tierData }, { data: featureData }] = await Promise.all([
+    supabase.from('programme_tiers').select('*').eq('programme_id', programmeId).order('tier_order', { ascending: true }),
+    supabase.from('programme_features').select('*').eq('programme_id', programmeId).order('created_at', { ascending: true })
+  ]);
+  tiers = tierData || [];
+  features = featureData || [];
 }
 
 async function load() {
-  const { data, error } = await supabase
-    .from('programmes')
-    .select('*')
-    .eq('id', programmeId)
-    .single();
-
+  const { data, error } = await supabase.from('programmes').select('*').eq('id', programmeId).single();
   if (error || !data) {
     root.innerHTML = `<div class="error-state">Couldn't load this programme. <a href="index.html">Back to Database</a></div>`;
     return;
   }
-
   programme = data;
-  await loadTiers();
+  await loadTiersAndFeatures();
   render();
 }
 
