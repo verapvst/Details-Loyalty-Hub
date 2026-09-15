@@ -7,6 +7,7 @@ import {
   loadMilestones, milestoneStatus, milestoneDateLabel, renderMilestoneStrip,
   openMilestoneModal, MILESTONE_BADGE_CLASS
 } from './milestones.js';
+import { loadQuestions, renderQuestionsSection, openQuestionModal } from './questions.js';
 
 initNav('tasks');
 await loadCustomOptions();
@@ -19,6 +20,7 @@ let meetings = [];
 let tasks = [];
 let polls = [];
 let milestones = [];
+let questions = [];
 
 let calendarView = 'month'; // 'agenda' | 'month'
 let monthCursor = new Date(2026, 8, 1); // September 2026 — start of the project period
@@ -1391,11 +1393,17 @@ function renderMilestoneStripSection() {
   });
 }
 
+async function reloadQuestionsAndRender() {
+  questions = await loadQuestions();
+  renderQuestionsSection(document.getElementById('question-list'), questions, { onChange: reloadQuestionsAndRender });
+}
+
 // ---------------- Init ----------------
 
 document.getElementById('btn-add-meeting').addEventListener('click', () => openAddMeetingModal());
 document.getElementById('btn-add-poll').addEventListener('click', openAddPollModal);
 document.getElementById('btn-add-task').addEventListener('click', openAddTaskModal);
+document.getElementById('btn-add-question').addEventListener('click', () => openQuestionModal({ onChange: reloadQuestionsAndRender }));
 document.querySelectorAll('#calendar-view-toggle button').forEach(btn => {
   btn.addEventListener('click', () => switchCalendarView(btn.dataset.view));
 });
@@ -1409,9 +1417,11 @@ function renderAll() {
 async function init() {
   await Promise.all([loadMeetings(), loadTasks(), loadPolls()]);
   milestones = await loadMilestones();
+  questions = await loadQuestions();
   renderAll();
   renderPolls();
   renderTasks();
+  renderQuestionsSection(document.getElementById('question-list'), questions, { onChange: reloadQuestionsAndRender });
 }
 
 init();

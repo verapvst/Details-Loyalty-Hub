@@ -130,6 +130,10 @@ export const OPTIONS = {
     { value: 'exact', label: 'Exact date' },
     { value: 'window', label: 'Approximate window' },
     { value: 'tbd', label: 'TBD' }
+  ],
+  question_status: [
+    { value: 'open', label: 'Open' },
+    { value: 'answered', label: 'Answered' }
   ]
 };
 
