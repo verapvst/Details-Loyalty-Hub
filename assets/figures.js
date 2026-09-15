@@ -49,9 +49,25 @@ function renderRow(f) {
       <div class="list-row-meta">
         ${citationTag ? `<span class="badge badge-muted">${escapeHtml(citationTag)}</span>` : ''}
         ${f.created_by ? `<span>Added by ${escapeHtml(f.created_by)}</span>` : ''}
+        <button type="button" class="btn-text" data-insight-edit="${f.id}">Edit</button>
+        <button type="button" class="btn-danger-text" data-insight-delete="${f.id}">Delete</button>
       </div>
     </div>
   `;
+}
+
+function wireRowActions() {
+  listEl.querySelectorAll('[data-insight-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openInsightModal(allInsights.find(f => f.id === btn.dataset.insightEdit)));
+  });
+  listEl.querySelectorAll('[data-insight-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this insight?')) return;
+      await supabase.from('figures').delete().eq('id', btn.dataset.insightDelete);
+      showToast('Insight deleted.');
+      loadInsights();
+    });
+  });
 }
 
 function applyFiltersAndRender() {
@@ -79,6 +95,7 @@ function applyFiltersAndRender() {
   }
 
   listEl.innerHTML = filtered.map(renderRow).join('');
+  wireRowActions();
 }
 
 async function loadSources() {
@@ -113,13 +130,14 @@ document.getElementById('btn-clear-filters').addEventListener('click', () => {
   applyFiltersAndRender();
 });
 
-function openAddModal() {
+// One modal for both Add (insight=null) and Edit (insight=existing row).
+function openInsightModal(insight) {
   const root = document.getElementById('add-insight-root');
-  const sourceOptions = sources.map(s => `<option value="${s.id}">${escapeHtml(s.citation_tag)}</option>`).join('');
+  const sourceOptions = sources.map(s => `<option value="${s.id}" ${insight && insight.source_id === s.id ? 'selected' : ''}>${escapeHtml(s.citation_tag)}</option>`).join('');
   const fieldsHTML = INSIGHT_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${inputHTML(f, '')}
+      ${inputHTML(f, insight ? insight[f.key] : '')}
     </div>
   `).join('');
 
@@ -127,7 +145,7 @@ function openAddModal() {
     <div class="modal-overlay form-overlay" id="add-modal">
       <div class="form-modal" style="max-width: 560px;">
         <div class="form-modal-head">
-          <h2>Add Insight</h2>
+          <h2>${insight ? 'Edit Insight' : 'Add Insight'}</h2>
           <button type="button" class="form-modal-close" id="close-btn">&times;</button>
         </div>
         <form id="add-form">
@@ -146,7 +164,7 @@ function openAddModal() {
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
-            <button type="submit" class="btn-primary" id="submit-btn">Save Insight</button>
+            <button type="submit" class="btn-primary" id="submit-btn">${insight ? 'Save Changes' : 'Save Insight'}</button>
           </div>
         </form>
       </div>
@@ -165,28 +183,34 @@ function openAddModal() {
     errorEl.hidden = true;
     const data = readFormValues(e.target, INSIGHT_FIELDS);
     data.source_id = e.target.elements.source_id.value;
-    data.created_by = getIdentity();
-    data.created_at = new Date().toISOString();
 
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { error } = await supabase.from('figures').insert(data);
+    let error;
+    if (insight) {
+      ({ error } = await supabase.from('figures').update(data).eq('id', insight.id));
+    } else {
+      data.created_by = getIdentity();
+      data.created_at = new Date().toISOString();
+      ({ error } = await supabase.from('figures').insert(data));
+    }
+
     if (error) {
       errorEl.textContent = `Couldn't save insight: ${error.message}`;
       errorEl.hidden = false;
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Insight';
+      submitBtn.textContent = insight ? 'Save Changes' : 'Save Insight';
       return;
     }
 
     close();
-    showToast('Insight added.');
+    showToast(insight ? 'Insight updated.' : 'Insight added.');
     loadInsights();
   });
 }
 
-addBtn.addEventListener('click', openAddModal);
+addBtn.addEventListener('click', () => openInsightModal(null));
 
 loadSources().then(loadInsights);

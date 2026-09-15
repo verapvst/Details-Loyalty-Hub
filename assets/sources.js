@@ -6,6 +6,7 @@ import { inputHTML, readFormValues, escapeHtml } from './fields.js';
 initNav('sources');
 
 const listEl = document.getElementById('source-list');
+let allSources = [];
 
 function formatDate(d) {
   if (!d) return '';
@@ -30,6 +31,8 @@ function renderRow(s) {
         ${pathNote}
         ${s.created_by ? `<span>Added by ${escapeHtml(s.created_by)}</span>` : ''}
         ${s.created_at ? `<span>${formatDate(s.created_at)}</span>` : ''}
+        <button type="button" class="btn-text" data-source-edit="${s.id}">Edit</button>
+        <button type="button" class="btn-danger-text" data-source-delete="${s.id}">Delete</button>
       </div>
     </div>
   `;
@@ -46,20 +49,38 @@ async function loadSources() {
     return;
   }
 
-  if (!data || !data.length) {
+  allSources = data || [];
+
+  if (!allSources.length) {
     listEl.innerHTML = `<div class="empty-state"><div class="em-title">No sources yet</div><p>Add the first one to start citing stats and quotes.</p></div>`;
     return;
   }
 
-  listEl.innerHTML = data.map(renderRow).join('');
+  listEl.innerHTML = allSources.map(renderRow).join('');
+  wireRowActions();
 }
 
-function openAddModal() {
+function wireRowActions() {
+  listEl.querySelectorAll('[data-source-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openSourceModal(allSources.find(s => s.id === btn.dataset.sourceEdit)));
+  });
+  listEl.querySelectorAll('[data-source-delete]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this source? Any linked insights will keep the source name but lose the link.')) return;
+      await supabase.from('sources').delete().eq('id', btn.dataset.sourceDelete);
+      showToast('Source deleted.');
+      loadSources();
+    });
+  });
+}
+
+// One modal for both Add (source=null) and Edit (source=existing row).
+function openSourceModal(source) {
   const root = document.getElementById('add-source-root');
   const fieldsHTML = SOURCE_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${inputHTML(f, '')}
+      ${inputHTML(f, source ? source[f.key] : '')}
     </div>
   `).join('');
 
@@ -67,7 +88,7 @@ function openAddModal() {
     <div class="modal-overlay form-overlay" id="add-modal">
       <div class="form-modal" style="max-width: 560px;">
         <div class="form-modal-head">
-          <h2>Add Source</h2>
+          <h2>${source ? 'Edit Source' : 'Add Source'}</h2>
           <button type="button" class="form-modal-close" id="close-btn">&times;</button>
         </div>
         <form id="add-form">
@@ -77,7 +98,7 @@ function openAddModal() {
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
-            <button type="submit" class="btn-primary" id="submit-btn">Save Source</button>
+            <button type="submit" class="btn-primary" id="submit-btn">${source ? 'Save Changes' : 'Save Source'}</button>
           </div>
         </form>
       </div>
@@ -95,28 +116,34 @@ function openAddModal() {
     const errorEl = document.getElementById('form-error');
     errorEl.hidden = true;
     const data = readFormValues(e.target, SOURCE_FIELDS);
-    data.created_by = getIdentity();
-    data.created_at = new Date().toISOString();
 
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { error } = await supabase.from('sources').insert(data);
+    let error;
+    if (source) {
+      ({ error } = await supabase.from('sources').update(data).eq('id', source.id));
+    } else {
+      data.created_by = getIdentity();
+      data.created_at = new Date().toISOString();
+      ({ error } = await supabase.from('sources').insert(data));
+    }
+
     if (error) {
       errorEl.textContent = `Couldn't save source: ${error.message}`;
       errorEl.hidden = false;
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Source';
+      submitBtn.textContent = source ? 'Save Changes' : 'Save Source';
       return;
     }
 
     close();
-    showToast('Source added.');
+    showToast(source ? 'Source updated.' : 'Source added.');
     loadSources();
   });
 }
 
-document.getElementById('btn-add-source').addEventListener('click', openAddModal);
+document.getElementById('btn-add-source').addEventListener('click', () => openSourceModal(null));
 
 loadSources();

@@ -76,7 +76,7 @@ function renderGroup(g) {
     <div class="list-row favorite-row" data-programme-id="${g.programme_id}">
       <div class="list-row-top">
         <div>
-          <div class="badge badge-muted" style="margin-bottom: 8px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
+          <div class="badge badge-muted" style="margin-bottom: 4px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
           <div class="list-row-title">
             <a href="programme.html?id=${g.programme_id}" class="favorite-programme-link">${escapeHtml(g.programme_name)}</a>
             <span style="color: var(--muted); font-weight: 400;"> — ${escapeHtml(g.target_label)}</span>

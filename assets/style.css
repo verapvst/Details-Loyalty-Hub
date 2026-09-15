@@ -361,7 +361,16 @@ ul { list-style: none; }
 .favorite-entry-person { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-mid); }
 .favorite-entry-desc { font-size: 13px; color: var(--dark); line-height: 1.6; }
 .favorite-entry-notes { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 4px; }
-.favorite-row { cursor: pointer; }
+.favorite-row { cursor: pointer; padding: 14px 18px; }
+.favorite-row .list-row-top { margin-bottom: 4px; }
+.favorite-row .list-row-title { font-size: 13px; font-family: var(--font-body); font-weight: 600; }
+.favorite-row .favorite-entries { margin-top: 8px; gap: 8px; }
+.favorite-row .favorite-entry { padding-top: 8px; }
+.favorite-row .favorite-entry-desc { font-size: 12px; }
+.favorite-row .favorite-entry-notes { font-size: 11px; margin-top: 2px; }
+.favorite-row .favorite-entry-head { gap: 6px; margin-bottom: 3px; }
+.favorite-row .favorite-entry-person { font-size: 10px; }
+.favorite-row .chip { padding: 2px 8px; font-size: 9px; }
 .favorite-programme-link { color: var(--accent); }
 .favorite-programme-link:hover { text-decoration: underline; }
 
