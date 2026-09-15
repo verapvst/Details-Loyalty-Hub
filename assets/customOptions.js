@@ -20,8 +20,7 @@ export const LIST_LABELS = {
   qualification_unit: 'Tier Qualification Unit',
   meeting_type: 'Meeting Type',
   task_type: 'Task Type',
-  figure_type: 'Figure Type',
-  figure_topic: 'Figure Topic'
+  insight_type: 'Insight Type'
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.

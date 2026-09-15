@@ -1,23 +1,22 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
-import { FIGURE_FIELDS } from './options.js';
+import { INSIGHT_FIELDS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 
 initNav('figures');
 await loadCustomOptions();
 
-const listEl = document.getElementById('figure-list');
+const listEl = document.getElementById('insight-list');
 const noSourcesNote = document.getElementById('no-sources-note');
-const addBtn = document.getElementById('btn-add-figure');
+const addBtn = document.getElementById('btn-add-insight');
 const sectionCount = document.getElementById('section-count');
 const filterType = document.getElementById('filter-type');
-const filterTopic = document.getElementById('filter-topic');
-const filterSubtopic = document.getElementById('filter-subtopic');
+const filterSource = document.getElementById('filter-source');
 const searchInput = document.getElementById('search-input');
 
 let sources = [];
-let allFigures = [];
+let allInsights = [];
 
 function distinctSorted(list, key) {
   return [...new Set(list.map(f => f[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -30,29 +29,24 @@ function populateFilterOptions() {
       values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
     selectEl.value = current;
   };
-  fill(filterType, distinctSorted(allFigures, 'data_type'));
-  fill(filterTopic, distinctSorted(allFigures, 'topic'));
-  fill(filterSubtopic, distinctSorted(allFigures, 'subtopic'));
+  fill(filterType, distinctSorted(allInsights, 'insight_type'));
+  fill(filterSource, distinctSorted(allInsights.map(f => ({ citation_tag: f.sources?.citation_tag })), 'citation_tag'));
 }
 
 function renderRow(f) {
   const citationTag = f.sources ? f.sources.citation_tag : null;
   const sourceLink = f.sources ? f.sources.link_or_path : null;
   const isUrl = /^https?:\/\//i.test(sourceLink || '');
-  const tags = [f.data_type, f.topic, f.subtopic].filter(Boolean);
 
   return `
     <div class="list-row">
       <div class="list-row-top">
-        <div>
-          <div class="badge badge-muted" style="margin-bottom: 8px;">${escapeHtml(f.market || '')}</div>
-          <div class="figure-value">${escapeHtml(f.value)}</div>
-        </div>
+        <div class="badge badge-green">${escapeHtml(f.insight_type || 'Other')}</div>
         ${isUrl ? `<a href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener" class="btn-outline btn-sm">Visit Website</a>` : ''}
       </div>
-      <div class="list-row-body">${escapeHtml(f.statistic)}</div>
+      <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(f.insight_text)}</div>
+      ${f.supporting_detail ? `<div class="list-row-body">${escapeHtml(f.supporting_detail)}</div>` : ''}
       <div class="list-row-meta">
-        ${tags.map(t => `<span class="badge badge-green">${escapeHtml(t)}</span>`).join('')}
         ${citationTag ? `<span class="badge badge-muted">${escapeHtml(citationTag)}</span>` : ''}
         ${f.created_by ? `<span>Added by ${escapeHtml(f.created_by)}</span>` : ''}
       </div>
@@ -62,27 +56,25 @@ function renderRow(f) {
 
 function applyFiltersAndRender() {
   const type = filterType.value;
-  const topic = filterTopic.value;
-  const subtopic = filterSubtopic.value;
+  const source = filterSource.value;
   const q = searchInput.value.trim().toLowerCase();
 
-  const filtered = allFigures.filter(f => {
-    if (type && f.data_type !== type) return false;
-    if (topic && f.topic !== topic) return false;
-    if (subtopic && f.subtopic !== subtopic) return false;
+  const filtered = allInsights.filter(f => {
+    if (type && f.insight_type !== type) return false;
+    if (source && f.sources?.citation_tag !== source) return false;
     if (q) {
-      const hay = `${f.market || ''} ${f.statistic || ''} ${f.value || ''}`.toLowerCase();
+      const hay = `${f.insight_text || ''} ${f.supporting_detail || ''} ${f.sources?.citation_tag || ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
 
-  sectionCount.textContent = `${filtered.length} of ${allFigures.length}`;
+  sectionCount.textContent = `${filtered.length} of ${allInsights.length}`;
 
   if (!filtered.length) {
-    listEl.innerHTML = allFigures.length
-      ? `<div class="empty-state"><div class="em-title">No figures match</div><p>Try adjusting or clearing the filters.</p></div>`
-      : `<div class="empty-state"><div class="em-title">No figures yet</div><p>Add the first market stat once you have a source to link it to.</p></div>`;
+    listEl.innerHTML = allInsights.length
+      ? `<div class="empty-state"><div class="em-title">No insights match</div><p>Try adjusting or clearing the filters.</p></div>`
+      : `<div class="empty-state"><div class="em-title">No insights yet</div><p>Add the first one once you have a source to link it to.</p></div>`;
     return;
   }
 
@@ -96,36 +88,35 @@ async function loadSources() {
   noSourcesNote.hidden = sources.length > 0;
 }
 
-async function loadFigures() {
+async function loadInsights() {
   const { data, error } = await supabase
     .from('figures')
     .select('*, sources(citation_tag, link_or_path)')
     .order('created_at', { ascending: false });
 
   if (error) {
-    listEl.innerHTML = `<div class="error-state">Couldn't load figures: ${escapeHtml(error.message)}</div>`;
+    listEl.innerHTML = `<div class="error-state">Couldn't load insights: ${escapeHtml(error.message)}</div>`;
     return;
   }
 
-  allFigures = data || [];
+  allInsights = data || [];
   populateFilterOptions();
   applyFiltersAndRender();
 }
 
-[filterType, filterTopic, filterSubtopic].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterType, filterSource].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterType.value = '';
-  filterTopic.value = '';
-  filterSubtopic.value = '';
+  filterSource.value = '';
   searchInput.value = '';
   applyFiltersAndRender();
 });
 
 function openAddModal() {
-  const root = document.getElementById('add-figure-root');
+  const root = document.getElementById('add-insight-root');
   const sourceOptions = sources.map(s => `<option value="${s.id}">${escapeHtml(s.citation_tag)}</option>`).join('');
-  const fieldsHTML = FIGURE_FIELDS.map(f => `
+  const fieldsHTML = INSIGHT_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
       ${inputHTML(f, '')}
@@ -136,7 +127,7 @@ function openAddModal() {
     <div class="modal-overlay form-overlay" id="add-modal">
       <div class="form-modal" style="max-width: 560px;">
         <div class="form-modal-head">
-          <h2>Add Figure</h2>
+          <h2>Add Insight</h2>
           <button type="button" class="form-modal-close" id="close-btn">&times;</button>
         </div>
         <form id="add-form">
@@ -155,7 +146,7 @@ function openAddModal() {
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
-            <button type="submit" class="btn-primary" id="submit-btn">Save Figure</button>
+            <button type="submit" class="btn-primary" id="submit-btn">Save Insight</button>
           </div>
         </form>
       </div>
@@ -172,7 +163,7 @@ function openAddModal() {
     e.preventDefault();
     const errorEl = document.getElementById('form-error');
     errorEl.hidden = true;
-    const data = readFormValues(e.target, FIGURE_FIELDS);
+    const data = readFormValues(e.target, INSIGHT_FIELDS);
     data.source_id = e.target.elements.source_id.value;
     data.created_by = getIdentity();
     data.created_at = new Date().toISOString();
@@ -183,19 +174,19 @@ function openAddModal() {
 
     const { error } = await supabase.from('figures').insert(data);
     if (error) {
-      errorEl.textContent = `Couldn't save figure: ${error.message}`;
+      errorEl.textContent = `Couldn't save insight: ${error.message}`;
       errorEl.hidden = false;
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Figure';
+      submitBtn.textContent = 'Save Insight';
       return;
     }
 
     close();
-    showToast('Figure added.');
-    loadFigures();
+    showToast('Insight added.');
+    loadInsights();
   });
 }
 
 addBtn.addEventListener('click', openAddModal);
 
-loadSources().then(loadFigures);
+loadSources().then(loadInsights);

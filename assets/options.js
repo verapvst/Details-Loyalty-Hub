@@ -57,14 +57,11 @@ export const OPTIONS = {
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
   industry: Object.keys(INDUSTRY_SUBS),
-  // Used for Figures & Data's "Type" and "Topic" classification, so stats/quotes can be
-  // filtered and found quickly when pulling numbers for slides and the thesis.
-  figure_type: [
-    'Statistic', 'Citation / Quote', 'Amount', 'Fact', 'Forecast', 'Benchmark', 'Other'
-  ],
-  figure_topic: [
-    'Loyalty Programmes', 'Market Sizing', 'Consumer Trends', 'Competitive Landscape',
-    'Technology & Innovation', 'Regulation & Compliance', 'Other'
+  // Data & Insights: reusable pieces of information extracted from a Source, rather
+  // than a full article summary. Deliberately being tested with one real source first —
+  // revisit this taxonomy once a few more examples exist.
+  insight_type: [
+    'Key Finding', 'Statistic', 'Relationship', 'Framework', 'Strategic Implication', 'Other'
   ],
   programme_positioning: ['Mass', 'Mid-market', 'Premium', 'Luxury'],
   target_customer: [
@@ -177,13 +174,10 @@ export const SOURCE_FIELDS = [
 ];
 
 // source_id is added dynamically once sources are loaded (see figures.js)
-export const FIGURE_FIELDS = [
-  { key: 'data_type', label: 'Type', type: 'select', options: 'figure_type', required: true },
-  { key: 'topic', label: 'Topic', type: 'select', options: 'figure_topic', required: true },
-  { key: 'subtopic', label: 'Subtopic', type: 'select', options: 'industry' },
-  { key: 'market', label: 'Market', type: 'text', required: true },
-  { key: 'statistic', label: 'Statistic', type: 'textarea', full: true, required: true },
-  { key: 'value', label: 'Value', type: 'text', required: true }
+export const INSIGHT_FIELDS = [
+  { key: 'insight_text', label: 'Insight / Finding', type: 'textarea', full: true, required: true },
+  { key: 'insight_type', label: 'Type', type: 'select', options: 'insight_type', required: true },
+  { key: 'supporting_detail', label: 'Supporting Detail', type: 'textarea', full: true }
 ];
 
 // format/location/online_link/participants are deliberately not here — they're
