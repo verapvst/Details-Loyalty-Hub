@@ -1,7 +1,8 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { escapeHtml } from './fields.js';
-import { loadQuestions } from './questions.js';
+import { TEAM_MEMBERS } from './options.js';
+import { loadQuestions, renderQuestionsSection, openQuestionModal } from './questions.js';
 
 initNav('reports');
 
@@ -249,4 +250,128 @@ async function loadSavedReports() {
   });
 }
 
+// ---------------- Questions (manage directly here, not just on Schedules & Tasks) ----------------
+
+async function reloadQuestions() {
+  const qs = await loadQuestions();
+  renderQuestionsSection(document.getElementById('question-list'), qs, { onChange: reloadQuestions });
+}
+
+document.getElementById('btn-add-question').addEventListener('click', () => openQuestionModal({ onChange: reloadQuestions }));
+
+// ---------------- Next Steps (tasks due in the period right after the one selected) ----------------
+
+function nextStepsWindow() {
+  const periodStart = startInput.value || currentWeek().start;
+  const periodEnd = endInput.value || currentWeek().end;
+  const nextStart = addDays(periodEnd, 1);
+  const nextEnd = addDays(periodEnd, daysBetween(periodStart, periodEnd));
+  return { nextStart, nextEnd };
+}
+
+async function loadNextSteps() {
+  const { nextStart, nextEnd } = nextStepsWindow();
+  document.getElementById('next-steps-range').textContent =
+    `Tasks due ${shortDate(nextStart)} – ${shortDate(nextEnd)} (the period right after what's selected below)`;
+
+  const { data, error } = await supabase.from('tasks').select('*').gte('due_date', nextStart).lte('due_date', nextEnd).order('due_date');
+  const el = document.getElementById('next-steps-list');
+  if (error) {
+    el.innerHTML = `<div class="error-state">Couldn't load next steps: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  const nextTasks = data || [];
+  if (!nextTasks.length) {
+    el.innerHTML = `<div class="empty-state"><div class="em-title">Nothing planned yet</div><p>Add a task with a due date in that window — it'll show up here and in the Next Steps section once you generate.</p></div>`;
+    return;
+  }
+  el.innerHTML = nextTasks.map(t => `
+    <div class="task-row" data-task-id="${t.id}">
+      <span class="badge ${t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
+      <div class="task-main">
+        <div class="task-title">${escapeHtml(t.title)}</div>
+        <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>
+      </div>
+      <div class="task-due">${t.due_date}</div>
+      <button type="button" class="task-remove" data-next-step-remove="${t.id}">&times;</button>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('[data-next-step-remove]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this task?')) return;
+      await supabase.from('tasks').delete().eq('id', btn.dataset.nextStepRemove);
+      loadNextSteps();
+    });
+  });
+}
+
+function openAddNextStepModal() {
+  const { nextStart } = nextStepsWindow();
+  let root = document.getElementById('next-step-modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'next-step-modal-root';
+    document.body.appendChild(root);
+  }
+
+  root.innerHTML = `
+    <div class="modal-overlay form-overlay" id="next-step-modal">
+      <div class="form-modal" style="max-width: 480px;">
+        <div class="form-modal-head"><h2>Add Task</h2><button type="button" class="form-modal-close" id="next-step-close">&times;</button></div>
+        <form id="next-step-form">
+          <div class="form-modal-body">
+            <div class="form-grid">
+              <div class="form-field full"><label>Title *</label><input type="text" name="title" required /></div>
+              <div class="form-field"><label>Due Date *</label><input type="date" name="due_date" required value="${nextStart}" /></div>
+              <div class="form-field"><label>Type</label>
+                <select name="task_type"><option value="Task">Task</option><option value="Deliverable">Deliverable</option></select>
+              </div>
+            </div>
+            <div class="form-section-label">Assignees</div>
+            <div class="checkbox-row">${TEAM_MEMBERS.map(name => `<label class="checkbox-item"><input type="checkbox" name="assignee" value="${name}" /> ${name}</label>`).join('')}</div>
+          </div>
+          <div class="form-modal-foot">
+            <button type="button" class="btn-text" id="next-step-cancel">Cancel</button>
+            <button type="submit" class="btn-primary">Add Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('next-step-modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('next-step-close').addEventListener('click', close);
+  document.getElementById('next-step-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  document.getElementById('next-step-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const assignees = [...form.querySelectorAll('input[name="assignee"]:checked')].map(cb => cb.value);
+    const { error } = await supabase.from('tasks').insert({
+      title: form.elements['title'].value.trim(),
+      due_date: form.elements['due_date'].value,
+      task_type: form.elements['task_type'].value,
+      status: 'todo',
+      assignees,
+      created_by: getIdentity(),
+      created_at: new Date().toISOString()
+    });
+    if (error) {
+      showToast(`Couldn't add task: ${error.message}`, true);
+      return;
+    }
+    close();
+    showToast('Task added.');
+    loadNextSteps();
+  });
+}
+
+document.getElementById('btn-add-next-step').addEventListener('click', openAddNextStepModal);
+[startInput, endInput].forEach(el => el.addEventListener('change', loadNextSteps));
+
+reloadQuestions();
+loadNextSteps();
 loadSavedReports();
