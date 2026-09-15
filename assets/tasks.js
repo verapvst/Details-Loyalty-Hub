@@ -27,7 +27,8 @@ const MONTH_MAX = new Date(2027, 0, 1); // January 2027 — last month occurrenc
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // indexed by Date#getDay() — keep Sunday-first
+const MONTH_WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // Month view's header row, week starting Monday
 
 function daysRemaining(dateStr) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -325,7 +326,7 @@ function renderMonthView() {
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const firstDay = new Date(year, month, 1);
-  const startOffset = firstDay.getDay();
+  const startOffset = (firstDay.getDay() + 6) % 7; // Date#getDay() is Sunday-first; shift so Monday is column 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const atMin = monthCursor.getTime() <= MONTH_MIN.getTime();
@@ -358,7 +359,7 @@ function renderMonthView() {
       <div class="month-label">${MONTH_NAMES[month]} ${year}</div>
       <button type="button" class="month-nav" id="month-next" ${atMax ? 'disabled' : ''}>&rarr;</button>
     </div>
-    <div class="month-weekdays">${DAY_ABBR.map(d => `<div>${d}</div>`).join('')}</div>
+    <div class="month-weekdays">${MONTH_WEEKDAY_LABELS.map(d => `<div>${d}</div>`).join('')}</div>
     <div class="month-grid">${cells}</div>
     <div id="month-day-detail"></div>
   `;
