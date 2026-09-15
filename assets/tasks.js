@@ -11,8 +11,10 @@ import {
 initNav('tasks');
 await loadCustomOptions();
 
-const identity = getIdentity();
-
+// Deliberately NOT cached in a module-level constant: getIdentity() is called fresh
+// at every use site below so switching the active user (via the nav identity picker,
+// which doesn't reload the page) takes effect immediately — otherwise every "is this
+// my vote / my task" check would keep comparing against whoever was active on load.
 let meetings = [];
 let tasks = [];
 let polls = [];
@@ -497,7 +499,7 @@ function openAddMeetingModal(prefill = {}, onSaved = null) {
     data.online_link = e.target.elements['online_link'].value.trim() || null;
     data.participants = [...e.target.querySelectorAll('input[name="participant"]:checked')].map(cb => cb.value);
     data.status = 'scheduled';
-    data.created_by = identity;
+    data.created_by = getIdentity();
     data.created_at = new Date().toISOString();
 
     const repeat = e.target.elements['repeat'].value;
@@ -720,6 +722,7 @@ function pollSlotsFor(params) {
 // available; a "Select all" toggle per day lets someone who's free most of the time
 // mark the whole column at once and just uncheck the one slot they can't do.
 function pollGridHTML(poll, closed) {
+  const identity = getIdentity();
   const dates = [...new Set(poll.poll_slots.map(s => s.slot_date))].sort();
   const times = [...new Set(poll.poll_slots.map(s => s.slot_time))].sort();
   const byKey = {};
@@ -830,6 +833,7 @@ function renderPolls() {
 }
 
 async function toggleResponse(slotId) {
+  const identity = getIdentity();
   const { data: existing } = await supabase
     .from('poll_responses')
     .select('id')
@@ -850,6 +854,7 @@ async function toggleResponse(slotId) {
 // current user in a single action — quicker than clicking each slot individually
 // when someone is free most of the day and just needs to exclude one slot.
 async function toggleWholeDay(pollId, dateStr) {
+  const identity = getIdentity();
   const poll = polls.find(p => p.id === pollId);
   if (!poll) return;
   const daySlots = poll.poll_slots.filter(s => s.slot_date === dateStr);
@@ -949,7 +954,7 @@ function openAddPollModal() {
 
     const { data: poll, error } = await supabase
       .from('meeting_polls')
-      .insert({ ...params, status: 'open', created_by: identity, created_at: new Date().toISOString() })
+      .insert({ ...params, status: 'open', created_by: getIdentity(), created_at: new Date().toISOString() })
       .select()
       .single();
 
@@ -1238,7 +1243,7 @@ function openAddTaskModal() {
 
     const data = readFormValues(e.target, TASK_FIELDS);
     data.assignees = [...e.target.querySelectorAll('input[name="assignee"]:checked')].map(cb => cb.value);
-    data.created_by = identity;
+    data.created_by = getIdentity();
     data.created_at = new Date().toISOString();
 
     const repeat = e.target.elements['repeat'].value;

@@ -7,7 +7,6 @@ import { escapeHtml } from './fields.js';
 initNav('settings');
 await loadCustomOptions();
 
-const identity = getIdentity();
 const listSelect = document.getElementById('list-select');
 const detailEl = document.getElementById('list-detail');
 
@@ -16,7 +15,7 @@ listSelect.addEventListener('change', () => renderDetail(listSelect.value));
 
 async function addValue(key, value) {
   const { error } = await supabase.from('custom_options').insert({
-    list_key: key, value, created_by: identity, created_at: new Date().toISOString()
+    list_key: key, value, created_by: getIdentity(), created_at: new Date().toISOString()
   });
   if (error) {
     showToast(error.code === '23505' ? 'That value already exists.' : `Couldn't add value: ${error.message}`, true);
