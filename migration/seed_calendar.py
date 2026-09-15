@@ -26,7 +26,6 @@ HEADERS = {
 
 CREATED_BY = "Seed"
 NOW = "2026-09-15T00:00:00+00:00"
-TEAM = ["Vera", "André", "Chica", "Alice", "Cá", "Maria"]
 
 RECURRENCE_END = date(2027, 1, 3)  # occurrences generate through 3 Jan 2027
 
@@ -89,21 +88,10 @@ def seed_meetings():
     post("meetings", professor_rows)
 
 
-def seed_weekly_deliverable():
-    week_starts = mondays_from(date(2026, 9, 14), RECURRENCE_END)
-    recurrence_id = str(uuid.uuid4())
-    rows = [{
-        "title": "Weekly PDS / Project Update",
-        "description": "PDF prepared in PowerPoint.",
-        "due_date": d.isoformat(),
-        "status": "todo",
-        "task_type": "Deliverable",
-        "assignees": TEAM,  # not yet permanently assigned — starts as the whole team
-        "recurrence_id": recurrence_id,
-        "created_by": CREATED_BY,
-        "created_at": NOW,
-    } for d in week_starts]
-    post("tasks", rows)
+# NOTE: the weekly deliverable is no longer a recurring Task/Deliverable row — it's
+# generated on demand by the Weekly Reports tab instead (see architecture note in
+# tasks.js / weekly-reports.js). seed_weekly_deliverable() was removed along with the
+# 16 rows it used to create.
 
 
 def seed_research_tasks():
@@ -168,7 +156,6 @@ def seed_milestones():
 
 def main():
     seed_meetings()
-    seed_weekly_deliverable()
     seed_research_tasks()
     seed_milestones()
 
