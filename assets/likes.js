@@ -59,9 +59,121 @@ export function wireHearts(container, ctx) {
 export function targetTypeLabel(type) {
   const labels = {
     mechanism: 'Mechanism', benefit: 'Benefit', membership_type: 'Membership Type',
-    target_customer: 'Target Customer', tier: 'Tier', feature: 'Feature'
+    target_customer: 'Target Customer', tier: 'Tier', feature: 'Feature', other: 'Other'
   };
   return labels[type] || type;
+}
+
+// The selectable values for a given target type, drawn from the programme's own
+// (already-loaded) data — not the full global taxonomy — so a manually-created
+// Favourite always points at something genuinely present on that programme.
+// Each option carries the row id when one exists (tier/feature), else null.
+function valueOptionsFor(targetType, { programme, tiers, features }) {
+  switch (targetType) {
+    case 'mechanism': return (programme.mechanisms || []).map(v => ({ value: v, id: null }));
+    case 'benefit': return (programme.benefits || []).map(v => ({ value: v, id: null }));
+    case 'membership_type': return programme.membership_type ? [{ value: programme.membership_type, id: null }] : [];
+    case 'target_customer': return (programme.target_customer || []).map(v => ({ value: v, id: null }));
+    case 'tier': return (tiers || []).map(t => ({ value: t.tier_name, id: t.id }));
+    case 'feature': return (features || []).map(f => ({ value: f.feature_name, id: f.id }));
+    default: return [];
+  }
+}
+
+// Step 1 of manual Favourite creation: pick WHAT on this programme to favourite
+// (as opposed to clicking a heart already attached to a specific chip). Once
+// confirmed, hands off to the normal openLikeModal — same object, same table,
+// whichever entry point was used to get there.
+export function openTargetPickerModal({ programmeId, programmeName, programme, tiers, features, likes, onChange }) {
+  let root = document.getElementById('like-modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'like-modal-root';
+    document.body.appendChild(root);
+  }
+
+  const TYPES = ['mechanism', 'benefit', 'membership_type', 'target_customer', 'tier', 'feature', 'other'];
+
+  root.innerHTML = `
+    <div class="modal-overlay form-overlay" id="picker-modal">
+      <div class="form-modal" style="max-width: 460px;">
+        <div class="form-modal-head">
+          <h2>Add Favourite</h2>
+          <button type="button" class="form-modal-close" id="picker-close">&times;</button>
+        </div>
+        <form id="picker-form">
+          <div class="form-modal-body">
+            <div class="form-field full">
+              <label>What are you favouriting on ${escapeHtml(programmeName)}?</label>
+              <select name="target_type" id="picker-type">
+                ${TYPES.map(t => `<option value="${t}">${escapeHtml(targetTypeLabel(t))}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-field full" id="picker-value-wrap">
+              <label>Which one?</label>
+              <select name="target_value" id="picker-value"></select>
+            </div>
+          </div>
+          <div class="form-modal-foot">
+            <button type="button" class="btn-text" id="picker-cancel">Cancel</button>
+            <button type="submit" class="btn-primary">Continue</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('picker-modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('picker-close').addEventListener('click', close);
+  document.getElementById('picker-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const typeSel = document.getElementById('picker-type');
+  const valueWrap = document.getElementById('picker-value-wrap');
+  let currentOptions = [];
+
+  function syncValueField() {
+    const type = typeSel.value;
+    currentOptions = type === 'other' ? [] : valueOptionsFor(type, { programme, tiers, features });
+
+    if (type === 'other' || currentOptions.length === 0) {
+      valueWrap.innerHTML = `
+        <label>${type === 'other' ? 'Describe it' : `No ${targetTypeLabel(type).toLowerCase()} values found on this programme — describe it`}</label>
+        <input type="text" name="target_value_other" placeholder="e.g. a detail not yet captured elsewhere" required />
+      `;
+    } else {
+      valueWrap.innerHTML = `
+        <label>Which one?</label>
+        <select name="target_value" id="picker-value">
+          ${currentOptions.map((o, i) => `<option value="${i}">${escapeHtml(o.value)}</option>`).join('')}
+        </select>
+      `;
+    }
+  }
+  typeSel.addEventListener('change', syncValueField);
+  syncValueField();
+
+  document.getElementById('picker-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const type = typeSel.value;
+
+    let targetLabel, targetId;
+    if (type === 'other' || currentOptions.length === 0) {
+      targetLabel = form.elements['target_value_other'].value.trim();
+      targetId = null;
+      if (!targetLabel) return;
+    } else {
+      const opt = currentOptions[Number(form.elements['target_value'].value)];
+      targetLabel = opt.value;
+      targetId = opt.id;
+    }
+
+    close();
+    const { mine } = likeSummary(likes, type, targetLabel);
+    openLikeModal({ programmeId, programmeName, targetType: type, targetLabel, targetId, existingLike: mine, likes, onChange });
+  });
 }
 
 export function openLikeModal({ programmeId, programmeName, targetType, targetLabel, targetId, existingLike, likes, onChange }) {

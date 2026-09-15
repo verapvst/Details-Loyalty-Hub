@@ -6,7 +6,7 @@ import {
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
-import { loadLikes, likeSummary, heartHTML, wireHearts } from './likes.js';
+import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
 
 initNav('database');
 await loadCustomOptions();
@@ -268,6 +268,17 @@ function featuresBlockHTML() {
   `;
 }
 
+function addFavouriteBlockHTML() {
+  if (editing) return '';
+  return `
+    <div class="record-block">
+      <h3>Favourite something from this programme</h3>
+      <p class="settings-hint" style="margin-bottom: 14px;">Didn't click a heart above? Pick any mechanism, benefit, tier, feature or other element to favourite it directly.</p>
+      <button type="button" class="btn-outline" id="btn-add-favourite">+ Add Favourite</button>
+    </div>
+  `;
+}
+
 function sourceBlockHTML() {
   if (!editing) {
     const isUrl = /^https?:\/\//i.test(programme.source_url || '');
@@ -331,6 +342,7 @@ function render() {
         ${mechanismsBenefitsBlockHTML()}
         ${featuresBlockHTML()}
         ${sourceBlockHTML()}
+        ${addFavouriteBlockHTML()}
       </div>
     </form>
   `;
@@ -378,6 +390,12 @@ function render() {
       programmeName: programme.programme_name,
       likes,
       onChange: (newLikes) => { likes = newLikes; render(); }
+    });
+    document.getElementById('btn-add-favourite').addEventListener('click', () => {
+      openTargetPickerModal({
+        programmeId, programmeName: programme.programme_name, programme, tiers, features, likes,
+        onChange: (newLikes) => { likes = newLikes; render(); }
+      });
     });
   }
 }

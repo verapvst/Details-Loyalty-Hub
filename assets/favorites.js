@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
-import { initNav } from './app.js';
+import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
-import { heartHTML, likeSummary, targetTypeLabel, openLikeModal } from './likes.js';
+import { heartHTML, likeSummary, targetTypeLabel, openLikeModal, openTargetPickerModal } from './likes.js';
 
 initNav('favorites');
 
@@ -65,7 +65,8 @@ function renderGroup(g) {
             ${e.psychological_effect.map(p => `<span class="chip" style="padding: 3px 10px;">${escapeHtml(p)}</span>`).join('')}
           </div>
         ` : ''}
-        <button type="button" class="task-remove" data-like-delete="${e.id}" style="margin-left: auto;">&times;</button>
+        <button type="button" class="btn-text" data-like-edit="${e.id}" style="margin-left: auto;">Edit</button>
+        <button type="button" class="task-remove" data-like-delete="${e.id}">&times;</button>
       </div>
       ${e.description ? `<div class="favorite-entry-desc">${escapeHtml(e.description)}</div>` : ''}
       ${e.psychological_effect_notes ? `<div class="favorite-entry-notes">${escapeHtml(e.psychological_effect_notes)}</div>` : ''}
@@ -73,7 +74,7 @@ function renderGroup(g) {
   `).join('');
 
   return `
-    <div class="list-row favorite-row" data-programme-id="${g.programme_id}">
+    <div class="list-row favorite-row" data-programme-id="${g.programme_id}" data-programme-name="${escapeHtml(g.programme_name)}">
       <div class="list-row-top">
         <div>
           <div class="badge badge-muted" style="margin-bottom: 4px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
@@ -128,12 +129,34 @@ function wireEntryDelete() {
   });
 }
 
+// Any team member can edit any entry (matches the rest of the app — tasks, meetings,
+// sources are all editable by anyone), not just the person who originally added it.
+function wireEntryEdit() {
+  listEl.querySelectorAll('[data-like-edit]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const entry = allLikes.find(l => l.id === btn.dataset.likeEdit);
+      if (!entry) return;
+      const groupEntries = allLikes.filter(l =>
+        l.programme_id === entry.programme_id && l.target_type === entry.target_type && l.target_label === entry.target_label
+      );
+      openLikeModal({
+        programmeId: entry.programme_id,
+        programmeName: entry.programmes?.programme_name || 'Unknown programme',
+        targetType: entry.target_type, targetLabel: entry.target_label, targetId: entry.target_id,
+        existingLike: entry, likes: groupEntries,
+        onChange: loadAllLikes
+      });
+    });
+  });
+}
+
 // The programme name is a real link (for hover affordance / opening in a new tab),
-// but the whole row is clickable too — only the heart and delete buttons opt out.
+// but the whole row is clickable too — only the heart, edit and delete buttons opt out.
 function wireRowNavigation() {
   listEl.querySelectorAll('.favorite-row').forEach(row => {
     row.addEventListener('click', (e) => {
-      if (e.target.closest('.like-heart') || e.target.closest('[data-like-delete]') || e.target.closest('a')) return;
+      if (e.target.closest('.like-heart') || e.target.closest('[data-like-delete]') || e.target.closest('[data-like-edit]') || e.target.closest('a')) return;
       window.location.href = `programme.html?id=${row.dataset.programmeId}`;
     });
   });
@@ -168,6 +191,7 @@ function applyFiltersAndRender() {
 
   listEl.innerHTML = filtered.map(renderGroup).join('');
   wireFavoriteHearts();
+  wireEntryEdit();
   wireEntryDelete();
   wireRowNavigation();
 }
@@ -197,5 +221,71 @@ document.getElementById('btn-clear-filters').addEventListener('click', () => {
   searchInput.value = '';
   applyFiltersAndRender();
 });
+
+// "Add Favourite" from this page: pick a programme first, then hand off to the same
+// target picker used from the programme page itself — same underlying object either way.
+function openProgrammePickerModal() {
+  let root = document.getElementById('like-modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'like-modal-root';
+    document.body.appendChild(root);
+  }
+
+  root.innerHTML = `
+    <div class="modal-overlay form-overlay" id="programme-picker-modal">
+      <div class="form-modal" style="max-width: 460px;">
+        <div class="form-modal-head">
+          <h2>Add Favourite</h2>
+          <button type="button" class="form-modal-close" id="pp-close">&times;</button>
+        </div>
+        <div class="form-modal-body">
+          <div class="form-field full">
+            <label>Programme</label>
+            <select id="pp-programme"><option value="">Loading…</option></select>
+          </div>
+        </div>
+        <div class="form-modal-foot">
+          <button type="button" class="btn-text" id="pp-cancel">Cancel</button>
+          <button type="button" class="btn-primary" id="pp-next">Next</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('programme-picker-modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('pp-close').addEventListener('click', close);
+  document.getElementById('pp-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const sel = document.getElementById('pp-programme');
+  supabase.from('programmes').select('id, programme_name').order('programme_name').then(({ data }) => {
+    const programmes = data || [];
+    sel.innerHTML = '<option value=""></option>' +
+      programmes.map(p => `<option value="${p.id}">${escapeHtml(p.programme_name)}</option>`).join('');
+  });
+
+  document.getElementById('pp-next').addEventListener('click', async () => {
+    const programmeId = sel.value;
+    if (!programmeId) { showToast('Pick a programme first.', true); return; }
+    const programmeName = sel.options[sel.selectedIndex].textContent;
+
+    const [{ data: programme }, { data: tiers }, { data: features }, { data: programmeLikes }] = await Promise.all([
+      supabase.from('programmes').select('*').eq('id', programmeId).single(),
+      supabase.from('programme_tiers').select('*').eq('programme_id', programmeId),
+      supabase.from('programme_features').select('*').eq('programme_id', programmeId),
+      supabase.from('likes').select('*').eq('programme_id', programmeId)
+    ]);
+
+    close();
+    openTargetPickerModal({
+      programmeId, programmeName, programme, tiers: tiers || [], features: features || [],
+      likes: programmeLikes || [], onChange: loadAllLikes
+    });
+  });
+}
+
+document.getElementById('btn-add-favourite').addEventListener('click', openProgrammePickerModal);
 
 loadAllLikes();
