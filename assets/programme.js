@@ -6,6 +6,7 @@ import {
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
+import { loadLikes, likeSummary, heartHTML, wireHearts } from './likes.js';
 
 initNav('database');
 await loadCustomOptions();
@@ -17,6 +18,7 @@ const programmeId = params.get('id');
 let programme = null;
 let tiers = [];
 let features = [];
+let likes = [];
 let editing = false;
 
 if (!programmeId) {
@@ -32,6 +34,17 @@ function valueOrEmpty(v) {
 function chipsOrEmpty(arr) {
   if (!Array.isArray(arr) || !arr.length) return `<span class="value empty">—</span>`;
   return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>`;
+}
+
+// Like chips: same as chipsOrEmpty but each chip carries its own heart button.
+function likeableChipsHTML(targetType, arr) {
+  if (!Array.isArray(arr) || !arr.length) return `<span class="value empty">—</span>`;
+  return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `
+    <span class="like-chip">
+      <span class="badge badge-muted">${escapeHtml(v)}</span>
+      ${heartHTML(targetType, v, null, likeSummary(likes, targetType, v))}
+    </span>
+  `).join('')}</div>`;
 }
 
 function simpleFieldsBlockHTML(title, fields) {
@@ -70,7 +83,7 @@ function classificationBlockHTML() {
         </div>
         <div class="record-field full">
           <label>Target Customer</label>
-          ${editing ? inputHTML({ key: 'target_customer', type: 'multiselect', options: 'target_customer' }, programme.target_customer) : chipsOrEmpty(programme.target_customer)}
+          ${editing ? inputHTML({ key: 'target_customer', type: 'multiselect', options: 'target_customer' }, programme.target_customer) : likeableChipsHTML('target_customer', programme.target_customer)}
         </div>
       </div>
     </div>
@@ -90,6 +103,30 @@ function geographyBlockHTML() {
         <div class="record-field full">
           <label>Geographic Scope</label>
           ${editing ? inputHTML({ key: 'geographic_scope', type: 'multiselect', options: 'geographic_scope' }, programme.geographic_scope) : chipsOrEmpty(programme.geographic_scope)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function membershipBlockHTML() {
+  const mtField = PROGRAMME_MEMBERSHIP_FIELDS.find(f => f.key === 'membership_type');
+  const arField = PROGRAMME_MEMBERSHIP_FIELDS.find(f => f.key === 'access_registration');
+  const mtDisplay = programme.membership_type
+    ? `<span class="like-chip"><span class="value">${escapeHtml(programme.membership_type)}</span>${heartHTML('membership_type', programme.membership_type, null, likeSummary(likes, 'membership_type', programme.membership_type))}</span>`
+    : valueOrEmpty(programme.membership_type);
+
+  return `
+    <div class="record-block">
+      <h3>Membership</h3>
+      <div class="record-grid">
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Membership Type</label>
+          ${editing ? inputHTML(mtField, programme.membership_type) : mtDisplay}
+        </div>
+        <div class="record-field ${editing ? 'editing' : ''}">
+          <label>Access / Registration</label>
+          ${editing ? inputHTML(arField, programme.access_registration) : valueOrEmpty(programme.access_registration)}
         </div>
       </div>
     </div>
@@ -139,9 +176,9 @@ function mechanismsBenefitsBlockHTML() {
       <div class="record-block">
         <h3>Mechanisms &amp; Benefits</h3>
         <div class="record-grid">
-          <div class="record-field full"><label>Mechanisms</label>${chipsOrEmpty(mechanisms)}</div>
+          <div class="record-field full"><label>Mechanisms</label>${likeableChipsHTML('mechanism', mechanisms)}</div>
           ${pointsInfo}${discountInfo}${partnerInfo}
-          <div class="record-field full"><label>Benefits</label>${chipsOrEmpty(programme.benefits)}</div>
+          <div class="record-field full"><label>Benefits</label>${likeableChipsHTML('benefit', programme.benefits)}</div>
         </div>
       </div>
       ${tiersDisplayBlockHTML()}
@@ -197,13 +234,14 @@ function tiersDisplayBlockHTML() {
       <td>${t.tier_price === null || t.tier_price === undefined ? '—' : `${t.tier_price} ${escapeHtml(t.currency || 'EUR')}`}</td>
       <td>${t.qualification_amount !== null && t.qualification_amount !== undefined ? `${t.qualification_amount} ` : ''}${escapeHtml(t.qualification_unit) || '—'}</td>
       <td>${escapeHtml(t.note) || ''}</td>
+      <td>${heartHTML('tier', t.tier_name, t.id, likeSummary(likes, 'tier', t.tier_name))}</td>
     </tr>
   `).join('');
   return `
     <div class="record-block">
       <h3>Programme Tiers</h3>
       <table class="record-tier-table">
-        <thead><tr><th>Order</th><th>Tier Name</th><th>Fee</th><th>Qualification</th><th>Note</th></tr></thead>
+        <thead><tr><th>Order</th><th>Tier Name</th><th>Fee</th><th>Qualification</th><th>Note</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -213,7 +251,12 @@ function tiersDisplayBlockHTML() {
 function featuresBlockHTML() {
   if (!editing) {
     if (!features.length) return `<div class="record-block"><h3>Features</h3><p class="value empty">No features recorded</p></div>`;
-    return `<div class="record-block"><h3>Features</h3><div class="chip-row" style="margin-bottom:0;">${features.map(f => `<span class="badge badge-green">${escapeHtml(f.feature_name)}</span>`).join('')}</div></div>`;
+    return `<div class="record-block"><h3>Features</h3><div class="chip-row" style="margin-bottom:0;">${features.map(f => `
+      <span class="like-chip">
+        <span class="badge badge-green">${escapeHtml(f.feature_name)}</span>
+        ${heartHTML('feature', f.feature_name, f.id, likeSummary(likes, 'feature', f.feature_name))}
+      </span>
+    `).join('')}</div></div>`;
   }
   const rows = features.length ? features : [{}];
   return `
@@ -284,7 +327,7 @@ function render() {
         ${simpleFieldsBlockHTML('Identity', PROGRAMME_IDENTITY_FIELDS)}
         ${classificationBlockHTML()}
         ${geographyBlockHTML()}
-        ${simpleFieldsBlockHTML('Membership', PROGRAMME_MEMBERSHIP_FIELDS)}
+        ${membershipBlockHTML()}
         ${mechanismsBenefitsBlockHTML()}
         ${featuresBlockHTML()}
         ${sourceBlockHTML()}
@@ -330,6 +373,12 @@ function render() {
     document.getElementById('btn-save').addEventListener('click', saveChanges);
   } else {
     document.getElementById('btn-edit').addEventListener('click', () => { editing = true; render(); });
+    wireHearts(root, {
+      programmeId,
+      programmeName: programme.programme_name,
+      likes,
+      onChange: (newLikes) => { likes = newLikes; render(); }
+    });
   }
 }
 
@@ -423,6 +472,7 @@ async function load() {
   }
   programme = data;
   await loadTiersAndFeatures();
+  likes = await loadLikes(programmeId);
   render();
 }
 

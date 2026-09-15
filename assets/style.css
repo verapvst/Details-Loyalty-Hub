@@ -245,6 +245,19 @@ ul { list-style: none; }
 
 .mech-block { padding: 16px; background: var(--surface-alt); border-radius: var(--radius); margin-bottom: 4px; }
 
+/* ---------- Likes ---------- */
+.like-chip { display: inline-flex; align-items: center; gap: 4px; }
+.like-heart {
+  display: inline-flex; align-items: center; gap: 3px; padding: 3px 6px; border-radius: 12px;
+  font-size: 11px; color: var(--muted); transition: background var(--transition), transform var(--transition);
+}
+.like-heart:hover { background: var(--surface-alt); transform: scale(1.08); }
+.like-heart.liked:hover { background: var(--red-light); }
+.heart-icon { font-size: 13px; line-height: 1; }
+.heart-count { font-weight: 600; font-size: 10px; }
+.record-tier-table .like-heart { padding: 3px 6px; }
+.like-target-display { font-size: 14px; font-weight: 600; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); }
+
 .form-error { font-size: 12px; color: var(--red); background: var(--red-light); padding: 10px 14px; border-radius: var(--radius); margin-bottom: 16px; }
 .form-error[hidden] { display: none; }
 

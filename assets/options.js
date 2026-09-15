@@ -102,6 +102,12 @@ export const OPTIONS = {
     'Automatic / No qualification', 'Invitation only', 'Other'
   ],
   yes_no: ['Yes', 'No'],
+  // The Favorites/Likes annotation layer's controlled psychology taxonomy.
+  // Deliberately kept lean — revisit only once real liked data has accumulated.
+  psychological_effect: [
+    'Anchoring', 'Loss Aversion', 'Social Proof', 'Scarcity', 'Status / Signalling',
+    'Switching Costs / Lock-in', 'Goal-Gradient', 'Variable Reward', 'Convenience', 'Reciprocity'
+  ],
   meeting_type: ['Client', 'Group', 'Professor'],
   // The tasks.status column has a pre-existing database CHECK constraint allowing only
   // these three machine values — the labels are just how they're shown in the UI.
