@@ -798,7 +798,7 @@ function renderPolls() {
         ${top.length ? `
           <div class="poll-top">
             <span class="poll-top-label">Top availability</span>
-            ${top.map(r => `<span class="poll-top-chip">${escapeHtml(formatSlot(r.slot))} · ${r.count}/${TEAM_MEMBERS.length}</span>`).join('')}
+            ${top.map(r => `<span class="poll-top-chip" title="${escapeHtml(r.names.join(', '))}">${escapeHtml(formatSlot(r.slot))} · ${r.count}/${TEAM_MEMBERS.length}</span>`).join('')}
           </div>
         ` : ''}
         ${pollGridHTML(poll, closed)}
@@ -1084,8 +1084,10 @@ function openScheduleMeetingModal(poll) {
               ${top.map((r, i) => `
                 <button type="button" class="schedule-suggestion" data-slot-id="${r.slot.id}">
                   <span class="schedule-suggestion-rank">${i + 1}</span>
-                  <span class="schedule-suggestion-label">${escapeHtml(formatSlot(r.slot))}</span>
-                  <span class="schedule-suggestion-count">${r.count}/${TEAM_MEMBERS.length} available</span>
+                  <span class="schedule-suggestion-main">
+                    <span class="schedule-suggestion-label">${escapeHtml(formatSlot(r.slot))} <span class="schedule-suggestion-count">· ${r.count}/${TEAM_MEMBERS.length} available</span></span>
+                    <span class="schedule-suggestion-names">${escapeHtml(r.names.join(', '))}</span>
+                  </span>
                 </button>
               `).join('')}
             </div>
