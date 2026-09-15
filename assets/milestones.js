@@ -8,7 +8,9 @@ import { escapeHtml } from './fields.js';
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const BADGE_CLASS = { deadline: 'badge-red', steering: 'badge-muted', presentation: 'badge-green' };
+// All milestone types share one color (red) — steering points and big deliverables/
+// deadlines are all "the things that matter most on the timeline."
+const BADGE_CLASS = { deadline: 'badge-red', steering: 'badge-red', presentation: 'badge-red' };
 
 function toDateStr(d) {
   const y = d.getFullYear();

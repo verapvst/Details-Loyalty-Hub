@@ -16,6 +16,10 @@
   --white: #FFFFFF;
   --red: #D70015;
   --red-light: #FFEEEE;
+  --yellow: #B7791F;
+  --yellow-light: #FCF1DC;
+  --green: #1E7A34;
+  --green-light: #E8F5E9;
   --nav-h: 56px;
   --radius: 10px;
   --radius-lg: 20px;
@@ -327,6 +331,7 @@ ul { list-style: none; }
 .badge-green { color: var(--accent); background: var(--accent-light); }
 .badge-muted { color: var(--muted); background: var(--surface-alt); }
 .badge-red { color: var(--red); background: var(--red-light); }
+.badge-yellow { color: var(--yellow); background: var(--yellow-light); }
 .badge-dark { color: var(--white); background: var(--dark); }
 
 /* ---------- Page header (utility pages: Sources, Figures, Tasks) ---------- */
@@ -376,15 +381,37 @@ ul { list-style: none; }
 .poll-slot-label { flex: 1; font-weight: 500; }
 .poll-slot-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .poll-slot-names { font-size: 11px; color: var(--muted-light); white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-.poll-slot-confirm { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-light); border-radius: 14px; padding: 5px 12px; white-space: nowrap; }
-.poll-slot-confirm:hover { background: #EDE1C6; }
-.poll-confirmed-note { font-size: 12px; color: var(--accent); margin-top: 10px; }
+
+.poll-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.poll-top-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.poll-top-chip { font-size: 11px; font-weight: 600; color: var(--accent-mid); background: var(--accent-light); padding: 5px 12px; border-radius: 14px; white-space: nowrap; }
+.poll-actions { display: flex; align-items: center; gap: 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.poll-actions .btn-primary { margin-left: auto; }
+
+.schedule-suggestions { display: flex; flex-direction: column; gap: 8px; }
+.schedule-suggestion {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px;
+  background: var(--surface-alt); border-radius: var(--radius); text-align: left;
+  transition: background var(--transition);
+}
+.schedule-suggestion:hover { background: var(--accent-light); }
+.schedule-suggestion-rank {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--dark); color: var(--white);
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.schedule-suggestion-label { flex: 1; font-weight: 500; font-size: 13px; }
+.schedule-suggestion-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
 /* ---------- Tasks list ---------- */
 .task-row {
-  display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface);
+  display: flex; align-items: center; gap: 16px; padding: 16px 20px 16px 17px; background: var(--surface);
   border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom: 8px; flex-wrap: wrap;
+  border-left: 3px solid transparent; transition: padding var(--transition), opacity var(--transition);
 }
+.task-row.status-todo { border-left-color: var(--red); }
+.task-row.status-in_progress { border-left-color: var(--yellow); }
+.task-row.status-done { border-left-color: var(--green); }
+.task-row.status-cancelled { border-left-color: var(--muted-light); }
 .task-main { flex: 1; min-width: 180px; }
 .task-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
 .task-assignees { font-size: 12px; color: var(--muted); }
@@ -394,8 +421,21 @@ ul { list-style: none; }
   background: var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%236E6E73" stroke-width="1.4" fill="none"/></svg>') no-repeat right 10px center;
   appearance: none; -webkit-appearance: none; cursor: pointer;
 }
+.task-status-select.status-todo { background-color: var(--red-light); color: var(--red); }
+.task-status-select.status-in_progress { background-color: var(--yellow-light); color: var(--yellow); }
+.task-status-select.status-done { background-color: var(--green-light); color: var(--green); }
+.task-status-select.status-cancelled { background-color: var(--surface-alt); color: var(--muted); }
 .task-remove { color: var(--muted); font-size: 16px; padding: 4px 6px; }
 .task-remove:hover { color: var(--red); }
+
+/* Tasks due outside the current + next week: same info, lighter footprint so the
+   list stays scannable instead of listing every distant task at full weight. */
+.task-row.compact { padding: 8px 20px 8px 17px; opacity: 0.75; }
+.task-row.compact .task-title { font-size: 12px; margin-bottom: 2px; }
+.task-row.compact .task-assignees { display: none; }
+.task-row.compact .badge { padding: 3px 9px; font-size: 9px; }
+.task-row.compact .task-due { font-size: 11px; }
+.task-row.compact .task-status-select { padding: 4px 22px 4px 10px; font-size: 10px; }
 .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .checkbox-item { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .checkbox-item input { width: 15px; height: 15px; accent-color: var(--accent); }
@@ -483,19 +523,24 @@ ul { list-style: none; }
 .month-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
 .month-weekdays div { text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.month-cell { aspect-ratio: 1; background: var(--surface-alt); border-radius: var(--radius); padding: 8px; cursor: pointer; transition: background var(--transition); display: flex; flex-direction: column; }
+.month-cell { min-height: 88px; background: var(--surface-alt); border-radius: var(--radius); padding: 8px; cursor: pointer; transition: background var(--transition); display: flex; flex-direction: column; }
 .month-cell:hover { background: var(--accent-light); }
 .month-cell.empty { background: transparent; cursor: default; }
 .month-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
 .month-cell.today .month-cell-num { color: var(--accent); font-weight: 700; }
 .month-cell.selected { box-shadow: 0 0 0 2px var(--dark); }
-.month-cell-num { font-size: 12px; font-weight: 600; }
-.month-cell-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
-.month-dot { width: 6px; height: 6px; border-radius: 50%; }
-.month-dot-meeting { background: var(--accent); }
-.month-dot-task { background: var(--muted-light); }
-.month-dot-deliverable { background: var(--red); }
-.month-dot-milestone { background: var(--dark); }
+.month-cell-num { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.month-cell-pills { display: flex; flex-direction: column; gap: 2px; }
+.month-pill {
+  font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 5px; line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.month-pill-meeting { background: var(--surface); color: var(--muted); }
+.month-pill-deliverable { background: var(--yellow-light); color: var(--yellow); }
+.month-pill-milestone { background: var(--red-light); color: var(--red); }
+.month-pill-task { background: var(--surface); color: var(--muted); }
+.month-pill.cancelled-pill { opacity: 0.55; text-decoration: line-through; }
+.month-pill-more { background: transparent; color: var(--muted-light); padding: 2px 5px 0; }
 .month-day-detail { margin-top: 18px; }
 .month-day-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
 .month-day-empty { font-size: 13px; color: var(--muted); margin-top: 18px; }
@@ -515,9 +560,9 @@ ul { list-style: none; }
   .agenda-row, .task-row { flex-wrap: wrap; }
   .poll-slot { flex-wrap: wrap; }
   .poll-slot-names { display: none; }
-  .month-cell { padding: 5px; }
+  .month-cell { padding: 5px; min-height: 72px; }
   .month-label { min-width: 0; font-size: 16px; }
-  .month-cell-dots { gap: 2px; }
+  .month-pill { font-size: 8px; padding: 1px 4px; }
 }
 @media (max-width: 480px) {
   .identity-grid { grid-template-columns: 1fr 1fr; }

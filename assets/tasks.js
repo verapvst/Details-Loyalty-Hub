@@ -41,6 +41,21 @@ function formatTime(t) {
   return t ? t.slice(0, 5) : '';
 }
 
+// This week (Mon-Sun) + next week — the window that gets full-weight task rows.
+function nearTermRange() {
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const day = now.getDay();
+  const monday = new Date(now); monday.setDate(now.getDate() + (day === 0 ? -6 : 1 - day));
+  const nextSunday = new Date(monday); nextSunday.setDate(monday.getDate() + 13);
+  return { start: toDateStr(monday), end: toDateStr(nextSunday) };
+}
+
+function isNearTerm(dateStr) {
+  if (!dateStr) return true;
+  const { start, end } = nearTermRange();
+  return dateStr >= start && dateStr <= end;
+}
+
 function timeRangeLabel(start, end) {
   if (!start) return '';
   return end ? `${formatTime(start)}–${formatTime(end)}` : formatTime(start);
@@ -185,14 +200,14 @@ function buildAgendaItems() {
   meetings.forEach(m => items.push({
     date: m.meeting_date, time: m.meeting_time,
     timeLabel: timeRangeLabel(m.meeting_time, m.end_time),
-    title: m.title, badgeText: m.meeting_type, badgeClass: 'badge-green',
+    title: m.title, badgeText: m.meeting_type, badgeClass: 'badge-muted',
     sub: meetingSubtitle(m), kind: 'meeting', cancelled: m.status === 'cancelled', raw: m
   }));
 
   tasks.filter(t => t.due_date).forEach(t => items.push({
     date: t.due_date, time: null, timeLabel: '',
     title: t.title, badgeText: t.task_type === 'Deliverable' ? 'Deliverable' : 'Task',
-    badgeClass: t.task_type === 'Deliverable' ? 'badge-red' : 'badge-muted',
+    badgeClass: t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted',
     sub: (t.assignees && t.assignees.length) ? `Assigned: ${t.assignees.join(', ')}` : 'Unassigned',
     kind: 'task', cancelled: t.status === 'cancelled', raw: t
   }));
@@ -268,6 +283,14 @@ function renderAgenda() {
 
 // ---------------- Month view ----------------
 
+// Short label shown inside a month-view pill instead of a plain dot.
+function monthPillLabel(kind, item) {
+  if (kind === 'meeting') return item.meeting_type;
+  if (kind === 'deliverable') return /PDS/i.test(item.title) ? 'PDS' : item.title.split(' ')[0];
+  if (kind === 'milestone') return item.title;
+  return item.title.split(' ')[0];
+}
+
 function monthIndex() {
   const index = {};
   const push = (dateStr, entry) => {
@@ -276,15 +299,17 @@ function monthIndex() {
     index[dateStr].push(entry);
   };
 
-  meetings.forEach(m => push(m.meeting_date, { dot: 'meeting', item: m }));
-  tasks.filter(t => t.due_date).forEach(t => push(t.due_date, { dot: t.task_type === 'Deliverable' ? 'deliverable' : 'task', item: t }));
+  meetings.forEach(m => push(m.meeting_date, { kind: 'meeting', item: m, cancelled: m.status === 'cancelled' }));
+  tasks.filter(t => t.due_date).forEach(t => push(t.due_date, {
+    kind: t.task_type === 'Deliverable' ? 'deliverable' : 'task', item: t, cancelled: t.status === 'cancelled'
+  }));
   milestones.forEach(m => {
     if (!m.date_from) return;
     const from = new Date(m.date_from + 'T00:00:00');
     const to = new Date((m.date_to || m.date_from) + 'T00:00:00');
     let guard = 0;
     for (let d = new Date(from); d <= to && guard < 60; d.setDate(d.getDate() + 1), guard++) {
-      push(toDateStr(d), { dot: 'milestone', item: m });
+      push(toDateStr(d), { kind: 'milestone', item: m, cancelled: false });
     }
   });
   return index;
@@ -308,11 +333,17 @@ function renderMonthView() {
     const dateStr = toDateStr(new Date(year, month, day));
     const entries = index[dateStr] || [];
     const isToday = dateStr === toDateStr(new Date());
-    const dots = entries.slice(0, 4).map(e => `<span class="month-dot month-dot-${e.dot}"></span>`).join('');
+    const shown = entries.slice(0, 3);
+    const overflow = entries.length - shown.length;
+    const pills = shown.map(e => `
+      <div class="month-pill month-pill-${e.kind} ${e.cancelled ? 'cancelled-pill' : ''}" title="${escapeHtml(e.item.title)}">
+        ${escapeHtml(monthPillLabel(e.kind, e.item))}
+      </div>
+    `).join('') + (overflow > 0 ? `<div class="month-pill month-pill-more">+${overflow}</div>` : '');
     cells += `
       <div class="month-cell ${isToday ? 'today' : ''}" data-date="${dateStr}">
         <div class="month-cell-num">${day}</div>
-        <div class="month-cell-dots">${dots}</div>
+        <div class="month-cell-pills">${pills}</div>
       </div>
     `;
   }
@@ -415,12 +446,16 @@ function participantsHTML(selected = []) {
   `).join('');
 }
 
-function openAddMeetingModal() {
+// `prefill` seeds the form (used by the poll's "Schedule Meeting" flow to suggest a
+// starting date/time — the user can still change everything before saving).
+// `onSaved(meetingRow)` fires after a successful insert, in addition to the normal
+// toast/reload, so a caller can react to the newly created meeting.
+function openAddMeetingModal(prefill = {}, onSaved = null) {
   const root = document.getElementById('add-meeting-root');
   const fieldsHTML = MEETING_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${inputHTML(f, '')}
+      ${inputHTML(f, prefill[f.key] ?? '')}
     </div>
   `).join('');
 
@@ -431,9 +466,9 @@ function openAddMeetingModal() {
         <form id="form">
           <div class="form-modal-body">
             <div class="form-error" id="form-error" hidden></div>
-            <div class="form-grid">${fieldsHTML}${formatBlockHTML('', '', '')}${repeatFieldsHTML()}</div>
+            <div class="form-grid">${fieldsHTML}${formatBlockHTML(prefill.format || '', prefill.location || '', prefill.online_link || '')}${repeatFieldsHTML()}</div>
             <div class="form-section-label">Participants</div>
-            <div class="checkbox-row">${participantsHTML()}</div>
+            <div class="checkbox-row">${participantsHTML(prefill.participants || [])}</div>
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -475,7 +510,7 @@ function openAddMeetingModal() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    const { error } = await supabase.from('meetings').insert(rows);
+    const { data: inserted, error } = await supabase.from('meetings').insert(rows).select();
     if (error) {
       errorEl.textContent = `Couldn't save meeting: ${error.message}`;
       errorEl.hidden = false;
@@ -487,6 +522,7 @@ function openAddMeetingModal() {
     showToast(rows.length > 1 ? `${rows.length} meetings added.` : 'Meeting added.');
     await loadMeetings();
     renderAll();
+    if (onSaved && inserted && inserted[0]) await onSaved(inserted[0]);
   });
 }
 
@@ -596,11 +632,24 @@ async function openEditMeetingModal(meeting) {
 }
 
 // ---------------- Meeting polls ----------------
+// A poll is only a scheduling aid: it collects availability and never, by itself,
+// creates a Meeting. "Schedule Meeting" is a separate, explicit step that opens the
+// real Meeting form (pre-filled from the poll's strongest slot as a suggestion only).
+// Once that Meeting is created, the poll is marked 'scheduled' and drops out of the
+// active list — the Calendar only ever shows real Meetings, never poll grids.
 
 function formatSlot(slot) {
   const d = new Date(`${slot.slot_date}T00:00:00`);
   const dateLabel = `${DAY_ABBR[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)}`;
   return slot.slot_time ? `${dateLabel} · ${formatTime(slot.slot_time)}` : dateLabel;
+}
+
+function addMinutes(timeStr, minutes) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const hh = String(Math.floor((total / 60) % 24)).padStart(2, '0');
+  const mm = String(total % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 async function loadPolls() {
@@ -621,26 +670,73 @@ async function loadPolls() {
   }));
 }
 
+// Slots with at least one response, ranked most-available first (ties broken chronologically).
+function pollResults(poll) {
+  return poll.poll_slots
+    .map(slot => ({ slot, count: (slot.poll_responses || []).length, names: (slot.poll_responses || []).map(r => r.person) }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count || `${a.slot.slot_date}${a.slot.slot_time || ''}`.localeCompare(`${b.slot.slot_date}${b.slot.slot_time || ''}`));
+}
+
+function pollFieldsHTML(poll = {}) {
+  return `
+    <div class="form-grid">
+      <div class="form-field full"><label>Poll / Meeting Name *</label><input type="text" name="title" required value="${escapeHtml(poll.title)}" /></div>
+      <div class="form-field full"><label>Note</label><textarea name="description" rows="2">${escapeHtml(poll.description)}</textarea></div>
+    </div>
+    <div class="form-section-label">Candidate Slots</div>
+    <div class="form-grid">
+      <div class="form-field"><label>Start Date *</label><input type="date" name="start_date" required value="${poll.start_date || ''}" /></div>
+      <div class="form-field"><label>End Date</label><input type="date" name="end_date" value="${poll.end_date || ''}" /></div>
+      <div class="form-field"><label>From *</label><input type="time" name="from_time" required value="${poll.from_time || '09:00'}" /></div>
+      <div class="form-field"><label>To *</label><input type="time" name="to_time" required value="${poll.to_time || '18:00'}" /></div>
+      <div class="form-field"><label>Slot Length</label>
+        <select name="slot_minutes">
+          ${[15, 30, 60].map(m => `<option value="${m}" ${(poll.slot_minutes || 30) === m ? 'selected' : ''}>${m} min</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function readPollForm(form) {
+  return {
+    title: form.elements['title'].value.trim(),
+    description: form.elements['description'].value.trim() || null,
+    start_date: form.elements['start_date'].value,
+    end_date: form.elements['end_date'].value || null,
+    from_time: form.elements['from_time'].value,
+    to_time: form.elements['to_time'].value,
+    slot_minutes: Number(form.elements['slot_minutes'].value)
+  };
+}
+
+function pollSlotsFor(params) {
+  return generateSlots(params.start_date, params.end_date, params.from_time, params.to_time, params.slot_minutes);
+}
+
 function renderPolls() {
   const el = document.getElementById('poll-list');
-  if (!polls.length) {
+  // Scheduled polls already produced a real Meeting — they're historical, not active.
+  const active = polls.filter(p => p.status !== 'scheduled');
+  if (!active.length) {
     el.innerHTML = `<div class="empty-state"><div class="em-title">No polls yet</div><p>Start one to find a time that works for everyone.</p></div>`;
     return;
   }
 
-  el.innerHTML = polls.map(poll => {
+  el.innerHTML = active.map(poll => {
     const closed = poll.status === 'closed';
+    const top = pollResults(poll).slice(0, 3);
+
     const slotsHTML = poll.poll_slots.map(slot => {
       const responses = slot.poll_responses || [];
       const iVoted = responses.some(r => r.person === identity);
-      const chosen = poll.chosen_slot_id === slot.id;
       return `
         <div class="poll-slot">
           <input type="checkbox" data-slot-id="${slot.id}" ${iVoted ? 'checked' : ''} ${closed ? 'disabled' : ''} />
-          <span class="poll-slot-label">${formatSlot(slot)}${chosen ? ' — confirmed' : ''}</span>
+          <span class="poll-slot-label">${formatSlot(slot)}</span>
           <span class="poll-slot-names">${escapeHtml(responses.map(r => r.person).join(', '))}</span>
           <span class="poll-slot-count">${responses.length} available</span>
-          ${!closed ? `<button type="button" class="poll-slot-confirm" data-confirm-slot="${slot.id}">Confirm</button>` : ''}
         </div>
       `;
     }).join('');
@@ -648,11 +744,25 @@ function renderPolls() {
     return `
       <div class="poll-card ${closed ? 'closed' : ''}" data-poll-id="${poll.id}">
         <div class="poll-head">
-          <div class="poll-title">${escapeHtml(poll.title)}</div>
+          <div>
+            <div class="poll-title">${escapeHtml(poll.title)}</div>
+            ${poll.description ? `<div class="poll-desc">${escapeHtml(poll.description)}</div>` : ''}
+          </div>
           <span class="badge ${closed ? 'badge-muted' : 'badge-green'}">${closed ? 'Closed' : 'Open'}</span>
         </div>
-        ${poll.description ? `<div class="poll-desc">${escapeHtml(poll.description)}</div>` : ''}
+        ${top.length ? `
+          <div class="poll-top">
+            <span class="poll-top-label">Top availability</span>
+            ${top.map(r => `<span class="poll-top-chip">${escapeHtml(formatSlot(r.slot))} · ${r.count}/${TEAM_MEMBERS.length}</span>`).join('')}
+          </div>
+        ` : ''}
         <div class="poll-slots">${slotsHTML}</div>
+        <div class="poll-actions">
+          <button type="button" class="btn-text" data-poll-edit="${poll.id}">Edit</button>
+          <button type="button" class="btn-text" data-poll-toggle-close="${poll.id}">${closed ? 'Reopen' : 'Close'}</button>
+          <button type="button" class="btn-danger-text" data-poll-delete="${poll.id}">Delete</button>
+          <button type="button" class="btn-primary" data-poll-schedule="${poll.id}">Schedule Meeting</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -660,8 +770,17 @@ function renderPolls() {
   el.querySelectorAll('[data-slot-id]').forEach(cb => {
     cb.addEventListener('change', () => toggleResponse(cb.dataset.slotId));
   });
-  el.querySelectorAll('[data-confirm-slot]').forEach(btn => {
-    btn.addEventListener('click', () => confirmSlot(btn.closest('.poll-card').dataset.pollId, btn.dataset.confirmSlot));
+  el.querySelectorAll('[data-poll-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openEditPollModal(polls.find(p => p.id === btn.dataset.pollEdit)));
+  });
+  el.querySelectorAll('[data-poll-toggle-close]').forEach(btn => {
+    btn.addEventListener('click', () => togglePollClosed(btn.dataset.pollToggleClose));
+  });
+  el.querySelectorAll('[data-poll-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deletePoll(btn.dataset.pollDelete));
+  });
+  el.querySelectorAll('[data-poll-schedule]').forEach(btn => {
+    btn.addEventListener('click', () => openScheduleMeetingModal(polls.find(p => p.id === btn.dataset.pollSchedule)));
   });
 }
 
@@ -682,31 +801,21 @@ async function toggleResponse(slotId) {
   renderPolls();
 }
 
-async function confirmSlot(pollId, slotId) {
+async function togglePollClosed(pollId) {
   const poll = polls.find(p => p.id === pollId);
-  const slot = poll?.poll_slots.find(s => s.id === slotId);
-  if (!poll || !slot) return;
+  if (!poll) return;
+  const newStatus = poll.status === 'closed' ? 'open' : 'closed';
+  await supabase.from('meeting_polls').update({ status: newStatus }).eq('id', pollId);
+  showToast(newStatus === 'closed' ? 'Poll closed.' : 'Poll reopened.');
+  await loadPolls();
+  renderPolls();
+}
 
-  const { error: meetingError } = await supabase.from('meetings').insert({
-    title: poll.title,
-    meeting_type: 'Team',
-    meeting_date: slot.slot_date,
-    meeting_time: slot.slot_time,
-    status: 'scheduled',
-    notes: 'Scheduled via meeting poll',
-    created_by: identity,
-    created_at: new Date().toISOString()
-  });
-  if (meetingError) {
-    showToast(`Couldn't add to calendar: ${meetingError.message}`, true);
-    return;
-  }
-
-  await supabase.from('meeting_polls').update({ status: 'closed', chosen_slot_id: slotId }).eq('id', pollId);
-
-  showToast('Meeting confirmed and added to the calendar.');
-  await Promise.all([loadMeetings(), loadPolls()]);
-  renderAll();
+async function deletePoll(pollId) {
+  if (!confirm('Delete this poll? Its availability responses will be lost. This cannot be undone.')) return;
+  await supabase.from('meeting_polls').delete().eq('id', pollId);
+  showToast('Poll deleted.');
+  await loadPolls();
   renderPolls();
 }
 
@@ -719,24 +828,7 @@ function openAddPollModal() {
         <form id="form">
           <div class="form-modal-body">
             <div class="form-error" id="form-error" hidden></div>
-            <div class="form-grid">
-              <div class="form-field full"><label>Poll Title *</label><input type="text" name="title" required /></div>
-              <div class="form-field full"><label>Description</label><textarea name="description" rows="2"></textarea></div>
-            </div>
-            <div class="form-section-label">Candidate Slots</div>
-            <div class="form-grid">
-              <div class="form-field"><label>Start Date *</label><input type="date" name="start_date" required /></div>
-              <div class="form-field"><label>End Date</label><input type="date" name="end_date" /></div>
-              <div class="form-field"><label>From *</label><input type="time" name="from_time" value="09:00" required /></div>
-              <div class="form-field"><label>To *</label><input type="time" name="to_time" value="18:00" required /></div>
-              <div class="form-field"><label>Slot Length</label>
-                <select name="slot_minutes">
-                  <option value="15">15 min</option>
-                  <option value="30" selected>30 min</option>
-                  <option value="60">60 min</option>
-                </select>
-              </div>
-            </div>
+            ${pollFieldsHTML()}
             <div class="settings-hint" id="slot-preview" style="margin: 8px 0 0;">Pick a date and time range to see how many candidate slots this creates.</div>
           </div>
           <div class="form-modal-foot">
@@ -757,18 +849,8 @@ function openAddPollModal() {
   const form = document.getElementById('form');
   const preview = document.getElementById('slot-preview');
 
-  function currentSlots() {
-    return generateSlots(
-      form.elements['start_date'].value,
-      form.elements['end_date'].value,
-      form.elements['from_time'].value,
-      form.elements['to_time'].value,
-      Number(form.elements['slot_minutes'].value)
-    );
-  }
-
   function updatePreview() {
-    const count = currentSlots().length;
+    const count = pollSlotsFor(readPollForm(form)).length;
     preview.textContent = count
       ? `This will create ${count} candidate slot${count === 1 ? '' : 's'}.`
       : 'Pick a date and time range to see how many candidate slots this creates.';
@@ -782,9 +864,8 @@ function openAddPollModal() {
     const errorEl = document.getElementById('form-error');
     errorEl.hidden = true;
 
-    const title = form.elements['title'].value.trim();
-    const description = form.elements['description'].value.trim() || null;
-    const slots = currentSlots();
+    const params = readPollForm(form);
+    const slots = pollSlotsFor(params);
 
     if (!slots.length) {
       errorEl.textContent = 'No candidate slots in that range — check your dates and times.';
@@ -803,7 +884,7 @@ function openAddPollModal() {
 
     const { data: poll, error } = await supabase
       .from('meeting_polls')
-      .insert({ title, description, created_by: identity, created_at: new Date().toISOString() })
+      .insert({ ...params, status: 'open', created_by: identity, created_at: new Date().toISOString() })
       .select()
       .single();
 
@@ -825,6 +906,160 @@ function openAddPollModal() {
     await loadPolls();
     renderPolls();
   });
+}
+
+function openEditPollModal(poll) {
+  const root = document.getElementById('edit-poll-root');
+  root.innerHTML = `
+    <div class="modal-overlay form-overlay" id="modal">
+      <div class="form-modal" style="max-width: 560px;">
+        <div class="form-modal-head"><h2>Edit Poll</h2><button type="button" class="form-modal-close" id="close-btn">&times;</button></div>
+        <form id="form">
+          <div class="form-modal-body">
+            <div class="form-error" id="form-error" hidden></div>
+            ${pollFieldsHTML(poll)}
+            <div class="settings-hint" id="slot-preview" style="margin: 8px 0 0;"></div>
+          </div>
+          <div class="form-modal-foot">
+            <button type="button" class="btn-text" id="cancel-btn">Close</button>
+            <button type="submit" class="btn-primary" id="submit-btn">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('close-btn').addEventListener('click', close);
+  document.getElementById('cancel-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const form = document.getElementById('form');
+  const preview = document.getElementById('slot-preview');
+
+  function diff() {
+    const newSlots = pollSlotsFor(readPollForm(form));
+    const newKeys = new Set(newSlots.map(s => `${s.slot_date}|${s.slot_time}`));
+    const existingKeys = new Set(poll.poll_slots.map(s => `${s.slot_date}|${s.slot_time}`));
+    const toAdd = newSlots.filter(s => !existingKeys.has(`${s.slot_date}|${s.slot_time}`));
+    const toRemove = poll.poll_slots.filter(s => !newKeys.has(`${s.slot_date}|${s.slot_time}`));
+    const responsesLost = toRemove.reduce((sum, s) => sum + (s.poll_responses || []).length, 0);
+    return { toAdd, toRemove, responsesLost };
+  }
+
+  function updatePreview() {
+    const { toAdd, toRemove, responsesLost } = diff();
+    const parts = [];
+    if (toAdd.length) parts.push(`+${toAdd.length} new slot${toAdd.length === 1 ? '' : 's'}`);
+    if (toRemove.length) parts.push(`-${toRemove.length} slot${toRemove.length === 1 ? '' : 's'}${responsesLost ? ` (${responsesLost} response${responsesLost === 1 ? '' : 's'} lost)` : ''}`);
+    preview.textContent = parts.length ? parts.join(' · ') : 'No change to candidate slots.';
+  }
+  updatePreview();
+  ['start_date', 'end_date', 'from_time', 'to_time', 'slot_minutes'].forEach(name => {
+    form.elements[name].addEventListener('input', updatePreview);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('form-error');
+    errorEl.hidden = true;
+
+    const params = readPollForm(form);
+    const { toAdd, toRemove, responsesLost } = diff();
+
+    if (toRemove.length) {
+      const msg = responsesLost
+        ? `This change removes ${toRemove.length} slot${toRemove.length === 1 ? '' : 's'} with ${responsesLost} response${responsesLost === 1 ? '' : 's'} already recorded — those responses will be lost. Continue?`
+        : `This change removes ${toRemove.length} candidate slot${toRemove.length === 1 ? '' : 's'}. Continue?`;
+      if (!confirm(msg)) return;
+    }
+
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+
+    const { error: updateError } = await supabase.from('meeting_polls').update(params).eq('id', poll.id);
+    if (updateError) {
+      errorEl.textContent = `Couldn't save poll: ${updateError.message}`;
+      errorEl.hidden = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
+      return;
+    }
+
+    if (toRemove.length) await supabase.from('poll_slots').delete().in('id', toRemove.map(s => s.id));
+    if (toAdd.length) await supabase.from('poll_slots').insert(toAdd.map(s => ({ ...s, poll_id: poll.id })));
+
+    close();
+    showToast('Poll updated.');
+    await loadPolls();
+    renderPolls();
+  });
+}
+
+function openScheduleMeetingModal(poll) {
+  const root = document.getElementById('schedule-meeting-root');
+  const top = pollResults(poll).slice(0, 5);
+
+  root.innerHTML = `
+    <div class="modal-overlay form-overlay" id="modal">
+      <div class="form-modal" style="max-width: 480px;">
+        <div class="form-modal-head"><h2>Schedule Meeting</h2><button type="button" class="form-modal-close" id="close-btn">&times;</button></div>
+        <div class="form-modal-body">
+          <p class="settings-hint" style="margin-bottom:16px;">These are only suggestions from the poll's availability — the date and time are confirmed on the next step.</p>
+          ${top.length ? `
+            <div class="form-section-label">Recommended times</div>
+            <div class="schedule-suggestions">
+              ${top.map((r, i) => `
+                <button type="button" class="schedule-suggestion" data-slot-id="${r.slot.id}">
+                  <span class="schedule-suggestion-rank">${i + 1}</span>
+                  <span class="schedule-suggestion-label">${escapeHtml(formatSlot(r.slot))}</span>
+                  <span class="schedule-suggestion-count">${r.count}/${TEAM_MEMBERS.length} available</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : `<p class="settings-hint">No one has submitted availability yet — you can still pick a custom time.</p>`}
+        </div>
+        <div class="form-modal-foot">
+          <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
+          <button type="button" class="btn-outline" id="custom-time-btn">Choose a custom time</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('close-btn').addEventListener('click', close);
+  document.getElementById('cancel-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const proceed = (slot) => {
+    close();
+    const prefill = slot ? {
+      title: poll.title,
+      meeting_date: slot.slot_date,
+      meeting_time: slot.slot_time,
+      end_time: poll.slot_minutes ? addMinutes(slot.slot_time, poll.slot_minutes) : '',
+      notes: `Scheduled from poll: ${poll.title}`
+    } : { title: poll.title, notes: `Scheduled from poll: ${poll.title}` };
+
+    openAddMeetingModal(prefill, async (newMeeting) => {
+      await supabase.from('meeting_polls').update({
+        status: 'scheduled',
+        scheduled_meeting_id: newMeeting.id,
+        chosen_slot_id: slot ? slot.id : null
+      }).eq('id', poll.id);
+      await loadPolls();
+      renderPolls();
+    });
+  };
+
+  root.querySelectorAll('.schedule-suggestion').forEach(btn => {
+    btn.addEventListener('click', () => proceed(top.find(r => r.slot.id === btn.dataset.slotId)?.slot));
+  });
+  document.getElementById('custom-time-btn').addEventListener('click', () => proceed(null));
 }
 
 // ---------------- Tasks ----------------
@@ -851,15 +1086,16 @@ function renderTasks() {
     const dr = t.due_date ? daysRemaining(t.due_date) : null;
     const statusOptions = getOptionList('task_status').map(s => `<option value="${s.value}" ${s.value === t.status ? 'selected' : ''}>${s.label}</option>`).join('');
     const cancelled = t.status === 'cancelled';
+    const compact = !isNearTerm(t.due_date);
     return `
-      <div class="task-row ${cancelled ? 'cancelled' : ''}" data-task-id="${t.id}">
-        <span class="badge ${t.task_type === 'Deliverable' ? 'badge-red' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
+      <div class="task-row status-${t.status} ${cancelled ? 'cancelled' : ''} ${compact ? 'compact' : ''}" data-task-id="${t.id}">
+        <span class="badge ${t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
         <div class="task-main" data-task-open="${t.id}">
           <div class="task-title">${escapeHtml(t.title)}${t.recurrence_id ? ' <span class="badge badge-muted" style="margin-left:6px;">Recurring</span>' : ''}</div>
           <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>
         </div>
         <div class="task-due">${t.due_date ? `${t.due_date}${dr ? ` · ${dr.text}` : ''}` : 'No due date'}</div>
-        <select class="task-status-select" data-task-status="${t.id}">${statusOptions}</select>
+        <select class="task-status-select status-${t.status}" data-task-status="${t.id}">${statusOptions}</select>
         <button type="button" class="task-remove" data-task-remove="${t.id}">&times;</button>
       </div>
     `;
@@ -1078,7 +1314,7 @@ function renderMilestoneStripSection() {
 
 // ---------------- Init ----------------
 
-document.getElementById('btn-add-meeting').addEventListener('click', openAddMeetingModal);
+document.getElementById('btn-add-meeting').addEventListener('click', () => openAddMeetingModal());
 document.getElementById('btn-add-poll').addEventListener('click', openAddPollModal);
 document.getElementById('btn-add-task').addEventListener('click', openAddTaskModal);
 document.querySelectorAll('#calendar-view-toggle button').forEach(btn => {
