@@ -18,7 +18,7 @@ let tasks = [];
 let polls = [];
 let milestones = [];
 
-let calendarView = 'agenda'; // 'agenda' | 'month'
+let calendarView = 'month'; // 'agenda' | 'month'
 let monthCursor = new Date(2026, 8, 1); // September 2026 — start of the project period
 const MONTH_MIN = new Date(2026, 8, 1);
 const MONTH_MAX = new Date(2027, 0, 1); // January 2027 — last month occurrences run through
@@ -1087,12 +1087,13 @@ function renderTasks() {
     const statusOptions = getOptionList('task_status').map(s => `<option value="${s.value}" ${s.value === t.status ? 'selected' : ''}>${s.label}</option>`).join('');
     const cancelled = t.status === 'cancelled';
     const compact = !isNearTerm(t.due_date);
-    // Status color only on the select itself, and only for this-week/next-week tasks —
-    // distant tasks stay neutral so the list isn't awash in color.
+    // Color (status pill + type badge) only for this-week/next-week tasks — distant,
+    // compact tasks stay neutral grey so it's obvious at a glance what's current.
     const statusClass = compact ? '' : `status-${t.status}`;
+    const typeBadgeClass = (!compact && t.task_type === 'Deliverable') ? 'badge-yellow' : 'badge-muted';
     return `
       <div class="task-row ${cancelled ? 'cancelled' : ''} ${compact ? 'compact' : ''}" data-task-id="${t.id}">
-        <span class="badge ${t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
+        <span class="badge ${typeBadgeClass}">${escapeHtml(t.task_type || 'Task')}</span>
         <div class="task-main" data-task-open="${t.id}">
           <div class="task-title">${escapeHtml(t.title)}${t.recurrence_id ? ' <span class="badge badge-muted" style="margin-left:6px;">Recurring</span>' : ''}</div>
           <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>

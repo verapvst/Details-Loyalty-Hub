@@ -29,15 +29,15 @@
   <div class="section-head">
     <h2 class="section-title">Calendar</h2>
     <div class="view-toggle" id="calendar-view-toggle">
-      <button type="button" data-view="agenda" class="active">Agenda</button>
-      <button type="button" data-view="month">Month</button>
+      <button type="button" data-view="agenda">Agenda</button>
+      <button type="button" data-view="month" class="active">Month</button>
     </div>
     <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
   </div>
-  <div id="calendar-agenda">
+  <div id="calendar-agenda" hidden>
     <div class="loading-state">Loading…</div>
   </div>
-  <div id="calendar-month" hidden></div>
+  <div id="calendar-month"></div>
 </section>
 
 <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
