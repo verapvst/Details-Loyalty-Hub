@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { TEAM_MEMBERS, MEETING_FIELDS, TASK_FIELDS } from './options.js';
-import { inputHTML, readFormValues, escapeHtml } from './fields.js';
+import { inputHTML, readFormValues, escapeHtml, checkboxRowWithAllHTML, wireSelectAllToggle } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
 import {
   loadMilestones, milestoneStatus, milestoneDateLabel, renderMilestoneStrip,
@@ -448,9 +448,7 @@ function wireFormatToggle(form) {
 }
 
 function participantsHTML(selected = []) {
-  return TEAM_MEMBERS.map(name => `
-    <label class="checkbox-item"><input type="checkbox" name="participant" value="${name}" ${selected.includes(name) ? 'checked' : ''} /> ${name}</label>
-  `).join('');
+  return checkboxRowWithAllHTML('participant', TEAM_MEMBERS, selected);
 }
 
 // `prefill` seeds the form (used by the poll's "Schedule Meeting" flow to suggest a
@@ -475,7 +473,7 @@ function openAddMeetingModal(prefill = {}, onSaved = null) {
             <div class="form-error" id="form-error" hidden></div>
             <div class="form-grid">${fieldsHTML}${formatBlockHTML(prefill.format || '', prefill.location || '', prefill.online_link || '')}${repeatFieldsHTML()}</div>
             <div class="form-section-label">Participants</div>
-            <div class="checkbox-row">${participantsHTML(prefill.participants || [])}</div>
+            ${participantsHTML(prefill.participants || [])}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -493,6 +491,7 @@ function openAddMeetingModal(prefill = {}, onSaved = null) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   wireRepeatToggle(document.getElementById('form'));
   wireFormatToggle(document.getElementById('form'));
+  wireSelectAllToggle(document.getElementById('form'));
 
   document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -563,7 +562,7 @@ async function openEditMeetingModal(meeting) {
             ${scopeNote}
             <div class="form-grid">${fieldsHTML}${formatBlockHTML(meeting.format, meeting.location, meeting.online_link)}</div>
             <div class="form-section-label">Participants</div>
-            <div class="checkbox-row">${participantsHTML(meeting.participants || [])}</div>
+            ${participantsHTML(meeting.participants || [])}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-danger-text" id="cancel-meeting-btn" style="margin-right:auto;">Cancel meeting…</button>
@@ -581,6 +580,7 @@ async function openEditMeetingModal(meeting) {
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   wireFormatToggle(document.getElementById('form'));
+  wireSelectAllToggle(document.getElementById('form'));
 
   document.getElementById('cancel-meeting-btn').addEventListener('click', async () => {
     let cancelScope = 'occurrence';
@@ -1147,9 +1147,7 @@ async function loadTasks() {
 }
 
 function assigneesHTML(selected = []) {
-  return TEAM_MEMBERS.map(name => `
-    <label class="checkbox-item"><input type="checkbox" name="assignee" value="${name}" ${selected.includes(name) ? 'checked' : ''} /> ${name}</label>
-  `).join('');
+  return checkboxRowWithAllHTML('assignee', TEAM_MEMBERS, selected);
 }
 
 function renderTasks() {
@@ -1225,7 +1223,7 @@ function openAddTaskModal() {
             <div class="form-error" id="form-error" hidden></div>
             <div class="form-grid">${fieldsHTML}${repeatFieldsHTML()}</div>
             <div class="form-section-label">Assignees</div>
-            <div class="checkbox-row">${assigneesHTML()}</div>
+            ${assigneesHTML()}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -1242,6 +1240,7 @@ function openAddTaskModal() {
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   wireRepeatToggle(document.getElementById('form'));
+  wireSelectAllToggle(document.getElementById('form'));
 
   document.getElementById('form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1316,7 +1315,7 @@ async function openEditTaskModal(task) {
             ${scopeNote}
             <div class="form-grid">${fieldsHTML}</div>
             <div class="form-section-label">Assignees</div>
-            <div class="checkbox-row">${assigneesHTML(task.assignees || [])}</div>
+            ${assigneesHTML(task.assignees || [])}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-danger-text" id="delete-btn" style="margin-right:auto;">Delete</button>
@@ -1333,6 +1332,7 @@ async function openEditTaskModal(task) {
   document.getElementById('close-btn').addEventListener('click', close);
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  wireSelectAllToggle(document.getElementById('form'));
 
   document.getElementById('delete-btn').addEventListener('click', async () => {
     if (!confirm('Delete this task?')) return;

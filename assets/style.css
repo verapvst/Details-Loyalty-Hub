@@ -452,6 +452,9 @@ ul { list-style: none; }
 .task-row.compact .task-status-select { padding: 4px 22px 4px 10px; font-size: 10px; }
 .checkbox-row { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .checkbox-item { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.checkbox-row-with-all { display: flex; align-items: flex-start; gap: 14px; }
+.checkbox-row-with-all .checkbox-row { flex: 1; }
+.checkbox-row-with-all .select-all-toggle { flex-shrink: 0; white-space: nowrap; padding-top: 1px; }
 .checkbox-item input { width: 15px; height: 15px; accent-color: var(--accent); }
 
 /* ---------- Weekly Reports ---------- */

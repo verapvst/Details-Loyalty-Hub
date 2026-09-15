@@ -46,6 +46,36 @@ export function checkboxGroupHTML(fieldKey, optionKey, selected) {
   }).join('')}</div>`;
 }
 
+// A checkbox-row plus a small "All"/"Clear" toggle button — for people-picker lists
+// (assignees, participants) where selecting the whole team one-by-one is tedious.
+// Call wireSelectAllToggle() on the containing form/element after inserting this HTML.
+export function checkboxRowWithAllHTML(fieldName, members, selected = []) {
+  const allSelected = members.length > 0 && members.every(m => selected.includes(m));
+  return `
+    <div class="checkbox-row-with-all">
+      <div class="checkbox-row">${members.map(name => `
+        <label class="checkbox-item"><input type="checkbox" name="${fieldName}" value="${escapeHtml(name)}" ${selected.includes(name) ? 'checked' : ''} /> ${escapeHtml(name)}</label>
+      `).join('')}</div>
+      <button type="button" class="btn-text select-all-toggle" data-select-all="${fieldName}">${allSelected ? 'Clear' : 'All'}</button>
+    </div>
+  `;
+}
+
+// Wires every [data-select-all] button within `root` to toggle all checkboxes sharing
+// its field name, and keeps the button's own All/Clear label in sync with manual clicks.
+export function wireSelectAllToggle(root) {
+  root.querySelectorAll('[data-select-all]').forEach(btn => {
+    const checkboxes = root.querySelectorAll(`input[name="${btn.dataset.selectAll}"]`);
+    const sync = () => { btn.textContent = [...checkboxes].every(cb => cb.checked) ? 'Clear' : 'All'; };
+    btn.addEventListener('click', () => {
+      const selectAll = !([...checkboxes].every(cb => cb.checked));
+      checkboxes.forEach(cb => { cb.checked = selectAll; });
+      sync();
+    });
+    checkboxes.forEach(cb => cb.addEventListener('change', sync));
+  });
+}
+
 // Reads every checked checkbox for a given field name into an array of values.
 export function readCheckboxGroup(formEl, fieldKey) {
   return [...formEl.querySelectorAll(`input[name="${fieldKey}"]:checked`)].map(cb => cb.value);

@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
-import { escapeHtml } from './fields.js';
+import { escapeHtml, checkboxRowWithAllHTML, wireSelectAllToggle } from './fields.js';
 import { TEAM_MEMBERS } from './options.js';
 import { loadQuestions, renderQuestionsSection, openQuestionModal } from './questions.js';
 
@@ -329,7 +329,7 @@ function openAddNextStepModal() {
               </div>
             </div>
             <div class="form-section-label">Assignees</div>
-            <div class="checkbox-row">${TEAM_MEMBERS.map(name => `<label class="checkbox-item"><input type="checkbox" name="assignee" value="${name}" /> ${name}</label>`).join('')}</div>
+            ${checkboxRowWithAllHTML('assignee', TEAM_MEMBERS, [])}
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="next-step-cancel">Cancel</button>
@@ -345,6 +345,7 @@ function openAddNextStepModal() {
   document.getElementById('next-step-close').addEventListener('click', close);
   document.getElementById('next-step-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  wireSelectAllToggle(document.getElementById('next-step-form'));
 
   document.getElementById('next-step-form').addEventListener('submit', async (e) => {
     e.preventDefault();
