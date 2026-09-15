@@ -22,11 +22,14 @@ export function likeSummary(likes, targetType, targetLabel) {
 // afterward on the containing element to make it interactive.
 // A plain heart outline when not liked, filled when liked — both grey, no color
 // change, so the heart never competes visually with the accent/status colors used
-// elsewhere in the app.
+// elsewhere in the app. Path is Feather's "heart" icon (24x24, symmetric about x=12).
 function heartIconSVG(filled) {
-  return `<svg class="heart-icon" viewBox="0 0 24 24" width="14" height="14" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.7-4.35-9.3-8.1C.7 9.9 1.7 6 5 5c2-.1 3.6 1 4.5 2.5C10.4 6 12 4.9 14 5c3.3 1 4.3 4.9 2.3 7.9C18.7 16.65 12 21 12 21z"/></svg>`;
+  return `<svg class="heart-icon" viewBox="0 0 24 24" width="14" height="14" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 }
 
+// Just shows whether the current user has liked it — no count. `summary.othersCount`
+// is still returned by likeSummary() for callers that need it (e.g. Favorites' own
+// "N others" isn't shown either, but the data stays available if that changes later).
 export function heartHTML(targetType, targetLabel, targetId, summary) {
   const filled = !!summary.mine;
   return `
@@ -35,7 +38,6 @@ export function heartHTML(targetType, targetLabel, targetId, summary) {
       data-target-label="${escapeHtml(targetLabel)}"
       data-target-id="${targetId ? escapeHtml(targetId) : ''}">
       ${heartIconSVG(filled)}
-      ${summary.othersCount > 0 ? `<span class="heart-count">${summary.othersCount}</span>` : ''}
     </button>
   `;
 }

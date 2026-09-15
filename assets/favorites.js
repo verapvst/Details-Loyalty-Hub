@@ -65,6 +65,7 @@ function renderGroup(g) {
             ${e.psychological_effect.map(p => `<span class="chip" style="padding: 3px 10px;">${escapeHtml(p)}</span>`).join('')}
           </div>
         ` : ''}
+        <button type="button" class="task-remove" data-like-delete="${e.id}" style="margin-left: auto;">&times;</button>
       </div>
       ${e.description ? `<div class="favorite-entry-desc">${escapeHtml(e.description)}</div>` : ''}
       ${e.psychological_effect_notes ? `<div class="favorite-entry-notes">${escapeHtml(e.psychological_effect_notes)}</div>` : ''}
@@ -72,12 +73,12 @@ function renderGroup(g) {
   `).join('');
 
   return `
-    <div class="list-row">
+    <div class="list-row favorite-row" data-programme-id="${g.programme_id}">
       <div class="list-row-top">
         <div>
           <div class="badge badge-muted" style="margin-bottom: 8px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
           <div class="list-row-title">
-            <a href="programme.html?id=${g.programme_id}" style="color: inherit;">${escapeHtml(g.programme_name)}</a>
+            <a href="programme.html?id=${g.programme_id}" class="favorite-programme-link">${escapeHtml(g.programme_name)}</a>
             <span style="color: var(--muted); font-weight: 400;"> — ${escapeHtml(g.target_label)}</span>
           </div>
         </div>
@@ -116,6 +117,28 @@ function wireFavoriteHearts() {
   });
 }
 
+function wireEntryDelete() {
+  listEl.querySelectorAll('[data-like-delete]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('Delete this favorite?')) return;
+      await supabase.from('likes').delete().eq('id', btn.dataset.likeDelete);
+      await loadAllLikes();
+    });
+  });
+}
+
+// The programme name is a real link (for hover affordance / opening in a new tab),
+// but the whole row is clickable too — only the heart and delete buttons opt out.
+function wireRowNavigation() {
+  listEl.querySelectorAll('.favorite-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.like-heart') || e.target.closest('[data-like-delete]') || e.target.closest('a')) return;
+      window.location.href = `programme.html?id=${row.dataset.programmeId}`;
+    });
+  });
+}
+
 function applyFiltersAndRender() {
   const type = filterType.value;
   const prog = filterProgramme.value;
@@ -145,6 +168,8 @@ function applyFiltersAndRender() {
 
   listEl.innerHTML = filtered.map(renderGroup).join('');
   wireFavoriteHearts();
+  wireEntryDelete();
+  wireRowNavigation();
 }
 
 async function loadAllLikes() {
