@@ -715,6 +715,61 @@ function pollSlotsFor(params) {
   return generateSlots(params.start_date, params.end_date, params.from_time, params.to_time, params.slot_minutes);
 }
 
+// Renders the poll's availability as a When2Meet-style grid: one column per day,
+// one row per candidate time. Cell shading intensity reflects how many people are
+// available; a "Select all" toggle per day lets someone who's free most of the time
+// mark the whole column at once and just uncheck the one slot they can't do.
+function pollGridHTML(poll, closed) {
+  const dates = [...new Set(poll.poll_slots.map(s => s.slot_date))].sort();
+  const times = [...new Set(poll.poll_slots.map(s => s.slot_time))].sort();
+  const byKey = {};
+  poll.poll_slots.forEach(s => { byKey[`${s.slot_date}|${s.slot_time}`] = s; });
+
+  const headerCells = dates.map(d => {
+    const dd = new Date(`${d}T00:00:00`);
+    const daySlots = poll.poll_slots.filter(s => s.slot_date === d);
+    const allMine = daySlots.length > 0 && daySlots.every(s => (s.poll_responses || []).some(r => r.person === identity));
+    return `
+      <th class="poll-grid-daycol">
+        <div class="poll-grid-day-label"><span>${DAY_ABBR[dd.getDay()]}</span><span>${dd.getDate()}</span></div>
+        ${!closed ? `<button type="button" class="poll-grid-day-toggle" data-day-toggle="${d}">${allMine ? 'Clear' : 'Select all'}</button>` : ''}
+      </th>
+    `;
+  }).join('');
+
+  const bodyRows = times.map(t => {
+    const cells = dates.map(d => {
+      const slot = byKey[`${d}|${t}`];
+      if (!slot) return `<td class="poll-grid-cell-wrap"></td>`;
+      const responses = slot.poll_responses || [];
+      const mine = responses.some(r => r.person === identity);
+      const count = responses.length;
+      // Only tint the cell once someone's responded — an inline background-color of
+      // "transparent" would otherwise beat the class's neutral grey box entirely.
+      const style = count > 0
+        ? `style="background-color: rgba(var(--accent-rgb), ${Math.min(0.18 + 0.7 * (count / TEAM_MEMBERS.length), 0.88)});"`
+        : '';
+      const names = responses.map(r => r.person).join(', ') || 'No one yet';
+      return `
+        <td class="poll-grid-cell-wrap">
+          <button type="button" class="poll-grid-cell ${mine ? 'mine' : ''}" data-slot-id="${slot.id}" ${closed ? 'disabled' : ''}
+            ${style} title="${escapeHtml(names)}">${count > 0 ? count : ''}</button>
+        </td>
+      `;
+    }).join('');
+    return `<tr><td class="poll-grid-time">${formatTime(t)}</td>${cells}</tr>`;
+  }).join('');
+
+  return `
+    <div class="poll-grid-wrap">
+      <table class="poll-grid">
+        <thead><tr><th class="poll-grid-corner"></th>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderPolls() {
   const el = document.getElementById('poll-list');
   // Scheduled polls already produced a real Meeting — they're historical, not active.
@@ -727,19 +782,6 @@ function renderPolls() {
   el.innerHTML = active.map(poll => {
     const closed = poll.status === 'closed';
     const top = pollResults(poll).slice(0, 3);
-
-    const slotsHTML = poll.poll_slots.map(slot => {
-      const responses = slot.poll_responses || [];
-      const iVoted = responses.some(r => r.person === identity);
-      return `
-        <div class="poll-slot">
-          <input type="checkbox" data-slot-id="${slot.id}" ${iVoted ? 'checked' : ''} ${closed ? 'disabled' : ''} />
-          <span class="poll-slot-label">${formatSlot(slot)}</span>
-          <span class="poll-slot-names">${escapeHtml(responses.map(r => r.person).join(', '))}</span>
-          <span class="poll-slot-count">${responses.length} available</span>
-        </div>
-      `;
-    }).join('');
 
     return `
       <div class="poll-card ${closed ? 'closed' : ''}" data-poll-id="${poll.id}">
@@ -756,7 +798,7 @@ function renderPolls() {
             ${top.map(r => `<span class="poll-top-chip">${escapeHtml(formatSlot(r.slot))} · ${r.count}/${TEAM_MEMBERS.length}</span>`).join('')}
           </div>
         ` : ''}
-        <div class="poll-slots">${slotsHTML}</div>
+        ${pollGridHTML(poll, closed)}
         <div class="poll-actions">
           <button type="button" class="btn-text" data-poll-edit="${poll.id}">Edit</button>
           <button type="button" class="btn-text" data-poll-toggle-close="${poll.id}">${closed ? 'Reopen' : 'Close'}</button>
@@ -767,8 +809,11 @@ function renderPolls() {
     `;
   }).join('');
 
-  el.querySelectorAll('[data-slot-id]').forEach(cb => {
-    cb.addEventListener('change', () => toggleResponse(cb.dataset.slotId));
+  el.querySelectorAll('[data-slot-id]').forEach(btn => {
+    btn.addEventListener('click', () => toggleResponse(btn.dataset.slotId));
+  });
+  el.querySelectorAll('[data-day-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => toggleWholeDay(btn.closest('.poll-card').dataset.pollId, btn.dataset.dayToggle));
   });
   el.querySelectorAll('[data-poll-edit]').forEach(btn => {
     btn.addEventListener('click', () => openEditPollModal(polls.find(p => p.id === btn.dataset.pollEdit)));
@@ -796,6 +841,26 @@ async function toggleResponse(slotId) {
     await supabase.from('poll_responses').delete().eq('id', existing.id);
   } else {
     await supabase.from('poll_responses').insert({ slot_id: slotId, person: identity, created_at: new Date().toISOString() });
+  }
+  await loadPolls();
+  renderPolls();
+}
+
+// Selects (or, if already fully selected, clears) every slot in one day for the
+// current user in a single action — quicker than clicking each slot individually
+// when someone is free most of the day and just needs to exclude one slot.
+async function toggleWholeDay(pollId, dateStr) {
+  const poll = polls.find(p => p.id === pollId);
+  if (!poll) return;
+  const daySlots = poll.poll_slots.filter(s => s.slot_date === dateStr);
+  const mineIds = daySlots.filter(s => (s.poll_responses || []).some(r => r.person === identity)).map(s => s.id);
+  const allMine = daySlots.length > 0 && mineIds.length === daySlots.length;
+
+  if (allMine) {
+    await supabase.from('poll_responses').delete().eq('person', identity).in('slot_id', daySlots.map(s => s.id));
+  } else {
+    const toInsert = daySlots.filter(s => !mineIds.includes(s.id)).map(s => ({ slot_id: s.id, person: identity, created_at: new Date().toISOString() }));
+    if (toInsert.length) await supabase.from('poll_responses').insert(toInsert);
   }
   await loadPolls();
   renderPolls();

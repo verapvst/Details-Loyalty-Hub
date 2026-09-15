@@ -8,6 +8,7 @@
   --surface-alt: #F5F5F7;
   --dark: #1D1D1F;
   --accent: #B18F46;
+  --accent-rgb: 177, 143, 70;
   --accent-mid: #93753A;
   --accent-light: #F5EFE1;
   --muted: #6E6E73;
@@ -372,15 +373,27 @@ ul { list-style: none; }
 .poll-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 6px; }
 .poll-title { font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -0.005em; }
 .poll-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-.poll-slots { display: flex; flex-direction: column; gap: 8px; }
-.poll-slot {
-  display: flex; align-items: center; gap: 14px; padding: 10px 14px;
-  background: var(--surface-alt); border-radius: var(--radius); font-size: 13px;
+
+/* When2Meet-style availability grid: one column per day, one row per slot. */
+.poll-grid-wrap { overflow-x: auto; padding-bottom: 4px; }
+.poll-grid { border-collapse: separate; border-spacing: 4px; }
+.poll-grid-corner { min-width: 52px; }
+.poll-grid-daycol { min-width: 56px; text-align: center; padding-bottom: 6px; }
+.poll-grid-day-label { display: flex; flex-direction: column; line-height: 1.3; margin-bottom: 4px; }
+.poll-grid-day-label span:first-child { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.poll-grid-day-label span:last-child { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--dark); }
+.poll-grid-day-toggle { font-size: 9px; font-weight: 600; color: var(--accent-mid); background: var(--accent-light); padding: 3px 8px; border-radius: 10px; white-space: nowrap; }
+.poll-grid-day-toggle:hover { background: #EDE1C6; }
+.poll-grid-time { font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap; padding-right: 8px; text-align: right; }
+.poll-grid-cell-wrap { padding: 0; }
+.poll-grid-cell {
+  width: 48px; height: 28px; border-radius: 6px; background: var(--surface-alt);
+  font-size: 11px; font-weight: 700; color: var(--accent-mid);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
-.poll-slot input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
-.poll-slot-label { flex: 1; font-weight: 500; }
-.poll-slot-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
-.poll-slot-names { font-size: 11px; color: var(--muted-light); white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.poll-grid-cell:hover:not(:disabled) { transform: scale(1.08); box-shadow: var(--shadow); }
+.poll-grid-cell.mine { box-shadow: inset 0 0 0 2px var(--dark); }
+.poll-grid-cell:disabled { cursor: default; }
 
 .poll-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .poll-top-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
@@ -554,8 +567,8 @@ ul { list-style: none; }
   .tier-row-v2 { grid-template-columns: 1fr 1fr; }
   .tier-row-v2 > button { grid-column: 1 / -1; justify-self: end; }
   .agenda-row, .task-row { flex-wrap: wrap; }
-  .poll-slot { flex-wrap: wrap; }
-  .poll-slot-names { display: none; }
+  .poll-grid-cell { width: 38px; height: 26px; }
+  .poll-grid-daycol, .poll-grid-corner { min-width: 42px; }
   .month-cell { padding: 5px; min-height: 72px; }
   .month-label { min-width: 0; font-size: 16px; }
   .month-pill { font-size: 8px; padding: 1px 4px; }
