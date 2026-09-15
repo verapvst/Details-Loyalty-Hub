@@ -20,6 +20,13 @@ export function likeSummary(likes, targetType, targetLabel) {
 
 // Renders a heart button + optional count for one likeable target. Call wireHearts()
 // afterward on the containing element to make it interactive.
+// A plain heart outline when not liked, filled when liked — both grey, no color
+// change, so the heart never competes visually with the accent/status colors used
+// elsewhere in the app.
+function heartIconSVG(filled) {
+  return `<svg class="heart-icon" viewBox="0 0 24 24" width="14" height="14" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.7-4.35-9.3-8.1C.7 9.9 1.7 6 5 5c2-.1 3.6 1 4.5 2.5C10.4 6 12 4.9 14 5c3.3 1 4.3 4.9 2.3 7.9C18.7 16.65 12 21 12 21z"/></svg>`;
+}
+
 export function heartHTML(targetType, targetLabel, targetId, summary) {
   const filled = !!summary.mine;
   return `
@@ -27,7 +34,7 @@ export function heartHTML(targetType, targetLabel, targetId, summary) {
       data-target-type="${escapeHtml(targetType)}"
       data-target-label="${escapeHtml(targetLabel)}"
       data-target-id="${targetId ? escapeHtml(targetId) : ''}">
-      <span class="heart-icon">${filled ? '❤️' : '🤍'}</span>
+      ${heartIconSVG(filled)}
       ${summary.othersCount > 0 ? `<span class="heart-count">${summary.othersCount}</span>` : ''}
     </button>
   `;
@@ -47,7 +54,7 @@ export function wireHearts(container, ctx) {
   });
 }
 
-function targetTypeLabel(type) {
+export function targetTypeLabel(type) {
   const labels = {
     mechanism: 'Mechanism', benefit: 'Benefit', membership_type: 'Membership Type',
     target_customer: 'Target Customer', tier: 'Tier', feature: 'Feature'

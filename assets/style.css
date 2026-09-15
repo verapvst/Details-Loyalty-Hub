@@ -260,8 +260,7 @@ ul { list-style: none; }
   font-size: 11px; color: var(--muted); transition: background var(--transition), transform var(--transition);
 }
 .like-heart:hover { background: var(--surface-alt); transform: scale(1.08); }
-.like-heart.liked:hover { background: var(--red-light); }
-.heart-icon { font-size: 13px; line-height: 1; }
+.heart-icon { display: block; flex-shrink: 0; }
 .heart-count { font-weight: 600; font-size: 10px; }
 .record-tier-table .like-heart { padding: 3px 6px; }
 .like-target-display { font-size: 14px; font-weight: 600; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); }
@@ -353,6 +352,15 @@ ul { list-style: none; }
 .list-row-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 11px; color: var(--muted); }
 .list-row-meta a { color: var(--accent); font-weight: 500; }
 .figure-value { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); line-height: 1; }
+
+/* ---------- Favorites (aggregated) ---------- */
+.favorite-entries { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+.favorite-entry { padding-top: 12px; border-top: 1px solid var(--border); }
+.favorite-entry:first-child { padding-top: 0; border-top: none; }
+.favorite-entry-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.favorite-entry-person { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-mid); }
+.favorite-entry-desc { font-size: 13px; color: var(--dark); line-height: 1.6; }
+.favorite-entry-notes { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 4px; }
 
 /* ---------- Agenda (meetings + deliverables) ---------- */
 .agenda-month-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 28px 0 12px; }

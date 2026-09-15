@@ -10,15 +10,40 @@
 
 <div id="nav-root"></div>
 
-<div class="placeholder-hero">
-  <div class="tag">Coming Soon</div>
-  <h1>Favorites</h1>
-  <p>Save the features you like most from each programme — privately, or as a shared team shortlist — to feed straight into recommendations for Details.</p>
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1>Favorites</h1>
+      <p>Every observation the team has flagged as interesting, in one place — filter by Mechanism, Benefit, Feature or Programme to see it aggregated.</p>
+    </div>
+  </div>
 </div>
 
-<script type="module">
-  import { initNav } from './assets/app.js';
-  initNav('favorites');
-</script>
+<div class="filter-bar-wrap">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">Type</span>
+      <select class="filter-select" id="filter-type"><option value="">All</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Programme</span>
+      <select class="filter-select" id="filter-programme"><option value="">All</option></select>
+    </div>
+    <button class="btn-clear-filters" id="btn-clear-filters" type="button">Clear filters</button>
+    <input class="search-input" id="search-input" type="search" placeholder="Search programme, feature, notes…" />
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Liked Observations</h2>
+    <span class="section-count" id="section-count"></span>
+  </div>
+  <div id="favorite-list" class="list-rows">
+    <div class="loading-state">Loading…</div>
+  </div>
+</section>
+
+<script type="module" src="assets/favorites.js"></script>
 </body>
 </html>
