@@ -202,14 +202,15 @@ function buildAgendaItems() {
   meetings.forEach(m => items.push({
     date: m.meeting_date, time: m.meeting_time,
     timeLabel: timeRangeLabel(m.meeting_time, m.end_time),
-    title: m.title, badgeText: m.meeting_type, badgeClass: 'badge-muted',
+    title: m.title, badgeText: m.meeting_type, badgeClass: 'badge-meeting',
     sub: meetingSubtitle(m), kind: 'meeting', cancelled: m.status === 'cancelled', raw: m
   }));
 
-  tasks.filter(t => t.due_date).forEach(t => items.push({
+  // Plain Tasks deliberately don't appear on the Calendar (Agenda or Month) — only
+  // Meetings and Deliverables do. Tasks stay visible in the Tasks list below.
+  tasks.filter(t => t.due_date && t.task_type === 'Deliverable').forEach(t => items.push({
     date: t.due_date, time: null, timeLabel: '',
-    title: t.title, badgeText: t.task_type === 'Deliverable' ? 'Deliverable' : 'Task',
-    badgeClass: t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted',
+    title: t.title, badgeText: 'Deliverable', badgeClass: 'badge-yellow',
     sub: (t.assignees && t.assignees.length) ? `Assigned: ${t.assignees.join(', ')}` : 'Unassigned',
     kind: 'task', cancelled: t.status === 'cancelled', raw: t
   }));
@@ -302,8 +303,9 @@ function monthIndex() {
   };
 
   meetings.forEach(m => push(m.meeting_date, { kind: 'meeting', item: m, cancelled: m.status === 'cancelled' }));
-  tasks.filter(t => t.due_date).forEach(t => push(t.due_date, {
-    kind: t.task_type === 'Deliverable' ? 'deliverable' : 'task', item: t, cancelled: t.status === 'cancelled'
+  // Only Deliverables show on the Calendar — plain Tasks stay in the Tasks list only.
+  tasks.filter(t => t.due_date && t.task_type === 'Deliverable').forEach(t => push(t.due_date, {
+    kind: 'deliverable', item: t, cancelled: t.status === 'cancelled'
   }));
   milestones.forEach(m => {
     if (!m.date_from) return;
