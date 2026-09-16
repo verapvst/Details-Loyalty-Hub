@@ -417,7 +417,8 @@ async function saveChanges() {
     points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
     points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,
     points_notes: form.elements['points_notes'].value.trim() || null,
-    partner_companies: form.elements['partner_companies'].value.split(';').map(s => s.trim()).filter(Boolean)
+    partner_companies: form.elements['partner_companies'].value.split(';').map(s => s.trim()).filter(Boolean),
+    updated_at: new Date().toISOString()
   };
 
   const saveBtn = document.getElementById('btn-save');

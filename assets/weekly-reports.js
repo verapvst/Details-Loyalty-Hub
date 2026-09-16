@@ -1,8 +1,8 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
-import { escapeHtml, checkboxRowWithAllHTML, wireSelectAllToggle } from './fields.js';
-import { TEAM_MEMBERS } from './options.js';
-import { loadQuestions, renderQuestionsSection, openQuestionModal } from './questions.js';
+import { escapeHtml } from './fields.js';
+import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions } from './questions.js';
+import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps } from './next-steps.js';
 
 initNav('reports');
 
@@ -20,12 +20,6 @@ function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
   return toDateStr(d);
-}
-
-function daysBetween(startStr, endStr) {
-  const start = new Date(startStr + 'T00:00:00');
-  const end = new Date(endStr + 'T00:00:00');
-  return Math.round((end - start) / 86400000) + 1;
 }
 
 function shortDate(dateStr) {
@@ -48,104 +42,97 @@ function currentWeek() {
   return { start: toDateStr(monday), end: toDateStr(sunday) };
 }
 
-function bullets(lines) {
-  return lines.length ? lines.join('\n') : '(Nothing to report this period.)';
-}
-
 // ---------------- Section builders ----------------
+// Progress reads straight from each table's own created_at/updated_at/completed_at —
+// no separate activity-log table. Each bucket becomes one readable sentence, not a
+// raw per-row dump, so the section stays copy-paste friendly.
 
-function buildResearchSection(programmes, features, sources) {
+function pluralize(n, noun) { return `${n} ${noun}${n === 1 ? '' : 's'}`; }
+
+function buildProgressSection(counts) {
   const lines = [];
-  if (programmes.length) {
-    lines.push('New programmes added:');
-    programmes.forEach(p => lines.push(`• ${p.programme_name}`));
-  }
-  if (features.length) {
-    if (lines.length) lines.push('');
-    lines.push('New features added:');
-    features.forEach(f => lines.push(`• ${f.feature_name}${f.programmes?.programme_name ? ` (${f.programmes.programme_name})` : ''}`));
-  }
-  if (sources.length) {
-    if (lines.length) lines.push('');
-    lines.push('Research / sources added:');
-    sources.forEach(s => lines.push(`• ${s.citation_tag}`));
-  }
-  return bullets(lines);
+  if (counts.programmesAdded) lines.push(`• ${pluralize(counts.programmesAdded, 'loyalty programme')} added.`);
+  if (counts.programmesUpdated) lines.push(`• ${pluralize(counts.programmesUpdated, 'programme')} updated with new information.`);
+  if (counts.featuresAdded) lines.push(`• ${pluralize(counts.featuresAdded, 'programme feature')} added.`);
+  if (counts.favouritesAdded) lines.push(`• ${pluralize(counts.favouritesAdded, 'favourite')} added to the team's benchmark of interesting mechanisms and benefits.`);
+  if (counts.insightsAdded) lines.push(`• ${pluralize(counts.insightsAdded, 'insight')} added to Data & Insights.`);
+  if (counts.meetingsHeld) lines.push(`• ${pluralize(counts.meetingsHeld, 'meeting')} held.`);
+  if (counts.tasksCompleted) lines.push(`• ${pluralize(counts.tasksCompleted, 'task/deliverable')} completed.`);
+  return lines.length ? lines.join('\n') : '(No recorded activity this period.)';
 }
 
-function buildAnalysisSection(likes, figures) {
+function buildQuestionsSection(active) {
+  const questions = active.filter(q => q.item_type === 'question');
+  const support = active.filter(q => q.item_type === 'support');
   const lines = [];
-  if (likes.length) {
-    lines.push('Team insights (Favorites):');
-    likes.forEach(l => {
-      const who = l.programmes?.programme_name ? `${l.programmes.programme_name} — ${l.target_label}` : l.target_label;
-      const desc = l.description ? `: ${l.description}` : '';
-      const why = l.psychological_effect_notes ? ` (${l.psychological_effect_notes})` : '';
-      lines.push(`• ${who}${desc}${why} — ${l.liked_by}`);
-    });
+  if (questions.length) {
+    lines.push('Questions:');
+    questions.forEach(q => lines.push(`• ${q.question_text}`));
   }
-  if (figures.length) {
+  if (support.length) {
     if (lines.length) lines.push('');
-    lines.push('Figures & Data added:');
-    figures.forEach(f => lines.push(`• ${f.market ? f.market + ': ' : ''}${f.statistic} (${f.value})`));
+    lines.push('Support Needed:');
+    support.forEach(q => lines.push(`• ${q.question_text}`));
   }
-  return bullets(lines);
+  return lines.length ? lines.join('\n') : '(Nothing open.)';
+}
+
+function buildNextStepsSection(steps) {
+  return steps.length ? steps.map(s => `• ${s.text}`).join('\n') : '(Nothing planned yet.)';
 }
 
 function buildMeetingsSection(meetings) {
-  return bullets(meetings.map(m => {
+  const lines = meetings.map(m => {
     const time = m.meeting_time ? ` · ${m.meeting_time.slice(0, 5)}` : '';
     const status = m.status === 'cancelled' ? ' [Cancelled]' : '';
     const notes = m.notes ? `\n  Notes: ${m.notes}` : '';
     return `• ${m.meeting_date}${time} — ${m.title} (${m.meeting_type})${status}${notes}`;
-  }));
-}
-
-function buildDeliverablesSection(tasks) {
-  return bullets(tasks.map(t => `• ${t.title}${t.assignees?.length ? ` — ${t.assignees.join(', ')}` : ''} (due ${t.due_date})`));
-}
-
-function buildQuestionsSection(openQuestions) {
-  return bullets(openQuestions.map(q => `• ${q.question_text}${q.asked_by ? ` — asked by ${q.asked_by}` : ''}`));
-}
-
-function buildNextStepsSection(tasks) {
-  return bullets(tasks.map(t => `• ${t.title}${t.assignees?.length ? ` — ${t.assignees.join(', ')}` : ''} (due ${t.due_date})`));
+  });
+  return lines.length ? lines.join('\n') : '(No meetings this period.)';
 }
 
 // ---------------- Generate ----------------
 
 async function generateReport(periodStart, periodEnd) {
   const rangeEndExclusive = addDays(periodEnd, 1); // timestamptz columns: [start, end+1)
-  const nextStart = addDays(periodEnd, 1);
-  const nextEnd = addDays(periodEnd, daysBetween(periodStart, periodEnd));
 
   const [
-    { data: newProgrammes }, { data: newFeatures }, { data: newSources },
-    { data: likes }, { data: figures },
+    { data: newProgrammes }, { data: updatedProgrammes }, { data: newFeatures },
+    { data: newLikes }, { data: newInsights },
     { data: meetings },
-    { data: doneDeliverables },
-    { data: nextTasks },
-    allQuestions
+    { data: doneTasks },
+    allQuestions, allNextSteps
   ] = await Promise.all([
-    supabase.from('programmes').select('programme_name, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('programme_features').select('feature_name, created_at, programmes(programme_name)').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('sources').select('citation_tag, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('likes').select('target_label, description, psychological_effect_notes, liked_by, created_at, programmes(programme_name)').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('figures').select('statistic, value, market, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('programmes').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('programmes').select('id, created_at, updated_at').gte('updated_at', periodStart).lt('updated_at', rangeEndExclusive),
+    supabase.from('programme_features').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('likes').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('figures').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
     supabase.from('meetings').select('*').gte('meeting_date', periodStart).lte('meeting_date', periodEnd).order('meeting_date'),
-    supabase.from('tasks').select('*').eq('task_type', 'Deliverable').eq('status', 'done').gte('due_date', periodStart).lte('due_date', periodEnd),
-    supabase.from('tasks').select('*').gte('due_date', nextStart).lte('due_date', nextEnd).order('due_date'),
-    loadQuestions()
+    supabase.from('tasks').select('*').in('task_type', ['Task', 'Deliverable']).gte('completed_at', periodStart).lt('completed_at', rangeEndExclusive),
+    loadQuestions(),
+    loadNextSteps()
   ]);
 
+  // A programme created this period will also carry an updated_at from that same save —
+  // don't double-count it as "updated" too.
+  const updatedExcludingNew = (updatedProgrammes || []).filter(p => p.updated_at !== p.created_at && !(newProgrammes || []).some(np => np.id === p.id));
+
+  const counts = {
+    programmesAdded: (newProgrammes || []).length,
+    programmesUpdated: updatedExcludingNew.length,
+    featuresAdded: (newFeatures || []).length,
+    favouritesAdded: (newLikes || []).length,
+    insightsAdded: (newInsights || []).length,
+    meetingsHeld: (meetings || []).filter(m => m.status !== 'cancelled').length,
+    tasksCompleted: (doneTasks || []).length
+  };
+
   return {
-    research: buildResearchSection(newProgrammes || [], newFeatures || [], newSources || []),
-    analysis: buildAnalysisSection(likes || [], figures || []),
-    meetings: buildMeetingsSection(meetings || []),
-    deliverables: buildDeliverablesSection(doneDeliverables || []),
-    questions: buildQuestionsSection(allQuestions.filter(q => q.status === 'open')),
-    next_steps: buildNextStepsSection(nextTasks || [])
+    progress: buildProgressSection(counts),
+    questions: buildQuestionsSection(activeQuestions(allQuestions)),
+    next_steps: buildNextStepsSection(activeNextSteps(allNextSteps)),
+    meetings: buildMeetingsSection(meetings || [])
   };
 }
 
@@ -158,12 +145,10 @@ startInput.value = start;
 endInput.value = end;
 
 const sectionEls = {
-  research: document.getElementById('section-research'),
-  analysis: document.getElementById('section-analysis'),
-  meetings: document.getElementById('section-meetings'),
-  deliverables: document.getElementById('section-deliverables'),
+  progress: document.getElementById('section-progress'),
   questions: document.getElementById('section-questions'),
-  next_steps: document.getElementById('section-next-steps')
+  next_steps: document.getElementById('section-next-steps'),
+  meetings: document.getElementById('section-meetings')
 };
 
 let currentPeriod = null;
@@ -214,6 +199,29 @@ document.getElementById('btn-save-report').addEventListener('click', async () =>
   loadSavedReports();
 });
 
+document.getElementById('btn-copy-report').addEventListener('click', async () => {
+  if (!currentPeriod) return;
+  const doc = [
+    `WEEKLY REPORT`,
+    weekLabel(currentPeriod.start, currentPeriod.end),
+    '',
+    '01 — Progress', sectionEls.progress.value,
+    '',
+    '02 — Questions & Support Needed', sectionEls.questions.value,
+    '',
+    '03 — Next Steps', sectionEls.next_steps.value,
+    '',
+    '04 — Meetings & Discussions', sectionEls.meetings.value
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(doc);
+    showToast('Report copied to clipboard.');
+  } catch {
+    showToast('Could not copy automatically — select the sections manually.', true);
+  }
+});
+
 async function loadSavedReports() {
   const el = document.getElementById('saved-reports-list');
   const { data, error } = await supabase.from('weekly_reports').select('*').order('period_start', { ascending: false });
@@ -250,7 +258,7 @@ async function loadSavedReports() {
   });
 }
 
-// ---------------- Questions (manage directly here, not just on Schedules & Tasks) ----------------
+// ---------------- Questions & Support Needed (manual) ----------------
 
 async function reloadQuestions() {
   const qs = await loadQuestions();
@@ -259,120 +267,15 @@ async function reloadQuestions() {
 
 document.getElementById('btn-add-question').addEventListener('click', () => openQuestionModal({ onChange: reloadQuestions }));
 
-// ---------------- Next Steps (tasks due in the period right after the one selected) ----------------
+// ---------------- Next Steps (manual, not Tasks) ----------------
 
-function nextStepsWindow() {
-  const periodStart = startInput.value || currentWeek().start;
-  const periodEnd = endInput.value || currentWeek().end;
-  const nextStart = addDays(periodEnd, 1);
-  const nextEnd = addDays(periodEnd, daysBetween(periodStart, periodEnd));
-  return { nextStart, nextEnd };
+async function reloadNextSteps() {
+  const steps = await loadNextSteps();
+  renderNextStepsSection(document.getElementById('next-steps-list'), steps, { onChange: reloadNextSteps });
 }
 
-async function loadNextSteps() {
-  const { nextStart, nextEnd } = nextStepsWindow();
-  document.getElementById('next-steps-range').textContent =
-    `Tasks due ${shortDate(nextStart)} – ${shortDate(nextEnd)} (the period right after what's selected below)`;
-
-  const { data, error } = await supabase.from('tasks').select('*').gte('due_date', nextStart).lte('due_date', nextEnd).order('due_date');
-  const el = document.getElementById('next-steps-list');
-  if (error) {
-    el.innerHTML = `<div class="error-state">Couldn't load next steps: ${escapeHtml(error.message)}</div>`;
-    return;
-  }
-  const nextTasks = data || [];
-  if (!nextTasks.length) {
-    el.innerHTML = `<div class="empty-state"><div class="em-title">Nothing planned yet</div><p>Add a task with a due date in that window — it'll show up here and in the Next Steps section once you generate.</p></div>`;
-    return;
-  }
-  el.innerHTML = nextTasks.map(t => `
-    <div class="task-row" data-task-id="${t.id}">
-      <span class="badge ${t.task_type === 'Deliverable' ? 'badge-yellow' : 'badge-muted'}">${escapeHtml(t.task_type || 'Task')}</span>
-      <div class="task-main">
-        <div class="task-title">${escapeHtml(t.title)}</div>
-        <div class="task-assignees">${(t.assignees && t.assignees.length) ? escapeHtml(t.assignees.join(', ')) : 'Unassigned'}</div>
-      </div>
-      <div class="task-due">${t.due_date}</div>
-      <button type="button" class="task-remove" data-next-step-remove="${t.id}">&times;</button>
-    </div>
-  `).join('');
-
-  el.querySelectorAll('[data-next-step-remove]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Delete this task?')) return;
-      await supabase.from('tasks').delete().eq('id', btn.dataset.nextStepRemove);
-      loadNextSteps();
-    });
-  });
-}
-
-function openAddNextStepModal() {
-  const { nextStart } = nextStepsWindow();
-  let root = document.getElementById('next-step-modal-root');
-  if (!root) {
-    root = document.createElement('div');
-    root.id = 'next-step-modal-root';
-    document.body.appendChild(root);
-  }
-
-  root.innerHTML = `
-    <div class="modal-overlay form-overlay" id="next-step-modal">
-      <div class="form-modal" style="max-width: 480px;">
-        <div class="form-modal-head"><h2>Add Task</h2><button type="button" class="form-modal-close" id="next-step-close">&times;</button></div>
-        <form id="next-step-form">
-          <div class="form-modal-body">
-            <div class="form-grid">
-              <div class="form-field full"><label>Title *</label><input type="text" name="title" required /></div>
-              <div class="form-field"><label>Due Date *</label><input type="date" name="due_date" required value="${nextStart}" /></div>
-              <div class="form-field"><label>Type</label>
-                <select name="task_type"><option value="Task">Task</option><option value="Deliverable">Deliverable</option></select>
-              </div>
-            </div>
-            <div class="form-section-label">Assignees</div>
-            ${checkboxRowWithAllHTML('assignee', TEAM_MEMBERS, [])}
-          </div>
-          <div class="form-modal-foot">
-            <button type="button" class="btn-text" id="next-step-cancel">Cancel</button>
-            <button type="submit" class="btn-primary">Add Task</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-
-  const overlay = document.getElementById('next-step-modal');
-  const close = () => root.innerHTML = '';
-  document.getElementById('next-step-close').addEventListener('click', close);
-  document.getElementById('next-step-cancel').addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  wireSelectAllToggle(document.getElementById('next-step-form'));
-
-  document.getElementById('next-step-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const assignees = [...form.querySelectorAll('input[name="assignee"]:checked')].map(cb => cb.value);
-    const { error } = await supabase.from('tasks').insert({
-      title: form.elements['title'].value.trim(),
-      due_date: form.elements['due_date'].value,
-      task_type: form.elements['task_type'].value,
-      status: 'todo',
-      assignees,
-      created_by: getIdentity(),
-      created_at: new Date().toISOString()
-    });
-    if (error) {
-      showToast(`Couldn't add task: ${error.message}`, true);
-      return;
-    }
-    close();
-    showToast('Task added.');
-    loadNextSteps();
-  });
-}
-
-document.getElementById('btn-add-next-step').addEventListener('click', openAddNextStepModal);
-[startInput, endInput].forEach(el => el.addEventListener('change', loadNextSteps));
+document.getElementById('btn-add-next-step').addEventListener('click', () => openNextStepModal({ onChange: reloadNextSteps }));
 
 reloadQuestions();
-loadNextSteps();
+reloadNextSteps();
 loadSavedReports();

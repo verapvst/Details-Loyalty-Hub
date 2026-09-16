@@ -7,7 +7,6 @@ import {
   loadMilestones, milestoneStatus, milestoneDateLabel, renderMilestoneStrip,
   openMilestoneModal, MILESTONE_BADGE_CLASS
 } from './milestones.js';
-import { loadQuestions, renderQuestionsSection, openQuestionModal } from './questions.js';
 
 initNav('tasks');
 await loadCustomOptions();
@@ -20,7 +19,6 @@ let meetings = [];
 let tasks = [];
 let polls = [];
 let milestones = [];
-let questions = [];
 
 let calendarView = 'month'; // 'agenda' | 'month'
 let monthCursor = new Date(2026, 8, 1); // September 2026 — start of the project period
@@ -1186,7 +1184,10 @@ function renderTasks() {
   el.querySelectorAll('[data-task-status]').forEach(sel => {
     sel.addEventListener('click', (e) => e.stopPropagation());
     sel.addEventListener('change', async () => {
-      await supabase.from('tasks').update({ status: sel.value }).eq('id', sel.dataset.taskStatus);
+      await supabase.from('tasks').update({
+        status: sel.value,
+        completed_at: sel.value === 'done' ? new Date().toISOString() : null
+      }).eq('id', sel.dataset.taskStatus);
       showToast('Status updated.');
       await loadTasks();
       renderTasks();
@@ -1351,6 +1352,7 @@ async function openEditTaskModal(task) {
 
     const payload = readFormValues(e.target, TASK_FIELDS.filter(f => !(f.key === 'due_date' && scope !== 'occurrence')));
     payload.assignees = [...e.target.querySelectorAll('input[name="assignee"]:checked')].map(cb => cb.value);
+    if ('status' in payload) payload.completed_at = payload.status === 'done' ? new Date().toISOString() : null;
 
     let query = supabase.from('tasks').update(payload);
     if (scope === 'occurrence') query = query.eq('id', task.id);
@@ -1393,17 +1395,11 @@ function renderMilestoneStripSection() {
   });
 }
 
-async function reloadQuestionsAndRender() {
-  questions = await loadQuestions();
-  renderQuestionsSection(document.getElementById('question-list'), questions, { onChange: reloadQuestionsAndRender });
-}
-
 // ---------------- Init ----------------
 
 document.getElementById('btn-add-meeting').addEventListener('click', () => openAddMeetingModal());
 document.getElementById('btn-add-poll').addEventListener('click', openAddPollModal);
 document.getElementById('btn-add-task').addEventListener('click', openAddTaskModal);
-document.getElementById('btn-add-question').addEventListener('click', () => openQuestionModal({ onChange: reloadQuestionsAndRender }));
 document.querySelectorAll('#calendar-view-toggle button').forEach(btn => {
   btn.addEventListener('click', () => switchCalendarView(btn.dataset.view));
 });
@@ -1417,11 +1413,9 @@ function renderAll() {
 async function init() {
   await Promise.all([loadMeetings(), loadTasks(), loadPolls()]);
   milestones = await loadMilestones();
-  questions = await loadQuestions();
   renderAll();
   renderPolls();
   renderTasks();
-  renderQuestionsSection(document.getElementById('question-list'), questions, { onChange: reloadQuestionsAndRender });
 }
 
 init();

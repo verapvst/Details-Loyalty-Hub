@@ -14,7 +14,7 @@
   <div class="page-header-inner">
     <div>
       <h1>Weekly Reports</h1>
-      <p>Pick a period and the platform drafts the PDE from what happened in the Database, Calendar, Tasks and Favorites — review, edit, then save.</p>
+      <p>Pick a period and the platform drafts a copy-paste-ready report from what happened across programmes, favourites, insights, meetings and tasks — review, edit, then save.</p>
     </div>
   </div>
 </div>
@@ -22,8 +22,9 @@
 <section class="section" style="padding-bottom: 12px;">
   <div class="section-head">
     <h2 class="section-title">Questions &amp; Support Needed</h2>
-    <button class="btn-outline" id="btn-add-question" type="button">+ Add Question</button>
+    <button class="btn-outline" id="btn-add-question" type="button">+ Add</button>
   </div>
+  <div class="settings-hint" style="margin-bottom: 14px;">Manual — active items appear in the next generated report; resolving one keeps it as history without deleting it.</div>
   <div id="question-list">
     <div class="loading-state">Loading…</div>
   </div>
@@ -32,9 +33,9 @@
 <section class="section" style="padding-top: 0; padding-bottom: 12px;">
   <div class="section-head">
     <h2 class="section-title">Next Steps</h2>
-    <button class="btn-outline" id="btn-add-next-step" type="button">+ Add Task</button>
+    <button class="btn-outline" id="btn-add-next-step" type="button">+ Add Next Step</button>
   </div>
-  <div class="settings-hint" id="next-steps-range" style="margin-bottom: 14px;"></div>
+  <div class="settings-hint" style="margin-bottom: 14px;">Strategic directions, not operational Tasks — no assignee or due date needed.</div>
   <div id="next-steps-list">
     <div class="loading-state">Loading…</div>
   </div>
@@ -55,32 +56,27 @@
 <section class="section" id="report-sections" style="padding-top: 12px;" hidden>
   <div class="section-head">
     <h2 class="section-title" id="report-period-label">Report</h2>
-    <button class="btn-primary" id="btn-save-report" type="button">Save Report</button>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-outline" id="btn-copy-report" type="button">Copy Report</button>
+      <button class="btn-primary" id="btn-save-report" type="button">Save Report</button>
+    </div>
   </div>
 
   <div class="report-block">
-    <h3>1. Research &amp; Discoveries</h3>
-    <textarea id="section-research" rows="6"></textarea>
+    <h3>01. Progress</h3>
+    <textarea id="section-progress" rows="7"></textarea>
   </div>
   <div class="report-block">
-    <h3>2. Analysis &amp; Conclusions</h3>
-    <textarea id="section-analysis" rows="6"></textarea>
-  </div>
-  <div class="report-block">
-    <h3>3. Meetings &amp; Discussions</h3>
-    <textarea id="section-meetings" rows="6"></textarea>
-  </div>
-  <div class="report-block">
-    <h3>4. Deliverables &amp; Progress</h3>
-    <textarea id="section-deliverables" rows="5"></textarea>
-  </div>
-  <div class="report-block">
-    <h3>5. Questions &amp; Support Needed</h3>
+    <h3>02. Questions &amp; Support Needed</h3>
     <textarea id="section-questions" rows="5"></textarea>
   </div>
   <div class="report-block">
-    <h3>6. Next Steps</h3>
+    <h3>03. Next Steps</h3>
     <textarea id="section-next-steps" rows="5"></textarea>
+  </div>
+  <div class="report-block">
+    <h3>04. Meetings &amp; Discussions</h3>
+    <textarea id="section-meetings" rows="6"></textarea>
   </div>
 </section>
 
