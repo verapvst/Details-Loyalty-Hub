@@ -13,6 +13,7 @@ const noSourcesNote = document.getElementById('no-sources-note');
 const addBtn = document.getElementById('btn-add-insight');
 const sectionCount = document.getElementById('section-count');
 const filterType = document.getElementById('filter-type');
+const filterVisual = document.getElementById('filter-visual');
 const filterSource = document.getElementById('filter-source');
 const searchInput = document.getElementById('search-input');
 const scopeFilterBtn = document.getElementById('scope-filter-btn');
@@ -36,6 +37,7 @@ function populateFilterOptions() {
     selectEl.value = current;
   };
   fill(filterType, distinctSorted(allInsights, 'insight_type'));
+  fill(filterVisual, distinctSorted(allInsights, 'visual_type'));
   fill(filterSource, distinctSorted(allInsights.map(f => ({ source_name: f.sources ? displaySourceName(f.sources) : null })), 'source_name'));
 }
 
@@ -66,6 +68,7 @@ function renderRow(f) {
     <a href="insight.html?id=${f.id}" class="list-row" style="display: block; text-decoration: none; color: inherit;">
       <div class="list-row-top">
         <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
+        ${f.visual_type ? `<span class="badge badge-muted">${escapeHtml(f.visual_type)}</span>` : ''}
         ${shortCitation ? `<span data-source-link="${f.source_id}" class="badge badge-muted" title="${escapeHtml(sourceName || '')}">${escapeHtml(shortCitation)}</span>` : ''}
       </div>
       <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(displayTitle(f))}</div>
@@ -87,11 +90,13 @@ function wireRowLinks() {
 
 function applyFiltersAndRender() {
   const type = filterType.value;
+  const visual = filterVisual.value;
   const sourceName = filterSource.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allInsights.filter(f => {
     if (type && f.insight_type !== type) return false;
+    if (visual && f.visual_type !== visual) return false;
     if (sourceName && (!f.sources || displaySourceName(f.sources) !== sourceName)) return false;
     // Scope filter uses OR logic: match if the insight has ANY of the selected tags.
     if (scopeFilterSelected.length && !(f.scope || []).some(v => scopeFilterSelected.includes(v))) return false;
@@ -135,10 +140,11 @@ document.addEventListener('click', (e) => {
   if (!scopeFilterPanel.hidden && !e.target.closest('.scope-filter')) scopeFilterPanel.hidden = true;
 });
 
-[filterType, filterSource].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterType, filterVisual, filterSource].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterType.value = '';
+  filterVisual.value = '';
   filterSource.value = '';
   searchInput.value = '';
   scopeFilterSelected = [];
