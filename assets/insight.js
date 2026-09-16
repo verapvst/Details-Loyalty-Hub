@@ -2,7 +2,7 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import { escapeHtml, copyToClipboard } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
-import { openInsightModal, definitionFor } from './insightModal.js';
+import { openInsightModal, definitionFor, insightImageUrl } from './insightModal.js';
 import { toEditableHtml, fieldPlainText } from './richText.js';
 
 await initNav('figures');
@@ -75,6 +75,20 @@ function contentBlockHTML(heading, richValue, copyAction, copyLabel) {
   `;
 }
 
+function visualBlockHTML(insight) {
+  if (!insight.image_path) return '';
+  const url = insightImageUrl(insight.image_path);
+  return `
+    <div class="record-block">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="margin-bottom: 0;">Visual / Evidence</h3>
+        <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="btn-text">Open Full Size</a>
+      </div>
+      <img src="${escapeHtml(url)}" alt="${escapeHtml(displayTitle(insight))}" style="max-width: 100%; border-radius: var(--radius); display: block;" />
+    </div>
+  `;
+}
+
 function render() {
   const s = insight.sources;
   const isUrl = /^https?:\/\//i.test(s?.link_or_path || '');
@@ -99,6 +113,7 @@ function render() {
     </div>
     <div class="record-body">
       ${contentBlockHTML('Main Insight', insight.insight_text, 'insight', 'Copy Insight')}
+      ${visualBlockHTML(insight)}
       ${contentBlockHTML('Source Detail', insight.supporting_detail, 'supporting', 'Copy Source Detail')}
 
       <div class="record-block">

@@ -1,15 +1,24 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
-import { escapeHtml } from './fields.js';
+import { escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 import { openSourceModal } from './sourceModal.js';
+import { loadSourceUsage, sortSourcesByRecency } from './insightModal.js';
 
 await initNav('sources');
 await loadCustomOptions();
 
 const listEl = document.getElementById('source-list');
+const sectionCount = document.getElementById('section-count');
 const searchInput = document.getElementById('search-input');
+const sortSelect = document.getElementById('sort-select');
+const filterType = document.getElementById('filter-type');
+const scopeFilterBtn = document.getElementById('scope-filter-btn');
+const scopeFilterPanel = document.getElementById('scope-filter-panel');
+
 let allSources = [];
+let usage = new Map(); // source_id -> most recent figures.created_at, from insightModal.js
+let scopeFilterSelected = [];
 
 // Legacy rows added before this restructure may not have source_name/short_citation
 // yet (only the migration's one-time backfill from the old citation_tag) — fall back
@@ -34,22 +43,83 @@ function renderRow(s) {
   `;
 }
 
-function applyFilterAndRender() {
+function distinctSorted(list, key) {
+  return [...new Set(list.map(s => s[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function populateFilterOptions() {
+  const current = filterType.value;
+  filterType.innerHTML = '<option value="">All</option>' +
+    distinctSorted(allSources, 'source_type').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  filterType.value = current;
+}
+
+function updateScopeFilterButtonLabel() {
+  scopeFilterBtn.textContent = scopeFilterSelected.length
+    ? (scopeFilterSelected.length <= 2 ? scopeFilterSelected.join(', ') : `${scopeFilterSelected.length} selected`)
+    : 'All';
+}
+
+// "Recently Used" (default) surfaces sources actually being cited right now, not just
+// ones entered recently — a source added months ago but reused for several Insights
+// stays near the top. "Recently Added" and "A–Z" cover the other two natural asks.
+function sortForDisplay(list) {
+  const sort = sortSelect.value;
+  if (sort === 'az') return [...list].sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  if (sort === 'recent-add') return [...list].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  return sortSourcesByRecency(list, usage);
+}
+
+function applyFiltersAndRender() {
   const q = searchInput.value.trim().toLowerCase();
-  const filtered = !q ? allSources : allSources.filter(s => {
-    const hay = `${displayName(s)} ${s.author_org || ''}`.toLowerCase();
-    return hay.includes(q);
+
+  const filtered = allSources.filter(s => {
+    if (filterType.value && s.source_type !== filterType.value) return false;
+    if (scopeFilterSelected.length && !(s.scope || []).some(v => scopeFilterSelected.includes(v))) return false;
+    if (q) {
+      const hay = `${displayName(s)} ${s.author_org || ''} ${s.source_type || ''} ${s.short_citation || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
   });
+
+  sectionCount.textContent = `${filtered.length} of ${allSources.length}`;
 
   if (!filtered.length) {
     listEl.innerHTML = allSources.length
-      ? `<div class="empty-state"><div class="em-title">No sources match</div><p>Try a different search.</p></div>`
+      ? `<div class="empty-state"><div class="em-title">No sources match</div><p>Try adjusting or clearing the filters.</p></div>`
       : `<div class="empty-state"><div class="em-title">No sources yet</div><p>Add the first one to start citing stats and findings.</p></div>`;
     return;
   }
 
-  listEl.innerHTML = filtered.map(renderRow).join('');
+  listEl.innerHTML = sortForDisplay(filtered).map(renderRow).join('');
 }
+
+scopeFilterPanel.innerHTML = scopeCheckboxGroupsHTML([]);
+scopeFilterBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  scopeFilterPanel.hidden = !scopeFilterPanel.hidden;
+});
+scopeFilterPanel.addEventListener('change', () => {
+  scopeFilterSelected = readCheckboxGroup(scopeFilterPanel, 'scope');
+  updateScopeFilterButtonLabel();
+  applyFiltersAndRender();
+});
+document.addEventListener('click', (e) => {
+  if (!scopeFilterPanel.hidden && !e.target.closest('.scope-filter')) scopeFilterPanel.hidden = true;
+});
+
+[sortSelect, filterType].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+searchInput.addEventListener('input', applyFiltersAndRender);
+document.getElementById('btn-clear-filters').addEventListener('click', () => {
+  sortSelect.value = 'recent-use';
+  filterType.value = '';
+  searchInput.value = '';
+  scopeFilterSelected = [];
+  scopeFilterPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  updateScopeFilterButtonLabel();
+  applyFiltersAndRender();
+});
 
 async function loadSources() {
   const { data, error } = await supabase
@@ -63,10 +133,10 @@ async function loadSources() {
   }
 
   allSources = data || [];
-  applyFilterAndRender();
+  usage = await loadSourceUsage();
+  populateFilterOptions();
+  applyFiltersAndRender();
 }
-
-searchInput.addEventListener('input', applyFilterAndRender);
 
 document.getElementById('btn-add-source').addEventListener('click', () => openSourceModal({ source: null, onChange: loadSources }));
 

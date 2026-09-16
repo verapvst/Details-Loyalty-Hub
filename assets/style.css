@@ -177,6 +177,16 @@ ul { list-style: none; }
 }
 .has-tooltip[data-tooltip=""]:hover::after, .has-tooltip[data-tooltip=""]:hover::before,
 .type-legend-item[data-tooltip=""]:hover::after, .type-legend-item[data-tooltip=""]:hover::before { content: none; }
+
+/* Information Type field (Add/Edit Insight): the chips ARE the selector — see all
+   types, hover one for its definition (via .has-tooltip above), click to pick. */
+.insight-type-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.insight-type-chip {
+  padding: 6px 13px; border-radius: 999px; background: var(--surface-alt); color: var(--muted);
+  font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
+}
+.insight-type-chip:hover { background: var(--border); color: var(--dark); }
+.insight-type-chip.active { background: var(--dark); color: #fff; }
 .search-input::placeholder { color: var(--muted-light); }
 .btn-clear-filters { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
 .btn-clear-filters:hover { color: var(--dark); }
@@ -276,6 +286,12 @@ ul { list-style: none; }
   font-size: 13px; color: var(--dark); line-height: 1.6; overflow-y: auto; max-height: 340px;
 }
 .rich-text-editable:focus { background: var(--white); box-shadow: 0 0 0 2px var(--dark); outline: none; }
+/* Belt-and-suspenders on top of the paste-as-plain-text handler in richText.js: any
+   inline font-family/size that still makes it into the DOM (legacy saved content,
+   an edge case the paste handler misses) is overridden so every field always
+   renders in the app's one editor font, never something brought in from outside. */
+.rich-text-editable, .rich-text-editable *,
+.rich-text-display, .rich-text-display * { font-family: inherit !important; font-size: inherit !important; }
 .rich-text-editable p { margin: 0 0 10px; }
 .rich-text-editable p:last-child { margin-bottom: 0; }
 .rich-text-editable ul, .rich-text-editable ol { margin: 0 0 10px 20px; }
@@ -304,6 +320,21 @@ ul { list-style: none; }
 .source-picker-option-name { font-size: 13px; color: var(--dark); }
 .source-picker-option-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .source-picker-empty { padding: 10px 14px; font-size: 12px; color: var(--muted); }
+.source-picker-group-label {
+  padding: 8px 14px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted-light);
+}
+
+/* ---------- Visual/Evidence upload (Add/Edit Insight: optional image) ---------- */
+.visual-evidence-drop {
+  border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 24px;
+  text-align: center; background: var(--surface-alt); cursor: pointer;
+}
+.visual-evidence-drop.drag-over { border-color: var(--dark); background: var(--white); }
+.visual-evidence-drop p { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+.visual-evidence-browse { color: var(--accent); text-decoration: underline; }
+.visual-evidence-preview img { max-width: 100%; max-height: 280px; border-radius: var(--radius); display: block; background: var(--surface-alt); }
+.visual-evidence-preview .btn-text { margin-top: 8px; }
 
 .tier-rows { display: flex; flex-direction: column; gap: 10px; }
 .tier-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 12px; align-items: center; }

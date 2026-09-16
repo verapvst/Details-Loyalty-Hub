@@ -22,11 +22,32 @@
 
 <div class="filter-bar-wrap">
   <div class="filter-bar">
-    <input class="search-input" id="search-input" type="search" placeholder="Search by source name or author/organisation…" />
+    <div class="filter-group">
+      <span class="filter-label">Sort</span>
+      <select class="filter-select" id="sort-select">
+        <option value="recent-use">Recently Used</option>
+        <option value="recent-add">Recently Added</option>
+        <option value="az">A–Z</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Type</span>
+      <select class="filter-select" id="filter-type"><option value="">All</option></select>
+    </div>
+    <div class="filter-group scope-filter">
+      <span class="filter-label">Scope</span>
+      <button type="button" class="filter-select" id="scope-filter-btn">All</button>
+      <div class="scope-filter-panel" id="scope-filter-panel" hidden></div>
+    </div>
+    <button class="btn-clear-filters" id="btn-clear-filters" type="button">Clear filters</button>
+    <input class="search-input" id="search-input" type="search" placeholder="Search by name, author or type…" />
   </div>
 </div>
 
 <section class="section">
+  <div class="section-head">
+    <span class="section-count" id="section-count"></span>
+  </div>
   <div id="source-list" class="list-rows">
     <div class="loading-state">Loading sources…</div>
   </div>

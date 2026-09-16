@@ -168,6 +168,19 @@ export function wireRichTextEditors(root) {
         else document.execCommand(cmd, false, null);
       });
     });
+
+    // Force every paste to plain text — pasting straight HTML (from a PDF, website,
+    // Word, another field's rich text, ...) brings its own font-family/size/color
+    // inline styles along with it, breaking the "one consistent editor font"
+    // guarantee. Stripping to plain text keeps Bold/Italic/lists as something only
+    // the toolbar controls, never something a paste can smuggle in. The CSS lock on
+    // .rich-text-editable/.rich-text-display is the backstop for anything already
+    // saved with stray inline styles from before this fix.
+    editable.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
   });
 }
 

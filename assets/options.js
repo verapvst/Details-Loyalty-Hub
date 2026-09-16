@@ -34,6 +34,8 @@ export const INSIGHT_TYPE_DEFINITIONS = {
   'Framework': 'A conceptual model or structured way of analysing a topic.',
   'Strategic Implication': 'What a finding may imply for strategy or decision-making.',
   'Benchmark': 'Explicitly comparative information involving companies, programmes, markets or practices.',
+  'Figure': 'A diagram, chart, map or other visual that is the evidence itself, not just an illustration of a text finding.',
+  'Table': 'Structured tabular data best preserved as-is (e.g. a comparison table from a report) rather than re-typed.',
   'Other': 'Information that does not clearly fit any of the categories above.'
 };
 
@@ -90,7 +92,7 @@ export const OPTIONS = {
   // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
   // below for the shared team definitions) — orthogonal to Scope, which is what it's about.
   insight_type: [
-    'Statistic', 'Market Fact', 'Key Finding', 'Relationship', 'Framework', 'Strategic Implication', 'Benchmark', 'Other'
+    'Statistic', 'Market Fact', 'Key Finding', 'Relationship', 'Framework', 'Strategic Implication', 'Benchmark', 'Figure', 'Table', 'Other'
   ],
   // Sources: "what kind of source is this" — separate from Scope ("what is it about").
   source_type: [

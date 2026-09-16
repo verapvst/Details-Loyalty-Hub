@@ -18,57 +18,239 @@ export function definitionFor(type) {
   return custom?.note || '';
 }
 
-export function typeLegendHTML() {
+function allInsightTypes() {
   const builtIn = Object.keys(INSIGHT_TYPE_DEFINITIONS);
   const custom = getCustomRows('insight_type').filter(r => r.active !== false).map(r => r.value);
-  return [...builtIn, ...custom].map(type =>
+  return [...builtIn, ...custom];
+}
+
+export function typeLegendHTML() {
+  return allInsightTypes().map(type =>
     `<span class="type-legend-item" data-tooltip="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</span>`
   ).join('<span class="type-legend-sep"> · </span>');
+}
+
+// The Add/Edit Insight form's Information Type field: one compact row of clickable
+// chips that ARE the selector (not a legend sitting above a separate <select>) — see,
+// hover-for-definition, and pick all happen on the same control. Definitions stay
+// exactly as defined in definitionFor(); this only changes how the field is presented.
+function insightTypeSelectorHTML(selected) {
+  const chips = allInsightTypes().map(type => `
+    <button type="button" class="insight-type-chip has-tooltip ${type === selected ? 'active' : ''}"
+      data-type="${escapeHtml(type)}" data-tooltip="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</button>
+  `).join('');
+  return `
+    <div class="insight-type-selector">${chips}</div>
+    <input type="hidden" name="insight_type" value="${escapeHtml(selected)}" />
+  `;
+}
+
+function wireInsightTypeSelector(form) {
+  const hidden = form.elements['insight_type'];
+  form.querySelectorAll('.insight-type-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      hidden.value = chip.dataset.type;
+      form.querySelectorAll('.insight-type-chip').forEach(c => c.classList.toggle('active', c === chip));
+    });
+  });
 }
 
 function sourceDisplayName(s) {
   return s.source_name || s.citation_tag || 'Untitled source';
 }
 
+// ---------------- Visual / Evidence (optional image on an Insight) ----------------
+// One Storage bucket, public-read — see supabase/021_insight_visual_evidence.sql.
+// figures.image_path stores only the object path; the public URL is derived here so
+// nothing goes stale if the bucket's URL ever changes.
+const IMAGE_BUCKET = 'insight-images';
+const IMAGE_ACCEPT = ['image/png', 'image/jpeg', 'image/webp'];
+const IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+
+export function insightImageUrl(path) {
+  if (!path) return null;
+  return supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+function visualEvidenceFieldHTML(insight) {
+  const existingUrl = insight?.image_path ? insightImageUrl(insight.image_path) : null;
+  return `
+    <div class="form-field full">
+      <label>Visual / Evidence <span style="font-weight:400; color: var(--muted);">(optional — a figure, chart, table or diagram)</span></label>
+      <div class="visual-evidence-preview" id="visual-evidence-preview" ${existingUrl ? '' : 'hidden'}>
+        <img id="visual-evidence-img" src="${existingUrl || ''}" alt="" />
+        <button type="button" class="btn-text" id="visual-evidence-remove">Remove image</button>
+      </div>
+      <div class="visual-evidence-drop" id="visual-evidence-drop" ${existingUrl ? 'hidden' : ''}>
+        <p>Drag and drop an image, or <span class="visual-evidence-browse">choose a file</span></p>
+        <p class="settings-hint" style="margin: 0;">PNG, JPG or WebP — up to 8MB.</p>
+        <input type="file" id="visual-evidence-input" accept="${IMAGE_ACCEPT.join(',')}" hidden />
+      </div>
+      <div class="form-error" id="visual-evidence-error" hidden></div>
+    </div>
+  `;
+}
+
+// Returns an object whose apply() performs the actual upload/delete and resolves to
+// the value figures.image_path should be set to — or `undefined` to leave the column
+// untouched entirely (the field was never opened), so an unrelated edit never clobbers
+// an existing image.
+function wireVisualEvidence(form, insight) {
+  const preview = form.querySelector('#visual-evidence-preview');
+  const dropZone = form.querySelector('#visual-evidence-drop');
+  const img = form.querySelector('#visual-evidence-img');
+  const fileInput = form.querySelector('#visual-evidence-input');
+  const removeBtn = form.querySelector('#visual-evidence-remove');
+  const errorEl = form.querySelector('#visual-evidence-error');
+
+  const originalPath = insight?.image_path || null;
+  let selectedFile = null;
+  let removed = false;
+
+  function showPreview(url) {
+    img.src = url;
+    preview.hidden = false;
+    dropZone.hidden = true;
+  }
+  function showDropZone() {
+    preview.hidden = true;
+    dropZone.hidden = false;
+    img.src = '';
+  }
+
+  function handleFile(file) {
+    errorEl.hidden = true;
+    if (!file) return;
+    if (!IMAGE_ACCEPT.includes(file.type)) {
+      errorEl.textContent = 'Please choose a PNG, JPG or WebP image.';
+      errorEl.hidden = false;
+      return;
+    }
+    if (file.size > IMAGE_MAX_BYTES) {
+      errorEl.textContent = 'That image is larger than 8MB — please use a smaller file.';
+      errorEl.hidden = false;
+      return;
+    }
+    selectedFile = file;
+    removed = false;
+    showPreview(URL.createObjectURL(file));
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+  ['dragover', 'dragenter'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  }));
+  ['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+  }));
+  dropZone.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
+
+  removeBtn.addEventListener('click', () => {
+    selectedFile = null;
+    removed = true;
+    fileInput.value = '';
+    showDropZone();
+  });
+
+  return {
+    async apply() {
+      if (selectedFile) {
+        const safeName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${crypto.randomUUID()}-${safeName}`;
+        const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, selectedFile);
+        if (error) throw new Error(`Couldn't upload image: ${error.message}`);
+        if (originalPath) supabase.storage.from(IMAGE_BUCKET).remove([originalPath]); // best-effort cleanup of the replaced file
+        return path;
+      }
+      if (removed && originalPath) {
+        supabase.storage.from(IMAGE_BUCKET).remove([originalPath]); // best-effort
+        return null;
+      }
+      return undefined;
+    }
+  };
+}
+
+// Most recent figures.created_at per source_id — a source used repeatedly stays near
+// the top even if it was added months ago, which matters more for reuse than when it
+// was first entered. One small query, computed once per modal open (not per keystroke).
+// Exported so the Sources page (sources.js) can offer the same "Recently Used" sort
+// without duplicating this logic.
+export async function loadSourceUsage() {
+  const { data } = await supabase.from('figures').select('source_id, created_at').not('source_id', 'is', null).order('created_at', { ascending: false });
+  const usage = new Map();
+  (data || []).forEach(row => { if (!usage.has(row.source_id)) usage.set(row.source_id, row.created_at); });
+  return usage;
+}
+
+// Recently-used first (ISO timestamps sort correctly as strings), then never-used
+// sources alphabetically after them.
+export function sortSourcesByRecency(sources, usage) {
+  return [...sources].sort((a, b) => {
+    const at = usage.get(a.id), bt = usage.get(b.id);
+    if (at && bt) return at < bt ? 1 : at > bt ? -1 : 0;
+    if (at) return -1;
+    if (bt) return 1;
+    return sourceDisplayName(a).localeCompare(sourceDisplayName(b));
+  });
+}
+
 // A searchable combobox rather than a plain <select> — scales to a much larger source
-// library than a native dropdown would. Reuses the same sources data already loaded
-// for the page (no separate source-management system); already alphabetical (the
-// caller's query is ordered by source_name), search narrows further by name or author.
+// library than a native dropdown would. Default (empty search) view is recency-first
+// (see loadSourceUsage/sortSourcesByRecency); search matches by name, author/org,
+// short citation and source type, kept in that same recency order.
 function sourcePickerHTML(selectedSource) {
   const label = selectedSource ? sourceDisplayName(selectedSource) : '';
   return `
     <div class="source-picker">
-      <input type="text" id="source-search" placeholder="Search sources by name…" autocomplete="off" value="${escapeHtml(label)}" />
+      <input type="text" id="source-search" placeholder="Search sources by name, author or type…" autocomplete="off" value="${escapeHtml(label)}" />
       <input type="hidden" name="source_id" id="source-id-input" value="${selectedSource ? selectedSource.id : ''}" />
       <div class="source-picker-dropdown" id="source-picker-dropdown" hidden></div>
     </div>
   `;
 }
 
-function wireSourcePicker({ form, sources, onSelect }) {
+// `getSources`/`getUsedIds` are functions (not plain values) so the picker keeps
+// showing an immediate, unsorted list on first focus and silently upgrades to the
+// recency-sorted one once loadSourceUsage() resolves — no spinner, no blocking.
+function wireSourcePicker({ form, getSources, getUsedIds, onSelect }) {
   const searchInput = form.querySelector('#source-search');
   const hiddenInput = form.querySelector('#source-id-input');
   const dropdown = form.querySelector('#source-picker-dropdown');
 
   function renderOptions(query) {
+    const sources = getSources();
     const q = query.trim().toLowerCase();
-    const matches = !q ? sources : sources.filter(s =>
-      sourceDisplayName(s).toLowerCase().includes(q) || (s.author_org || '').toLowerCase().includes(q)
-    );
-    dropdown.innerHTML = matches.length
-      ? matches.map(s => `
+    const matches = !q ? sources : sources.filter(s => {
+      const hay = `${sourceDisplayName(s)} ${s.author_org || ''} ${s.short_citation || ''} ${s.source_type || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+
+    if (!matches.length) {
+      dropdown.innerHTML = `<div class="source-picker-empty">No sources match.</div>`;
+    } else {
+      const usedIds = getUsedIds();
+      const usedCount = !q ? matches.filter(s => usedIds.has(s.id)).length : 0;
+      const optionHTML = s => `
         <div class="source-picker-option" data-id="${s.id}">
           <div class="source-picker-option-name">${escapeHtml(sourceDisplayName(s))}</div>
           ${(s.author_org || s.year) ? `<div class="source-picker-option-meta">${[s.author_org, s.year].filter(Boolean).map(v => escapeHtml(String(v))).join(' · ')}</div>` : ''}
         </div>
-      `).join('')
-      : `<div class="source-picker-empty">No sources match.</div>`;
+      `;
+      dropdown.innerHTML = (usedCount > 0 && usedCount < matches.length)
+        ? `<div class="source-picker-group-label">Recently Used</div>${matches.slice(0, usedCount).map(optionHTML).join('')}` +
+          `<div class="source-picker-group-label">All Sources</div>${matches.slice(usedCount).map(optionHTML).join('')}`
+        : matches.map(optionHTML).join('');
+    }
     dropdown.hidden = false;
 
     dropdown.querySelectorAll('.source-picker-option').forEach(opt => {
       opt.addEventListener('mousedown', (e) => e.preventDefault()); // survive the input's blur
       opt.addEventListener('click', () => {
-        const picked = sources.find(s => s.id === opt.dataset.id);
+        const picked = getSources().find(s => s.id === opt.dataset.id);
         searchInput.value = sourceDisplayName(picked);
         hiddenInput.value = picked.id;
         dropdown.hidden = true;
@@ -97,13 +279,17 @@ export function openInsightModal({ insight, sources, onChange }) {
   }
 
   const selectedSource = insight ? sources.find(s => s.id === insight.source_id) : null;
-  const fieldsHTML = INSIGHT_FIELDS.map(f => `
-    <div class="form-field ${f.full ? 'full' : ''}">
-      <label>${f.label}${f.required ? ' *' : ''}</label>
-      ${f.key === 'insight_type' ? `<div class="type-legend" style="margin: 2px 0 6px;">${typeLegendHTML()}</div>` : ''}
-      ${inputHTML(f, insight ? insight[f.key] : '')}
-    </div>
-  `).join('');
+  const fieldsHTML = INSIGHT_FIELDS.map(f => {
+    const block = `
+      <div class="form-field ${f.full ? 'full' : ''}">
+        <label>${f.label}${f.required ? ' *' : ''}</label>
+        ${f.key === 'insight_type' ? insightTypeSelectorHTML(insight?.insight_type) : inputHTML(f, insight ? insight[f.key] : '')}
+      </div>
+    `;
+    // Visual/Evidence sits right after Main Insight, before Source Detail — matching
+    // the "Title -> Main Insight -> Visual/Evidence -> Source -> Scope" shape.
+    return f.key === 'supporting_detail' ? visualEvidenceFieldHTML(insight) + block : block;
+  }).join('');
 
   root.innerHTML = `
     <div class="modal-overlay form-overlay" id="add-modal">
@@ -143,8 +329,21 @@ export function openInsightModal({ insight, sources, onChange }) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
   wireRichTextEditors(form);
+  wireInsightTypeSelector(form);
+  const visualEvidence = wireVisualEvidence(form, insight);
+
+  // Sources render immediately in whatever order the caller passed in; once usage
+  // loads (near-instant, one small query) the picker silently re-sorts to
+  // recently-used-first without blocking the modal or showing a spinner.
+  let orderedSources = sources;
+  let usedIds = new Set();
+  loadSourceUsage().then(usage => {
+    orderedSources = sortSourcesByRecency(sources, usage);
+    usedIds = new Set(usage.keys());
+  });
+
   wireSourcePicker({
-    form, sources,
+    form, getSources: () => orderedSources, getUsedIds: () => usedIds,
     onSelect: (picked) => {
       const scopeContainer = document.getElementById('insight-scope-groups');
       const currentlyChecked = readCheckboxGroup(form, 'scope');
@@ -181,6 +380,18 @@ export function openInsightModal({ insight, sources, onChange }) {
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
+
+    let imagePath;
+    try {
+      imagePath = await visualEvidence.apply();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = insight ? 'Save Changes' : 'Save Insight';
+      return;
+    }
+    if (imagePath !== undefined) data.image_path = imagePath;
 
     let error;
     if (insight) {
