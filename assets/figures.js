@@ -50,11 +50,15 @@ function renderRow(f) {
   const shortCitation = f.sources ? (f.sources.short_citation || f.sources.citation_tag) : null;
   const scopeChips = (f.scope || []).map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('');
 
+  // The Source badge needs to be its own click target (jump straight to the source)
+  // nested inside the row's own click target (open the insight) — an <a> can't
+  // validly contain another <a> (the browser silently closes the outer one early,
+  // splitting the card in two), so the inner one is a <span> wired up in JS instead.
   return `
     <a href="insight.html?id=${f.id}" class="list-row" style="display: block; text-decoration: none; color: inherit;">
       <div class="list-row-top">
         <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
-        ${shortCitation ? `<a href="source.html?id=${f.source_id}" data-source-link class="badge badge-muted" title="${escapeHtml(sourceName || '')}">${escapeHtml(shortCitation)}</a>` : ''}
+        ${shortCitation ? `<span data-source-link="${f.source_id}" class="badge badge-muted" title="${escapeHtml(sourceName || '')}">${escapeHtml(shortCitation)}</span>` : ''}
       </div>
       <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(f.insight_text)}</div>
       ${scopeChips ? `<div class="chip-row" style="margin: 10px 0 0;">${scopeChips}</div>` : ''}
@@ -63,8 +67,13 @@ function renderRow(f) {
 }
 
 function wireRowLinks() {
-  listEl.querySelectorAll('[data-source-link]').forEach(link => {
-    link.addEventListener('click', (e) => e.stopPropagation());
+  listEl.querySelectorAll('[data-source-link]').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = `source.html?id=${el.dataset.sourceLink}`;
+    });
   });
 }
 
