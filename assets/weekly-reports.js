@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { escapeHtml } from './fields.js';
+import { fieldPlainText } from './richText.js';
 import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions } from './questions.js';
 import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps } from './next-steps.js';
 
@@ -49,14 +50,15 @@ function currentWeek() {
 
 function pluralize(n, noun) { return `${n} ${noun}${n === 1 ? '' : 's'}`; }
 
+// Progress is a pulse check only — counts, no per-item detail. Meetings and Features
+// are deliberately absent: Meetings get their own count+list below (not represented
+// twice), and Features don't carry enough weekly-level signal to earn a line here.
 function buildProgressSection(counts) {
   const lines = [];
-  if (counts.programmesAdded) lines.push(`• ${pluralize(counts.programmesAdded, 'loyalty programme')} added.`);
+  if (counts.programmesAdded) lines.push(`• ${pluralize(counts.programmesAdded, 'new loyalty programme')} added.`);
   if (counts.programmesUpdated) lines.push(`• ${pluralize(counts.programmesUpdated, 'programme')} updated with new information.`);
-  if (counts.featuresAdded) lines.push(`• ${pluralize(counts.featuresAdded, 'programme feature')} added.`);
   if (counts.favouritesAdded) lines.push(`• ${pluralize(counts.favouritesAdded, 'favourite')} added to the team's benchmark of interesting mechanisms and benefits.`);
   if (counts.insightsAdded) lines.push(`• ${pluralize(counts.insightsAdded, 'insight')} added to Data & Insights.`);
-  if (counts.meetingsHeld) lines.push(`• ${pluralize(counts.meetingsHeld, 'meeting')} held.`);
   if (counts.tasksCompleted) lines.push(`• ${pluralize(counts.tasksCompleted, 'task/deliverable')} completed.`);
   return lines.length ? lines.join('\n') : '(No recorded activity this period.)';
 }
@@ -81,14 +83,53 @@ function buildNextStepsSection(steps) {
   return steps.length ? steps.map(s => `• ${s.text}`).join('\n') : '(Nothing planned yet.)';
 }
 
+// Favourites are the team's curated picks (not every liked row is a full mechanism —
+// target_label says what specifically was liked), so the list carries real value for
+// slide-building: what did we find worth highlighting, and why.
+function buildFavouritesSection(likes) {
+  const header = `${pluralize(likes.length, 'Favourite')}`;
+  if (!likes.length) return `${header}\n\n(None added this period.)`;
+  const lines = likes.map(l => {
+    const programme = l.programmes?.programme_name || 'Unknown programme';
+    const why = l.description ? ` — ${l.description}` : '';
+    return `• ${programme} — ${l.target_label}${why}`;
+  });
+  return [header, '', ...lines].join('\n');
+}
+
+// Title + source only — enough to index what was found and where to look it up. The
+// full insight body/detail stays in Data & Insights, not duplicated here.
+function buildInsightsSection(figures) {
+  const header = `${pluralize(figures.length, 'Insight')} Added`;
+  if (!figures.length) return `${header}\n\n(None added this period.)`;
+  const lines = figures.map(f => {
+    const title = f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
+    const source = f.sources ? (f.sources.source_name || f.sources.citation_tag) : null;
+    return `• ${title}${source ? ` — ${source}` : ''}`;
+  });
+  return [header, '', ...lines].join('\n');
+}
+
 function buildMeetingsSection(meetings) {
+  const held = meetings.filter(m => m.status !== 'cancelled');
+  const header = `${pluralize(held.length, 'Meeting')} Held`;
+  if (!meetings.length) return `${header}\n\n(No meetings this period.)`;
   const lines = meetings.map(m => {
     const time = m.meeting_time ? ` · ${m.meeting_time.slice(0, 5)}` : '';
     const status = m.status === 'cancelled' ? ' [Cancelled]' : '';
     const notes = m.notes ? `\n  Notes: ${m.notes}` : '';
     return `• ${m.meeting_date}${time} — ${m.title} (${m.meeting_type})${status}${notes}`;
   });
-  return lines.length ? lines.join('\n') : '(No meetings this period.)';
+  return [header, '', ...lines].join('\n');
+}
+
+// "In Process" is a snapshot of current status, not a period-bound event (tasks have
+// no "started_at") — it's reported as a count only, alongside the completed list.
+function buildTasksSection(doneTasks, inProgressCount) {
+  const header = `${pluralize(doneTasks.length, 'Task')} Completed · ${pluralize(inProgressCount, 'Task')} in Process`;
+  if (!doneTasks.length) return `${header}\n\n(Nothing completed this period.)`;
+  const lines = doneTasks.map(t => `• ${t.title}`);
+  return [header, '', ...lines].join('\n');
 }
 
 // ---------------- Generate ----------------
@@ -97,19 +138,19 @@ async function generateReport(periodStart, periodEnd) {
   const rangeEndExclusive = addDays(periodEnd, 1); // timestamptz columns: [start, end+1)
 
   const [
-    { data: newProgrammes }, { data: updatedProgrammes }, { data: newFeatures },
+    { data: newProgrammes }, { data: updatedProgrammes },
     { data: newLikes }, { data: newInsights },
     { data: meetings },
-    { data: doneTasks },
+    { data: doneTasks }, { count: inProgressCount },
     allQuestions, allNextSteps
   ] = await Promise.all([
     supabase.from('programmes').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
     supabase.from('programmes').select('id, created_at, updated_at').gte('updated_at', periodStart).lt('updated_at', rangeEndExclusive),
-    supabase.from('programme_features').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('likes').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
-    supabase.from('figures').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('likes').select('*, programmes(programme_name)').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
+    supabase.from('figures').select('*, sources(source_name, citation_tag)').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
     supabase.from('meetings').select('*').gte('meeting_date', periodStart).lte('meeting_date', periodEnd).order('meeting_date'),
     supabase.from('tasks').select('*').in('task_type', ['Task', 'Deliverable']).gte('completed_at', periodStart).lt('completed_at', rangeEndExclusive),
+    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
     loadQuestions(),
     loadNextSteps()
   ]);
@@ -121,18 +162,19 @@ async function generateReport(periodStart, periodEnd) {
   const counts = {
     programmesAdded: (newProgrammes || []).length,
     programmesUpdated: updatedExcludingNew.length,
-    featuresAdded: (newFeatures || []).length,
     favouritesAdded: (newLikes || []).length,
     insightsAdded: (newInsights || []).length,
-    meetingsHeld: (meetings || []).filter(m => m.status !== 'cancelled').length,
     tasksCompleted: (doneTasks || []).length
   };
 
   return {
     progress: buildProgressSection(counts),
+    favourites: buildFavouritesSection(newLikes || []),
+    insights: buildInsightsSection(newInsights || []),
+    meetings: buildMeetingsSection(meetings || []),
+    tasks: buildTasksSection(doneTasks || [], inProgressCount || 0),
     questions: buildQuestionsSection(activeQuestions(allQuestions)),
-    next_steps: buildNextStepsSection(activeNextSteps(allNextSteps)),
-    meetings: buildMeetingsSection(meetings || [])
+    next_steps: buildNextStepsSection(activeNextSteps(allNextSteps))
   };
 }
 
@@ -146,9 +188,12 @@ endInput.value = end;
 
 const sectionEls = {
   progress: document.getElementById('section-progress'),
+  favourites: document.getElementById('section-favourites'),
+  insights: document.getElementById('section-insights'),
+  meetings: document.getElementById('section-meetings'),
+  tasks: document.getElementById('section-tasks'),
   questions: document.getElementById('section-questions'),
-  next_steps: document.getElementById('section-next-steps'),
-  meetings: document.getElementById('section-meetings')
+  next_steps: document.getElementById('section-next-steps')
 };
 
 let currentPeriod = null;
@@ -207,11 +252,17 @@ document.getElementById('btn-copy-report').addEventListener('click', async () =>
     '',
     '01 — Progress', sectionEls.progress.value,
     '',
-    '02 — Questions & Support Needed', sectionEls.questions.value,
+    '02 — Favourites', sectionEls.favourites.value,
     '',
-    '03 — Next Steps', sectionEls.next_steps.value,
+    '03 — Insights', sectionEls.insights.value,
     '',
-    '04 — Meetings & Discussions', sectionEls.meetings.value
+    '04 — Meetings & Discussions', sectionEls.meetings.value,
+    '',
+    '05 — Tasks', sectionEls.tasks.value,
+    '',
+    '06 — Questions & Support Needed', sectionEls.questions.value,
+    '',
+    '07 — Next Steps', sectionEls.next_steps.value
   ].join('\n');
 
   try {
