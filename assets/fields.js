@@ -1,4 +1,4 @@
-import { PINNED_COUNTRIES } from './options.js';
+import { PINNED_COUNTRIES, SCOPE_GROUPS, SCOPE_OTHER } from './options.js';
 import { getOptionList } from './customOptions.js';
 
 export function escapeHtml(str) {
@@ -74,6 +74,24 @@ export function wireSelectAllToggle(root) {
     });
     checkboxes.forEach(cb => cb.addEventListener('change', sync));
   });
+}
+
+// Scope (Sources / Data & Insights): rendered as 3 fixed visual groups + one shared
+// "Other" — always under the field name "scope", read back with readCheckboxGroup.
+export function scopeCheckboxGroupsHTML(selected = []) {
+  const sel = Array.isArray(selected) ? selected : [];
+  const groupsHTML = Object.entries(SCOPE_GROUPS).map(([group, values]) => `
+    <div class="form-section-label" style="margin-top: 12px;">${escapeHtml(group)}</div>
+    <div class="checkbox-row">${values.map(v => `
+      <label class="checkbox-item"><input type="checkbox" name="scope" value="${escapeHtml(v)}" ${sel.includes(v) ? 'checked' : ''} /> ${escapeHtml(v)}</label>
+    `).join('')}</div>
+  `).join('');
+  return `
+    ${groupsHTML}
+    <div class="checkbox-row" style="margin-top: 12px;">
+      <label class="checkbox-item"><input type="checkbox" name="scope" value="${SCOPE_OTHER}" ${sel.includes(SCOPE_OTHER) ? 'checked' : ''} /> ${SCOPE_OTHER}</label>
+    </div>
+  `;
 }
 
 // Reads every checked checkbox for a given field name into an array of values.

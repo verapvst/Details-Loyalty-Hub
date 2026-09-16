@@ -7,6 +7,35 @@ export const TEAM_MEMBERS = ['André', 'Alice', 'Cá', 'Chica', 'Maria', 'Vera']
 // project benchmarks most often. Everything else follows alphabetically below them.
 export const PINNED_COUNTRIES = ['Portugal', 'United States', 'United Kingdom', 'Spain', 'France'];
 
+// Data & Insights / Sources: "what is this about" — separate from Source Type / Insight
+// Type, which answer "what kind of source/information is this". Flat for v1 (no sub-scope).
+// A Source's Scope is set once and Insights snapshot-copy it at creation, staying editable.
+export const SCOPE_GROUPS = {
+  'Market / Industry': [
+    'Tourism', 'Hospitality', 'Golf', 'Food & Beverage', 'Sports & Leisure',
+    'Travel & Transportation', 'Retail'
+  ],
+  'Loyalty': [
+    'Loyalty Programmes', 'Consumer Behaviour', 'Loyalty Strategy', 'Loyalty Economics', 'Loyalty Technology'
+  ],
+  'Company / Internal': ['Details', 'Customer / Consumer', 'Portfolio / Assets']
+};
+export const SCOPE_OTHER = 'Other';
+export const ALL_SCOPE_VALUES = [...Object.values(SCOPE_GROUPS).flat(), SCOPE_OTHER];
+
+// Shared team dictionary so everyone classifies Data & Insights the same way —
+// surfaced as hover tooltips next to the Type field/legend, never a separate page.
+export const INSIGHT_TYPE_DEFINITIONS = {
+  'Statistic': 'A specific quantitative data point.',
+  'Market Fact': 'A factual condition about a market or industry that is not necessarily quantitative.',
+  'Key Finding': 'A substantive conclusion or insight reported by the source, beyond a standalone fact or statistic.',
+  'Relationship': 'A documented relationship between concepts, variables or behaviours.',
+  'Framework': 'A conceptual model or structured way of analysing a topic.',
+  'Strategic Implication': 'What a finding may imply for strategy or decision-making.',
+  'Benchmark': 'Explicitly comparative information involving companies, programmes, markets or practices.',
+  'Other': 'Information that does not clearly fit any of the categories above.'
+};
+
 // Industry -> Sub-Industry. Matches the staging workbook exactly.
 export const INDUSTRY_SUBS = {
   'Hotels & Hospitality': ['Hotels & Resorts', 'Serviced Apartments', 'Hostels', 'Vacation Rentals', 'Hospitality Groups', 'Other'],
@@ -57,11 +86,15 @@ export const OPTIONS = {
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
   industry: Object.keys(INDUSTRY_SUBS),
-  // Data & Insights: reusable pieces of information extracted from a Source, rather
-  // than a full article summary. Deliberately being tested with one real source first —
-  // revisit this taxonomy once a few more examples exist.
+  // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
+  // below for the shared team definitions) — orthogonal to Scope, which is what it's about.
   insight_type: [
-    'Key Finding', 'Statistic', 'Relationship', 'Framework', 'Strategic Implication', 'Other'
+    'Statistic', 'Market Fact', 'Key Finding', 'Relationship', 'Framework', 'Strategic Implication', 'Benchmark', 'Other'
+  ],
+  // Sources: "what kind of source is this" — separate from Scope ("what is it about").
+  source_type: [
+    'Academic Article', 'Industry Report', 'Company Report', 'Consulting Report',
+    'Market Report', 'Book / Book Chapter', 'News / Media', 'Website', 'Other'
   ],
   programme_positioning: ['Mass', 'Mid-market', 'Premium', 'Luxury'],
   target_customer: [
@@ -167,13 +200,42 @@ export const PROGRAMME_SOURCE_FIELDS = [
   { key: 'source_url', label: 'Source / Programme URL', type: 'text', full: true }
 ];
 
+// Short/Full Citation are generated from the fields above but stay fully editable —
+// a starting point, not a strict citation-formatting engine (see generateCitations() below).
+// Scope is rendered separately as grouped checkboxes (see scopeCheckboxGroupsHTML in fields.js).
 export const SOURCE_FIELDS = [
-  { key: 'citation_tag', label: 'Citation Tag', type: 'text', required: true },
-  { key: 'full_citation', label: 'Full Citation', type: 'textarea', full: true, required: true },
-  { key: 'link_or_path', label: 'Link or Path (paste a URL to show a "Visit Website" button)', type: 'text', full: true }
+  { key: 'source_name', label: 'Article / Source Name', type: 'text', full: true, required: true },
+  { key: 'author_org', label: 'Author / Organisation', type: 'text', required: true },
+  { key: 'year', label: 'Year', type: 'number', required: true },
+  { key: 'source_type', label: 'Source Type', type: 'select', options: 'source_type', required: true },
+  { key: 'link_or_path', label: 'URL / DOI', type: 'text', full: true },
+  { key: 'short_citation', label: 'Short Citation', type: 'text', full: true },
+  { key: 'full_citation', label: 'Full Citation', type: 'textarea', full: true }
 ];
 
-// source_id is added dynamically once sources are loaded (see figures.js)
+// A deliberately simple, generic citation generator — not a full citation-formatting
+// engine. Always a starting point the researcher can edit, never force-regenerated
+// over an existing hand-edited citation (see the "Regenerate" affordance in sources.js).
+export function generateShortCitation({ author_org, year }) {
+  if (!author_org) return '';
+  return year ? `${author_org} (${year})` : author_org;
+}
+
+export function generateFullCitation({ source_name, author_org, year, source_type, link_or_path }) {
+  if (!author_org || !source_name) return '';
+  const yearPart = year ? ` (${year}).` : '.';
+  const base = `${author_org}${yearPart} ${source_name}.`;
+  // Industry/Company/Consulting/Market reports: the org is both author and publisher —
+  // repeating it is expected in citation style. For everything else (academic articles,
+  // books, news, websites) the publisher is unknown, so don't invent a duplicate.
+  const repeatsPublisher = ['Industry Report', 'Company Report', 'Consulting Report', 'Market Report'];
+  if (repeatsPublisher.includes(source_type)) return `${base} ${author_org}.`;
+  if (source_type === 'Website' && link_or_path) return `${base} Retrieved from ${link_or_path}`;
+  return base;
+}
+
+// source_id is added dynamically once sources are loaded (see figures.js). Scope is
+// rendered separately as grouped checkboxes, inherited from the chosen Source at creation.
 export const INSIGHT_FIELDS = [
   { key: 'insight_text', label: 'Insight / Finding', type: 'textarea', full: true, required: true },
   { key: 'insight_type', label: 'Type', type: 'select', options: 'insight_type', required: true },

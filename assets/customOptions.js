@@ -20,11 +20,15 @@ export const LIST_LABELS = {
   qualification_unit: 'Tier Qualification Unit',
   meeting_type: 'Meeting Type',
   task_type: 'Task Type',
-  insight_type: 'Insight Type'
+  insight_type: 'Insight Type',
+  source_type: 'Source Type'
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.
   // sub_industry is dependent on Industry and isn't Settings-extensible for now.
+  // scope (Sources / Data & Insights) is deliberately not here either — it's organised
+  // into 3 fixed visual groups (see SCOPE_GROUPS in options.js) that a flat appended
+  // custom value would break; add to a group directly in code if the taxonomy grows.
 };
 
 export async function loadCustomOptions() {

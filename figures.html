@@ -20,11 +20,18 @@
   </div>
 </div>
 
+<div class="type-legend-wrap"><div class="type-legend" id="type-legend"></div></div>
+
 <div class="filter-bar-wrap">
   <div class="filter-bar">
     <div class="filter-group">
       <span class="filter-label">Type</span>
       <select class="filter-select" id="filter-type"><option value="">All</option></select>
+    </div>
+    <div class="filter-group scope-filter">
+      <span class="filter-label">Scope</span>
+      <button type="button" class="filter-select" id="scope-filter-btn">All</button>
+      <div class="scope-filter-panel" id="scope-filter-panel" hidden></div>
     </div>
     <div class="filter-group">
       <span class="filter-label">Source</span>
