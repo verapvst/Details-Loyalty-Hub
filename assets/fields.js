@@ -2,6 +2,17 @@ import { PINNED_COUNTRIES } from './options.js';
 import { getOptionList, mergedScopeGroups } from './customOptions.js';
 import { getAppSetting } from './appSettings.js';
 
+// Plain-text clipboard copy for detail-view "Copy Insight / Copy Citation" actions —
+// clean text suitable for pasting into a slide, thesis, or an AI prompt, no HTML.
+export async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text || '');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)
