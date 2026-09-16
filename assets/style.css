@@ -155,8 +155,28 @@ ul { list-style: none; }
 }
 .type-legend-wrap { max-width: 1280px; margin: 0 auto 4px; padding: 0 40px; }
 .type-legend { font-size: 12px; color: var(--muted); line-height: 1.7; }
-.type-legend-item { border-bottom: 1px dotted var(--muted-light); cursor: help; }
+.type-legend-item { border-bottom: 1px dotted var(--muted-light); }
 .type-legend-sep { color: var(--muted-light); }
+
+/* Lightweight CSS-only tooltip (native title/cursor:help is too unreliable across
+   browsers to show a real definition on hover) — used for Information Type
+   definitions, both in the compact legend and on each Insight's Type badge. */
+.has-tooltip, .type-legend-item { position: relative; cursor: default; }
+.has-tooltip:hover::after, .type-legend-item:hover::after {
+  content: attr(data-tooltip); position: absolute; bottom: 100%; left: 50%;
+  transform: translateX(-50%); margin-bottom: 8px; z-index: 60;
+  background: var(--dark); color: #fff; padding: 8px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 400; line-height: 1.4; white-space: normal;
+  width: max-content; max-width: 220px; text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18); pointer-events: none;
+}
+.has-tooltip:hover::before, .type-legend-item:hover::before {
+  content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  margin-bottom: 3px; z-index: 60; border: 5px solid transparent; border-top-color: var(--dark);
+  pointer-events: none;
+}
+.has-tooltip[data-tooltip=""]:hover::after, .has-tooltip[data-tooltip=""]:hover::before,
+.type-legend-item[data-tooltip=""]:hover::after, .type-legend-item[data-tooltip=""]:hover::before { content: none; }
 .search-input::placeholder { color: var(--muted-light); }
 .btn-clear-filters { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
 .btn-clear-filters:hover { color: var(--dark); }

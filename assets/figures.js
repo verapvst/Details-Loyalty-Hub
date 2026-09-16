@@ -34,7 +34,7 @@ function typeLegendHTML() {
   const builtIn = Object.keys(INSIGHT_TYPE_DEFINITIONS);
   const custom = getCustomRows('insight_type').filter(r => r.active !== false).map(r => r.value);
   return [...builtIn, ...custom].map(type =>
-    `<span class="type-legend-item" title="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</span>`
+    `<span class="type-legend-item" data-tooltip="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</span>`
   ).join('<span class="type-legend-sep"> · </span>');
 }
 document.getElementById('type-legend').innerHTML = typeLegendHTML();
@@ -68,7 +68,7 @@ function renderRow(f) {
   return `
     <div class="list-row">
       <div class="list-row-top">
-        <div class="badge badge-green" title="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
+        <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
         ${isUrl ? `<a href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener" class="btn-outline btn-sm">Visit Website</a>` : ''}
       </div>
       <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(f.insight_text)}</div>
