@@ -2,8 +2,8 @@ import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { escapeHtml } from './fields.js';
 import { fieldPlainText } from './richText.js';
-import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions } from './questions.js';
-import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps } from './next-steps.js';
+import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions, questionDisplayTitle } from './questions.js';
+import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps, nextStepDisplayTitle } from './next-steps.js';
 
 await initNav('reports');
 
@@ -84,18 +84,18 @@ function buildQuestionsSection(active) {
   const lines = [];
   if (questions.length) {
     lines.push('Questions:');
-    questions.forEach(q => lines.push(`• ${q.question_text}`));
+    questions.forEach(q => lines.push(`• ${questionDisplayTitle(q)}`));
   }
   if (support.length) {
     if (lines.length) lines.push('');
     lines.push('Support Needed:');
-    support.forEach(q => lines.push(`• ${q.question_text}`));
+    support.forEach(q => lines.push(`• ${questionDisplayTitle(q)}`));
   }
   return lines.length ? lines.join('\n') : '(Nothing open.)';
 }
 
 function buildNextStepsSection(steps) {
-  return steps.length ? steps.map(s => `• ${s.text}`).join('\n') : '(Nothing planned yet.)';
+  return steps.length ? steps.map(s => `• ${nextStepDisplayTitle(s)}`).join('\n') : '(Nothing planned yet.)';
 }
 
 // Favourites are the team's curated picks (not every liked row is a full mechanism —

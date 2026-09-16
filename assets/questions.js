@@ -6,6 +6,7 @@
 import { supabase } from './supabase.js';
 import { getIdentity, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
+import { toEditableHtml } from './richText.js';
 
 export async function loadQuestions() {
   const { data } = await supabase.from('questions').select('*').order('created_at', { ascending: false });
@@ -14,7 +15,15 @@ export async function loadQuestions() {
 
 const TYPE_LABEL = { question: 'Question', support: 'Support Needed' };
 
-export function openQuestionModal({ onChange }) {
+// Displayed on the compact list — falls back to the full text when no short Title
+// was set (same fallback pattern used for Insight titles).
+export function questionDisplayTitle(q) {
+  return q.title || q.question_text;
+}
+
+// One modal for both Add (question=null) and Edit (question=existing row) — Title
+// and Details are optional; only the main Text is required.
+export function openQuestionModal({ question, onChange }) {
   let root = document.getElementById('question-modal-root');
   if (!root) {
     root = document.createElement('div');
@@ -24,8 +33,8 @@ export function openQuestionModal({ onChange }) {
 
   root.innerHTML = `
     <div class="modal-overlay form-overlay" id="question-modal">
-      <div class="form-modal" style="max-width: 480px;">
-        <div class="form-modal-head"><h2>Add Question / Support Needed</h2><button type="button" class="form-modal-close" id="question-modal-close">&times;</button></div>
+      <div class="form-modal" style="max-width: 520px;">
+        <div class="form-modal-head"><h2>${question ? 'Edit' : 'Add'} Question / Support Needed</h2><button type="button" class="form-modal-close" id="question-modal-close">&times;</button></div>
         <form id="question-form">
           <div class="form-modal-body">
             <div class="form-error" id="question-form-error" hidden></div>
@@ -33,19 +42,27 @@ export function openQuestionModal({ onChange }) {
               <div class="form-field full">
                 <label>Type</label>
                 <select name="item_type">
-                  <option value="question">Question</option>
-                  <option value="support">Support Needed</option>
+                  <option value="question" ${question?.item_type !== 'support' ? 'selected' : ''}>Question</option>
+                  <option value="support" ${question?.item_type === 'support' ? 'selected' : ''}>Support Needed</option>
                 </select>
               </div>
               <div class="form-field full">
-                <label>Text *</label>
-                <textarea name="question_text" rows="3" required placeholder="e.g. Should we include luxury hospitality as its own benchmark category? / Need access to the customer segmentation data."></textarea>
+                <label>Title <span style="font-weight:400; color: var(--muted);">(optional — shown on the list; falls back to the text below)</span></label>
+                <input type="text" name="title" value="${escapeHtml(question?.title)}" placeholder="Short label, e.g. Blockchain Loyalty" />
+              </div>
+              <div class="form-field full">
+                <label>Main ${question?.item_type === 'support' ? 'Support Needed' : 'Question'} *</label>
+                <textarea name="question_text" rows="3" required placeholder="e.g. Should we include luxury hospitality as its own benchmark category? / Need access to the customer segmentation data.">${escapeHtml(question?.question_text)}</textarea>
+              </div>
+              <div class="form-field full">
+                <label>Details <span style="font-weight:400; color: var(--muted);">(optional — full context, shown only when opened)</span></label>
+                <textarea name="details" rows="5" placeholder="Background, why it matters, what's needed to resolve it…">${escapeHtml(question?.details)}</textarea>
               </div>
             </div>
           </div>
           <div class="form-modal-foot">
             <button type="button" class="btn-text" id="question-cancel">Cancel</button>
-            <button type="submit" class="btn-primary">Add</button>
+            <button type="submit" class="btn-primary">${question ? 'Save Changes' : 'Add'}</button>
           </div>
         </form>
       </div>
@@ -64,19 +81,85 @@ export function openQuestionModal({ onChange }) {
     const text = form.elements['question_text'].value.trim();
     if (!text) return;
 
-    const { error } = await supabase.from('questions').insert({
+    const payload = {
       item_type: form.elements['item_type'].value,
-      question_text: text, asked_by: getIdentity(), status: 'open', created_at: new Date().toISOString()
-    });
+      title: form.elements['title'].value.trim() || null,
+      question_text: text,
+      details: form.elements['details'].value.trim() || null
+    };
+
+    let error;
+    if (question) {
+      ({ error } = await supabase.from('questions').update(payload).eq('id', question.id));
+    } else {
+      payload.asked_by = getIdentity();
+      payload.status = 'open';
+      payload.created_at = new Date().toISOString();
+      ({ error } = await supabase.from('questions').insert(payload));
+    }
     if (error) {
       const errorEl = document.getElementById('question-form-error');
-      errorEl.textContent = `Couldn't add: ${error.message}`;
+      errorEl.textContent = `Couldn't save: ${error.message}`;
       errorEl.hidden = false;
       return;
     }
     close();
-    showToast('Added.');
+    showToast(question ? 'Updated.' : 'Added.');
     onChange();
+  });
+}
+
+// Read-only view opened by clicking a row — the "bigger section" for Details, kept
+// out of the compact list. Edit hands off to the same Add/Edit modal above.
+function openQuestionDetailModal(question, { onChange }) {
+  let root = document.getElementById('question-detail-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'question-detail-root';
+    document.body.appendChild(root);
+  }
+
+  const label = TYPE_LABEL[question.item_type] || 'Question';
+
+  root.innerHTML = `
+    <div class="modal-overlay" id="question-detail-modal">
+      <div class="form-modal" style="max-width: 560px;">
+        <div class="form-modal-head">
+          <h2>${escapeHtml(label)}</h2>
+          <button type="button" class="form-modal-close" id="question-detail-close">&times;</button>
+        </div>
+        <div class="form-modal-body">
+          <div class="form-field full">
+            <label>Main ${escapeHtml(label)}</label>
+            <div class="like-target-display">${escapeHtml(question.question_text)}</div>
+          </div>
+          ${question.details ? `
+            <div class="form-field full" style="margin-top: 14px;">
+              <label>Details</label>
+              <div class="rich-text-display">${toEditableHtml(question.details)}</div>
+            </div>` : ''}
+          ${question.answer ? `
+            <div class="form-field full" style="margin-top: 14px;">
+              <label>Answer</label>
+              <div class="like-target-display">${escapeHtml(question.answer)}</div>
+            </div>` : ''}
+        </div>
+        <div class="form-modal-foot">
+          <button type="button" class="btn-text" id="question-detail-edit">Edit</button>
+          <button type="button" class="btn-primary" id="question-detail-close-btn">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('question-detail-modal');
+  const close = () => root.innerHTML = '';
+  document.getElementById('question-detail-close').addEventListener('click', close);
+  document.getElementById('question-detail-close-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.getElementById('question-detail-edit').addEventListener('click', () => {
+    close();
+    openQuestionModal({ question, onChange });
   });
 }
 
@@ -130,9 +213,9 @@ function questionRowHTML(q) {
   return `
     <div class="question-row ${q.status === 'answered' ? 'answered' : ''}" data-question-id="${q.id}">
       <span class="badge ${q.status === 'answered' ? 'badge-green' : 'badge-red'}">${q.status === 'answered' ? 'Resolved' : 'Open'}</span>
-      <div class="question-main">
-        <div class="question-text">${escapeHtml(q.question_text)}</div>
-        <div class="question-meta">${q.asked_by ? `Asked by ${escapeHtml(q.asked_by)}` : ''}${q.answer ? ` · ${escapeHtml(q.answer)}` : ''}</div>
+      <div class="question-main" data-question-view="${q.id}" style="cursor:pointer;">
+        <div class="question-text">${escapeHtml(questionDisplayTitle(q))}</div>
+        <div class="question-meta">${q.asked_by ? `Asked by ${escapeHtml(q.asked_by)}` : ''}${q.answer ? ` · ${escapeHtml(q.answer)}` : ''}${q.details ? ' · <span class="badge badge-muted">Details</span>' : ''}</div>
       </div>
       ${q.status === 'open' ? `<button type="button" class="btn-text" data-question-answer="${q.id}">Resolve</button>` : ''}
       <button type="button" class="task-remove" data-question-delete="${q.id}">&times;</button>
@@ -174,6 +257,9 @@ export function renderQuestionsSection(container, questions, { onChange }) {
     });
   }
 
+  container.querySelectorAll('[data-question-view]').forEach(el => {
+    el.addEventListener('click', () => openQuestionDetailModal(questions.find(q => q.id === el.dataset.questionView), { onChange }));
+  });
   container.querySelectorAll('[data-question-answer]').forEach(btn => {
     btn.addEventListener('click', () => openAnswerModal(questions.find(q => q.id === btn.dataset.questionAnswer), { onChange }));
   });
