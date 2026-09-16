@@ -81,7 +81,7 @@ function visualBlockHTML(insight) {
   return `
     <div class="record-block">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-        <h3 style="margin-bottom: 0;">Visual / Evidence</h3>
+        <h3 style="margin-bottom: 0;">Visual / Evidence${insight.visual_type ? ` <span class="badge badge-muted" style="font-weight: 500;">${escapeHtml(insight.visual_type)}</span>` : ''}</h3>
         <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="btn-text">Open Full Size</a>
       </div>
       <img src="${escapeHtml(url)}" alt="${escapeHtml(displayTitle(insight))}" style="max-width: 100%; border-radius: var(--radius); display: block;" />

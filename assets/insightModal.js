@@ -40,17 +40,22 @@ function insightTypeSelectorHTML(selected) {
       data-type="${escapeHtml(type)}" data-tooltip="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</button>
   `).join('');
   return `
-    <div class="insight-type-selector">${chips}</div>
+    <div class="insight-type-selector" id="insight-type-selector">${chips}</div>
     <input type="hidden" name="insight_type" value="${escapeHtml(selected)}" />
   `;
 }
 
+// Scoped to #insight-type-selector, not just the shared .insight-type-chip class —
+// the Visual/Evidence field below reuses that same class for its own Figure/Chart/
+// Table/Diagram chips, and an unscoped query here would also catch those, stomping
+// on insight_type whenever one of them was clicked.
 function wireInsightTypeSelector(form) {
+  const container = form.querySelector('#insight-type-selector');
   const hidden = form.elements['insight_type'];
-  form.querySelectorAll('.insight-type-chip').forEach(chip => {
+  container.querySelectorAll('.insight-type-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       hidden.value = chip.dataset.type;
-      form.querySelectorAll('.insight-type-chip').forEach(c => c.classList.toggle('active', c === chip));
+      container.querySelectorAll('.insight-type-chip').forEach(c => c.classList.toggle('active', c === chip));
     });
   });
 }
@@ -66,6 +71,10 @@ function sourceDisplayName(s) {
 const IMAGE_BUCKET = 'insight-images';
 const IMAGE_ACCEPT = ['image/png', 'image/jpeg', 'image/webp'];
 const IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+// What kind of visual it is (supabase/022_insight_visual_type.sql) — picking one is
+// what reveals the upload area; it's meaningless without an image, so the app only
+// ever sets/clears it together with image_path.
+const VISUAL_TYPES = ['Figure', 'Chart', 'Table', 'Diagram'];
 
 export function insightImageUrl(path) {
   if (!path) return null;
@@ -74,14 +83,22 @@ export function insightImageUrl(path) {
 
 function visualEvidenceFieldHTML(insight) {
   const existingUrl = insight?.image_path ? insightImageUrl(insight.image_path) : null;
+  const selectedType = insight?.visual_type || '';
+  const hasType = !!selectedType;
+  const chips = VISUAL_TYPES.map(t => `
+    <button type="button" class="insight-type-chip" data-visual-type="${escapeHtml(t)}" data-active="${t === selectedType}">${escapeHtml(t)}</button>
+  `).join('');
   return `
     <div class="form-field full">
-      <label>Visual / Evidence <span style="font-weight:400; color: var(--muted);">(optional — a figure, chart, table or diagram)</span></label>
-      <div class="visual-evidence-preview" id="visual-evidence-preview" ${existingUrl ? '' : 'hidden'}>
+      <label>Visual / Evidence <span style="font-weight:400; color: var(--muted);">(optional)</span></label>
+      <div class="settings-hint" style="margin: -2px 0 8px;">Pick what kind of visual this is to add one.</div>
+      <div class="insight-type-selector" id="visual-type-selector">${chips}</div>
+      <input type="hidden" id="visual-type-input" value="${escapeHtml(selectedType)}" />
+      <div class="visual-evidence-preview" id="visual-evidence-preview" ${(hasType && existingUrl) ? '' : 'hidden'}>
         <img id="visual-evidence-img" src="${existingUrl || ''}" alt="" />
         <button type="button" class="btn-text" id="visual-evidence-remove">Remove image</button>
       </div>
-      <div class="visual-evidence-drop" id="visual-evidence-drop" ${existingUrl ? 'hidden' : ''}>
+      <div class="visual-evidence-drop" id="visual-evidence-drop" ${(hasType && !existingUrl) ? '' : 'hidden'}>
         <p>Drag and drop an image, or <span class="visual-evidence-browse">choose a file</span></p>
         <p class="settings-hint" style="margin: 0;">PNG, JPG or WebP — up to 8MB.</p>
         <input type="file" id="visual-evidence-input" accept="${IMAGE_ACCEPT.join(',')}" hidden />
@@ -92,10 +109,12 @@ function visualEvidenceFieldHTML(insight) {
 }
 
 // Returns an object whose apply() performs the actual upload/delete and resolves to
-// the value figures.image_path should be set to — or `undefined` to leave the column
-// untouched entirely (the field was never opened), so an unrelated edit never clobbers
-// an existing image.
+// { image_path, visual_type } values to write — either key can be `undefined` to
+// leave that column untouched entirely, so an unrelated edit never clobbers an
+// existing image/type.
 function wireVisualEvidence(form, insight) {
+  const typeSelector = form.querySelector('#visual-type-selector');
+  const typeInput = form.querySelector('#visual-type-input');
   const preview = form.querySelector('#visual-evidence-preview');
   const dropZone = form.querySelector('#visual-evidence-drop');
   const img = form.querySelector('#visual-evidence-img');
@@ -104,19 +123,27 @@ function wireVisualEvidence(form, insight) {
   const errorEl = form.querySelector('#visual-evidence-error');
 
   const originalPath = insight?.image_path || null;
+  const originalType = insight?.visual_type || null;
   let selectedFile = null;
   let removed = false;
 
-  function showPreview(url) {
-    img.src = url;
-    preview.hidden = false;
-    dropZone.hidden = true;
+  // Chips only reveal the upload area — the drop zone shows once a type is picked and
+  // there's no image yet; the preview shows once there's an image (new or existing).
+  function updateVisibility() {
+    const hasType = !!typeInput.value;
+    const hasImage = !!(selectedFile || (originalPath && !removed));
+    preview.hidden = !(hasType && hasImage);
+    dropZone.hidden = !(hasType && !hasImage);
   }
-  function showDropZone() {
-    preview.hidden = true;
-    dropZone.hidden = false;
-    img.src = '';
-  }
+
+  typeSelector.querySelectorAll('[data-visual-type]').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.active === 'true');
+    chip.addEventListener('click', () => {
+      typeInput.value = chip.dataset.visualType;
+      typeSelector.querySelectorAll('[data-visual-type]').forEach(c => c.classList.toggle('active', c === chip));
+      updateVisibility();
+    });
+  });
 
   function handleFile(file) {
     errorEl.hidden = true;
@@ -133,7 +160,8 @@ function wireVisualEvidence(form, insight) {
     }
     selectedFile = file;
     removed = false;
-    showPreview(URL.createObjectURL(file));
+    img.src = URL.createObjectURL(file);
+    updateVisibility();
   }
 
   dropZone.addEventListener('click', () => fileInput.click());
@@ -152,7 +180,8 @@ function wireVisualEvidence(form, insight) {
     selectedFile = null;
     removed = true;
     fileInput.value = '';
-    showDropZone();
+    img.src = '';
+    updateVisibility();
   });
 
   return {
@@ -163,13 +192,17 @@ function wireVisualEvidence(form, insight) {
         const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, selectedFile);
         if (error) throw new Error(`Couldn't upload image: ${error.message}`);
         if (originalPath) supabase.storage.from(IMAGE_BUCKET).remove([originalPath]); // best-effort cleanup of the replaced file
-        return path;
+        return { image_path: path, visual_type: typeInput.value || null };
       }
       if (removed && originalPath) {
         supabase.storage.from(IMAGE_BUCKET).remove([originalPath]); // best-effort
-        return null;
+        return { image_path: null, visual_type: null };
       }
-      return undefined;
+      // The image itself wasn't touched, but an existing one's type tag may have been.
+      if (originalPath && typeInput.value !== (originalType || '')) {
+        return { image_path: undefined, visual_type: typeInput.value || null };
+      }
+      return { image_path: undefined, visual_type: undefined };
     }
   };
 }
@@ -381,9 +414,9 @@ export function openInsightModal({ insight, sources, onChange }) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving…';
 
-    let imagePath;
+    let visual;
     try {
-      imagePath = await visualEvidence.apply();
+      visual = await visualEvidence.apply();
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.hidden = false;
@@ -391,7 +424,8 @@ export function openInsightModal({ insight, sources, onChange }) {
       submitBtn.textContent = insight ? 'Save Changes' : 'Save Insight';
       return;
     }
-    if (imagePath !== undefined) data.image_path = imagePath;
+    if (visual.image_path !== undefined) data.image_path = visual.image_path;
+    if (visual.visual_type !== undefined) data.visual_type = visual.visual_type;
 
     let error;
     if (insight) {
