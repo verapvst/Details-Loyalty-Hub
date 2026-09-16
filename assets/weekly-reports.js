@@ -50,17 +50,32 @@ function currentWeek() {
 
 function pluralize(n, noun) { return `${n} ${noun}${n === 1 ? '' : 's'}`; }
 
-// Progress is a pulse check only — counts, no per-item detail. Meetings and Features
-// are deliberately absent: Meetings get their own count+list below (not represented
-// twice), and Features don't carry enough weekly-level signal to earn a line here.
-function buildProgressSection(counts) {
+// Progress is the single home for every count in the report — Favourites/Insights
+// keep only their full lists in their own sections, not a repeated header count.
+// Meetings and Features are deliberately absent: Meetings get their own count+list
+// in their own section (not represented twice), and Features don't carry enough
+// weekly-level signal to earn a line here. Tasks has no section of its own — it's
+// folded in here as both a count and the actual titles, completed and ongoing.
+function buildProgressSection(counts, doneTasks, inProgressTasks) {
   const lines = [];
   if (counts.programmesAdded) lines.push(`• ${pluralize(counts.programmesAdded, 'new loyalty programme')} added.`);
   if (counts.programmesUpdated) lines.push(`• ${pluralize(counts.programmesUpdated, 'programme')} updated with new information.`);
   if (counts.favouritesAdded) lines.push(`• ${pluralize(counts.favouritesAdded, 'favourite')} added to the team's benchmark of interesting mechanisms and benefits.`);
   if (counts.insightsAdded) lines.push(`• ${pluralize(counts.insightsAdded, 'insight')} added to Data & Insights.`);
-  if (counts.tasksCompleted) lines.push(`• ${pluralize(counts.tasksCompleted, 'task/deliverable')} completed.`);
-  return lines.length ? lines.join('\n') : '(No recorded activity this period.)';
+
+  const blocks = [lines.join('\n')];
+
+  blocks.push([
+    `Tasks Completed (${doneTasks.length}):`,
+    doneTasks.length ? doneTasks.map(t => `• ${t.title}`).join('\n') : '(None this period.)'
+  ].join('\n'));
+
+  blocks.push([
+    `Tasks In Process (${inProgressTasks.length}):`,
+    inProgressTasks.length ? inProgressTasks.map(t => `• ${t.title}`).join('\n') : '(None.)'
+  ].join('\n'));
+
+  return lines.length ? blocks.join('\n\n') : blocks.slice(1).join('\n\n');
 }
 
 function buildQuestionsSection(active) {
@@ -85,29 +100,27 @@ function buildNextStepsSection(steps) {
 
 // Favourites are the team's curated picks (not every liked row is a full mechanism —
 // target_label says what specifically was liked), so the list carries real value for
-// slide-building: what did we find worth highlighting, and why.
+// slide-building: what did we find worth highlighting, and why. The count already
+// lives in Progress, so this is the full list only, nothing repeated.
 function buildFavouritesSection(likes) {
-  const header = `${pluralize(likes.length, 'Favourite')}`;
-  if (!likes.length) return `${header}\n\n(None added this period.)`;
-  const lines = likes.map(l => {
+  if (!likes.length) return '(None added this period.)';
+  return likes.map(l => {
     const programme = l.programmes?.programme_name || 'Unknown programme';
     const why = l.description ? ` — ${l.description}` : '';
     return `• ${programme} — ${l.target_label}${why}`;
-  });
-  return [header, '', ...lines].join('\n');
+  }).join('\n');
 }
 
 // Title + source only — enough to index what was found and where to look it up. The
-// full insight body/detail stays in Data & Insights, not duplicated here.
+// full insight body/detail stays in Data & Insights, not duplicated here. The count
+// already lives in Progress, so this is the full list only.
 function buildInsightsSection(figures) {
-  const header = `${pluralize(figures.length, 'Insight')} Added`;
-  if (!figures.length) return `${header}\n\n(None added this period.)`;
-  const lines = figures.map(f => {
+  if (!figures.length) return '(None added this period.)';
+  return figures.map(f => {
     const title = f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
     const source = f.sources ? (f.sources.source_name || f.sources.citation_tag) : null;
     return `• ${title}${source ? ` — ${source}` : ''}`;
-  });
-  return [header, '', ...lines].join('\n');
+  }).join('\n');
 }
 
 function buildMeetingsSection(meetings) {
@@ -123,15 +136,6 @@ function buildMeetingsSection(meetings) {
   return [header, '', ...lines].join('\n');
 }
 
-// "In Process" is a snapshot of current status, not a period-bound event (tasks have
-// no "started_at") — it's reported as a count only, alongside the completed list.
-function buildTasksSection(doneTasks, inProgressCount) {
-  const header = `${pluralize(doneTasks.length, 'Task')} Completed · ${pluralize(inProgressCount, 'Task')} in Process`;
-  if (!doneTasks.length) return `${header}\n\n(Nothing completed this period.)`;
-  const lines = doneTasks.map(t => `• ${t.title}`);
-  return [header, '', ...lines].join('\n');
-}
-
 // ---------------- Generate ----------------
 
 async function generateReport(periodStart, periodEnd) {
@@ -141,7 +145,7 @@ async function generateReport(periodStart, periodEnd) {
     { data: newProgrammes }, { data: updatedProgrammes },
     { data: newLikes }, { data: newInsights },
     { data: meetings },
-    { data: doneTasks }, { count: inProgressCount },
+    { data: doneTasks }, { data: inProgressTasks },
     allQuestions, allNextSteps
   ] = await Promise.all([
     supabase.from('programmes').select('id, created_at').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
@@ -150,7 +154,9 @@ async function generateReport(periodStart, periodEnd) {
     supabase.from('figures').select('*, sources(source_name, citation_tag)').gte('created_at', periodStart).lt('created_at', rangeEndExclusive),
     supabase.from('meetings').select('*').gte('meeting_date', periodStart).lte('meeting_date', periodEnd).order('meeting_date'),
     supabase.from('tasks').select('*').in('task_type', ['Task', 'Deliverable']).gte('completed_at', periodStart).lt('completed_at', rangeEndExclusive),
-    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
+    // "In Process" is a snapshot of current status, not a period-bound event (tasks
+    // have no "started_at") — every currently in-progress task, regardless of period.
+    supabase.from('tasks').select('id, title').eq('status', 'in_progress').order('title'),
     loadQuestions(),
     loadNextSteps()
   ]);
@@ -163,16 +169,14 @@ async function generateReport(periodStart, periodEnd) {
     programmesAdded: (newProgrammes || []).length,
     programmesUpdated: updatedExcludingNew.length,
     favouritesAdded: (newLikes || []).length,
-    insightsAdded: (newInsights || []).length,
-    tasksCompleted: (doneTasks || []).length
+    insightsAdded: (newInsights || []).length
   };
 
   return {
-    progress: buildProgressSection(counts),
+    progress: buildProgressSection(counts, doneTasks || [], inProgressTasks || []),
     favourites: buildFavouritesSection(newLikes || []),
     insights: buildInsightsSection(newInsights || []),
     meetings: buildMeetingsSection(meetings || []),
-    tasks: buildTasksSection(doneTasks || [], inProgressCount || 0),
     questions: buildQuestionsSection(activeQuestions(allQuestions)),
     next_steps: buildNextStepsSection(activeNextSteps(allNextSteps))
   };
@@ -191,7 +195,6 @@ const sectionEls = {
   favourites: document.getElementById('section-favourites'),
   insights: document.getElementById('section-insights'),
   meetings: document.getElementById('section-meetings'),
-  tasks: document.getElementById('section-tasks'),
   questions: document.getElementById('section-questions'),
   next_steps: document.getElementById('section-next-steps')
 };
@@ -258,11 +261,9 @@ document.getElementById('btn-copy-report').addEventListener('click', async () =>
     '',
     '04 — Meetings & Discussions', sectionEls.meetings.value,
     '',
-    '05 — Tasks', sectionEls.tasks.value,
+    '05 — Questions & Support Needed', sectionEls.questions.value,
     '',
-    '06 — Questions & Support Needed', sectionEls.questions.value,
-    '',
-    '07 — Next Steps', sectionEls.next_steps.value
+    '06 — Next Steps', sectionEls.next_steps.value
   ].join('\n');
 
   try {
