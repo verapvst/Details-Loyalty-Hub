@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
 import { heartHTML, likeSummary, targetTypeLabel, openLikeModal, openTargetPickerModal } from './likes.js';
 
-initNav('favorites');
+await initNav('favorites');
 
 const listEl = document.getElementById('favorite-list');
 const sectionCount = document.getElementById('section-count');

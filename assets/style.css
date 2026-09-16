@@ -520,8 +520,31 @@ ul { list-style: none; }
 .chip button { color: var(--muted); font-size: 15px; padding: 2px 4px; line-height: 1; }
 .chip button:hover { color: var(--red); }
 .settings-add-row { display: flex; gap: 10px; }
-.settings-add-row input { flex: 1; padding: 10px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; }
-.settings-add-row input:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.settings-add-row input, .settings-add-row select { flex: 1; padding: 10px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; }
+.settings-add-row input:focus, .settings-add-row select:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.settings-note-input { max-width: 260px; }
+
+/* ---------- Settings: grouped-by-area layout, lifecycle chips, Navigation/Team/Pinned cards ---------- */
+.settings-jump-nav { gap: 22px; }
+.settings-jump-nav a { font-size: 13px; font-weight: 500; color: var(--muted); }
+.settings-jump-nav a:hover { color: var(--dark); }
+.settings-cards { display: flex; flex-direction: column; gap: 20px; }
+.settings-chip.inactive { opacity: 0.5; }
+.settings-chip.inactive span:first-child { text-decoration: line-through; }
+.chip-action { background: none; border: none; color: var(--muted); font-size: 11px; font-weight: 600; padding: 2px 4px; cursor: pointer; white-space: nowrap; }
+.chip-action:hover { color: var(--dark); }
+.chip-action-danger:hover { color: var(--red); }
+.settings-chip-note { cursor: help; color: var(--muted-light); font-size: 11px; }
+
+.settings-nav-row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.settings-nav-row:last-child { border-bottom: none; }
+.settings-nav-key { font-family: monospace; font-size: 11px; color: var(--muted-light); width: 80px; flex-shrink: 0; }
+.settings-nav-row input { flex: 1; padding: 8px 12px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; }
+
+.settings-pinned-list { display: flex; flex-direction: column; gap: 6px; }
+.settings-pinned-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }
+.settings-pinned-actions { display: flex; align-items: center; gap: 4px; }
+.settings-pinned-actions button:disabled { opacity: 0.3; cursor: default; }
 
 /* ---------- Programme cover image ----------
    Small and unboxed on purpose: most of these are brand logos on a transparent

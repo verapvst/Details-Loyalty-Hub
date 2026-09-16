@@ -14,17 +14,49 @@
   <div class="page-header-inner">
     <div>
       <h1>Settings</h1>
-      <p>Add new dropdown values — industries, programme types, benefits, and more — without touching any code.</p>
+      <p>Project configuration the team manages itself — tab names, team members, and every picklist below, without needing a code change.</p>
     </div>
   </div>
 </div>
 
-<section class="section">
-  <div class="form-field" style="max-width: 340px; margin-bottom: 28px;">
-    <label>Which list do you want to edit?</label>
-    <select id="list-select"></select>
+<div class="filter-bar-wrap">
+  <div class="filter-bar settings-jump-nav">
+    <a href="#settings-navigation">Navigation</a>
+    <a href="#settings-team">Team</a>
+    <a href="#settings-programmes">Loyalty Programmes</a>
+    <a href="#settings-sources-insights">Sources &amp; Insights</a>
+    <a href="#settings-calendar">Calendar &amp; Tasks</a>
   </div>
-  <div id="list-detail"></div>
+</div>
+
+<section class="section" id="settings-navigation">
+  <div class="section-head"><h2 class="section-title">Navigation</h2></div>
+  <div class="settings-hint" style="margin: -10px 0 16px;">Rename what the team sees in the top nav. The underlying page and its data never change — only the label.</div>
+  <div id="nav-settings-cards" class="settings-cards"></div>
+</section>
+
+<section class="section" id="settings-team">
+  <div class="section-head"><h2 class="section-title">Team</h2></div>
+  <div class="settings-hint" style="margin: -10px 0 16px;">Add or deactivate members. Deactivating removes someone from future assignment pickers — everything they already touched keeps their name.</div>
+  <div id="team-settings-card" class="settings-cards"></div>
+</section>
+
+<section class="section" id="settings-programmes">
+  <div class="section-head"><h2 class="section-title">Loyalty Programmes</h2></div>
+  <div class="settings-hint" style="margin: -10px 0 16px;">Taxonomies used when adding or editing a loyalty programme.</div>
+  <div id="programmes-settings-cards" class="settings-cards"></div>
+</section>
+
+<section class="section" id="settings-sources-insights">
+  <div class="section-head"><h2 class="section-title">Sources &amp; Insights</h2></div>
+  <div class="settings-hint" style="margin: -10px 0 16px;">Scope is one shared taxonomy used by both Sources and Data &amp; Insights — managed here once.</div>
+  <div id="sources-insights-settings-cards" class="settings-cards"></div>
+</section>
+
+<section class="section" id="settings-calendar">
+  <div class="section-head"><h2 class="section-title">Calendar &amp; Tasks</h2></div>
+  <div class="settings-hint" style="margin: -10px 0 16px;">Project conventions for meetings and tasks.</div>
+  <div id="calendar-settings-cards" class="settings-cards"></div>
 </section>
 
 <script type="module" src="assets/settings.js"></script>

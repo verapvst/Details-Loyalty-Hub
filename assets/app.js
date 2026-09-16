@@ -1,7 +1,12 @@
-import { TEAM_MEMBERS } from './options.js';
+import { loadTeamMembers, getActiveTeamMembers } from './teamMembers.js';
+import { loadAppSettings, getAppSetting } from './appSettings.js';
+import { escapeHtml } from './fields.js';
 
 const IDENTITY_KEY = 'dlh_identity';
 
+// `key` is the stable technical identifier (never changes, never shown) and `href` is
+// the route (never changes either) — only `label` can be overridden from Settings
+// (Navigation), via app_settings key `nav_label:<key>`. See navLabel() below.
 const NAV_LINKS = [
   { key: 'database', label: 'Database', href: 'index.html' },
   { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
@@ -12,6 +17,11 @@ const NAV_LINKS = [
   { key: 'sources', label: 'Sources', href: 'sources.html' },
   { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
+
+export function navLabel(key) {
+  const link = NAV_LINKS.find(l => l.key === key);
+  return getAppSetting(`nav_label:${key}`, link ? link.label : key);
+}
 
 export function getIdentity() {
   return localStorage.getItem(IDENTITY_KEY) || '';
@@ -32,7 +42,7 @@ function renderNav(activeKey) {
   if (!root) return;
 
   const links = NAV_LINKS.map(l =>
-    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${l.label}</a>`
+    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(l.key))}</a>`
   ).join('');
 
   root.innerHTML = `
@@ -72,7 +82,7 @@ function renderMobileDrawer(activeKey) {
   }
 
   const links = NAV_LINKS.map(l =>
-    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${l.label}</a>`
+    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(l.key))}</a>`
   ).join('');
 
   root.innerHTML = `
@@ -110,7 +120,7 @@ function handleDrawerEscape(e) {
   if (e.key === 'Escape') closeMobileDrawer();
 }
 
-function renderIdentityModal({ forceChoice }) {
+async function renderIdentityModal({ forceChoice }) {
   let root = document.getElementById('identity-modal-root');
   if (!root) {
     root = document.createElement('div');
@@ -118,7 +128,8 @@ function renderIdentityModal({ forceChoice }) {
     document.body.appendChild(root);
   }
 
-  const picks = TEAM_MEMBERS.map(name =>
+  await loadTeamMembers();
+  const picks = getActiveTeamMembers().map(name =>
     `<button class="identity-pick" data-name="${name}" type="button">
        <span class="identity-avatar">${initials(name)}</span>
        <span>${name}</span>
@@ -159,7 +170,8 @@ function updateIdentityDisplay() {
   if (avatarEl) avatarEl.textContent = name ? initials(name) : '?';
 }
 
-export function initNav(activeKey) {
+export async function initNav(activeKey) {
+  await loadAppSettings();
   renderNav(activeKey);
   updateIdentityDisplay();
 

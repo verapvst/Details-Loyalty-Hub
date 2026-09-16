@@ -1,5 +1,6 @@
-import { PINNED_COUNTRIES, SCOPE_GROUPS, SCOPE_OTHER } from './options.js';
-import { getOptionList } from './customOptions.js';
+import { PINNED_COUNTRIES } from './options.js';
+import { getOptionList, mergedScopeGroups } from './customOptions.js';
+import { getAppSetting } from './appSettings.js';
 
 export function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -19,12 +20,23 @@ function optionTag(o, selected) {
   return `<option value="${escapeHtml(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
 }
 
+// A deactivated value can still be sitting on an existing record — if so it must stay
+// selectable/visible when editing that record, even though it's no longer offered for
+// new ones. Appended at the end, labeled so it's clear why it looks out of place.
+function withOrphanValue(list, selected) {
+  if (!selected) return list;
+  const values = list.map(o => typeof o === 'object' ? o.value : o);
+  if (values.includes(selected)) return list;
+  return [...list, { value: selected, label: `${selected} (inactive)` }];
+}
+
 function selectOptionsHTML(optionKey, selected) {
-  const list = getOptionList(optionKey);
+  const list = withOrphanValue(getOptionList(optionKey), selected);
   const blank = `<option value="" ${!selected ? 'selected' : ''}></option>`;
 
   if (optionKey === 'country') {
-    const pinned = PINNED_COUNTRIES.filter(c => list.includes(c));
+    const pinnedOrder = getAppSetting('pinned_countries', PINNED_COUNTRIES);
+    const pinned = pinnedOrder.filter(c => list.includes(c));
     const rest = list.filter(c => !pinned.includes(c));
     return blank +
       `<optgroup label="Most Used">${pinned.map(o => optionTag(o, selected)).join('')}</optgroup>` +
@@ -36,9 +48,10 @@ function selectOptionsHTML(optionKey, selected) {
 
 // Renders a checkbox group for a multi-select field. `selected` is an array.
 export function checkboxGroupHTML(fieldKey, optionKey, selected) {
-  const list = getOptionList(optionKey);
   const sel = Array.isArray(selected) ? selected : [];
-  return `<div class="checkbox-row">${list.map(o => {
+  const list = getOptionList(optionKey);
+  const orphaned = sel.filter(v => !list.includes(v)).map(v => ({ value: v, label: `${v} (inactive)` }));
+  return `<div class="checkbox-row">${[...list, ...orphaned].map(o => {
     const value = typeof o === 'object' ? o.value : o;
     const label = typeof o === 'object' ? o.label : o;
     const checked = sel.includes(value) ? 'checked' : '';
@@ -78,20 +91,17 @@ export function wireSelectAllToggle(root) {
 
 // Scope (Sources / Data & Insights): rendered as 3 fixed visual groups + one shared
 // "Other" — always under the field name "scope", read back with readCheckboxGroup.
+// Group NAMES are fixed (not Settings-editable); the VALUES within them are merged
+// with whatever the team has added/deactivated via Settings (mergedScopeGroups).
 export function scopeCheckboxGroupsHTML(selected = []) {
   const sel = Array.isArray(selected) ? selected : [];
-  const groupsHTML = Object.entries(SCOPE_GROUPS).map(([group, values]) => `
+  const groups = mergedScopeGroups(sel);
+  return Object.entries(groups).map(([group, values]) => values.length ? `
     <div class="form-section-label" style="margin-top: 12px;">${escapeHtml(group)}</div>
     <div class="checkbox-row">${values.map(v => `
       <label class="checkbox-item"><input type="checkbox" name="scope" value="${escapeHtml(v)}" ${sel.includes(v) ? 'checked' : ''} /> ${escapeHtml(v)}</label>
     `).join('')}</div>
-  `).join('');
-  return `
-    ${groupsHTML}
-    <div class="checkbox-row" style="margin-top: 12px;">
-      <label class="checkbox-item"><input type="checkbox" name="scope" value="${SCOPE_OTHER}" ${sel.includes(SCOPE_OTHER) ? 'checked' : ''} /> ${SCOPE_OTHER}</label>
-    </div>
-  `;
+  ` : '').join('');
 }
 
 // Reads every checked checkbox for a given field name into an array of values.

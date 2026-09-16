@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
-import { TEAM_MEMBERS, MEETING_FIELDS, TASK_FIELDS } from './options.js';
+import { MEETING_FIELDS, TASK_FIELDS } from './options.js';
+import { loadTeamMembers, getActiveTeamMembers } from './teamMembers.js';
 import { inputHTML, readFormValues, escapeHtml, checkboxRowWithAllHTML, wireSelectAllToggle } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
 import {
@@ -8,8 +9,10 @@ import {
   openMilestoneModal, MILESTONE_BADGE_CLASS
 } from './milestones.js';
 
-initNav('tasks');
+await initNav('tasks');
 await loadCustomOptions();
+await loadTeamMembers();
+const TEAM_MEMBERS = getActiveTeamMembers();
 
 // Deliberately NOT cached in a module-level constant: getIdentity() is called fresh
 // at every use site below so switching the active user (via the nav identity picker,

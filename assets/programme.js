@@ -5,10 +5,10 @@ import {
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
-import { loadCustomOptions, getOptionList } from './customOptions.js';
+import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
 import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
 
-initNav('database');
+await initNav('database');
 await loadCustomOptions();
 
 const root = document.getElementById('record-root');
@@ -61,7 +61,7 @@ function classificationBlockHTML() {
   const industryField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'industry');
   const positioningField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'programme_positioning');
   const subOptions = editing
-    ? '<option value=""></option>' + (INDUSTRY_SUBS[programme.industry] || []).map(s =>
+    ? '<option value=""></option>' + getSubIndustryOptions(programme.industry, INDUSTRY_SUBS).map(s =>
         `<option value="${escapeHtml(s)}" ${s === programme.sub_industry ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')
     : '';
 
@@ -352,7 +352,7 @@ function render() {
     const industrySel = form.elements['industry'];
     industrySel.addEventListener('change', () => {
       const subSel = document.getElementById('record-sub-industry');
-      subSel.innerHTML = '<option value=""></option>' + (INDUSTRY_SUBS[industrySel.value] || []).map(s => `<option>${escapeHtml(s)}</option>`).join('');
+      subSel.innerHTML = '<option value=""></option>' + getSubIndustryOptions(industrySel.value, INDUSTRY_SUBS).map(s => `<option>${escapeHtml(s)}</option>`).join('');
     });
 
     wireMechanismToggle(form);

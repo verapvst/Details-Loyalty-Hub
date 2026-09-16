@@ -5,9 +5,9 @@ import {
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
-import { loadCustomOptions, getOptionList } from './customOptions.js';
+import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
 
-initNav('database');
+await initNav('database');
 await loadCustomOptions();
 
 let allProgrammes = [];
@@ -150,7 +150,7 @@ function fieldsGridHTML(fields, values = {}) {
 }
 
 function subIndustryOptionsHTML(industry, selected) {
-  const subs = INDUSTRY_SUBS[industry] || [];
+  const subs = getSubIndustryOptions(industry, INDUSTRY_SUBS);
   return '<option value=""></option>' + subs.map(s =>
     `<option value="${escapeHtml(s)}" ${s === selected ? 'selected' : ''}>${escapeHtml(s)}</option>`
   ).join('');

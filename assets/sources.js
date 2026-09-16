@@ -4,7 +4,7 @@ import { SOURCE_FIELDS, generateShortCitation, generateFullCitation } from './op
 import { inputHTML, readFormValues, escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 
-initNav('sources');
+await initNav('sources');
 await loadCustomOptions();
 
 const listEl = document.getElementById('source-list');

@@ -1,10 +1,11 @@
-// Shared reference data: team members and dropdown picklists.
+// Shared reference data: dropdown picklists.
 // Keep wording exact — it must match the staging workbook's Pick Lists sheet.
-
-export const TEAM_MEMBERS = ['André', 'Alice', 'Cá', 'Chica', 'Maria', 'Vera'];
+// Team members live in the team_members table now (see teamMembers.js) so the team
+// can Add/Deactivate themselves from Settings — no hardcoded array here any more.
 
 // Shown pinned at the top of the Country dropdown, in this order — the markets this
-// project benchmarks most often. Everything else follows alphabetically below them.
+// project benchmarks most often. This is only the code-shipped DEFAULT; Settings can
+// override the actual order via app_settings ('pinned_countries') — see appSettings.js.
 export const PINNED_COUNTRIES = ['Portugal', 'United States', 'United Kingdom', 'Spain', 'France'];
 
 // Data & Insights / Sources: "what is this about" — separate from Source Type / Insight

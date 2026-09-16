@@ -1,10 +1,17 @@
 // Lets the team extend picklists (industry, programme type, benefits, etc.) from the
 // Settings page without touching code. Custom values are stored in Supabase and merged
-// on top of the built-in OPTIONS lists at runtime.
+// on top of the built-in OPTIONS lists at runtime — plus the full Add/Deactivate/safe
+// Delete lifecycle: a built-in value is hidden from new-entry pickers via a row in
+// deactivated_options (it isn't a row anywhere else, so that's the only way to hide
+// one); a custom (team-added) value is hidden via its own `active` flag. Either way,
+// any record that already used the value keeps it — deactivation only affects what's
+// offered when creating/editing going forward (see selectOptionsHTML/checkboxGroupHTML
+// in fields.js, which always keep an already-selected value visible even if inactive).
 import { supabase } from './supabase.js';
-import { OPTIONS } from './options.js';
+import { OPTIONS, SCOPE_GROUPS, SCOPE_OTHER } from './options.js';
 
 const cache = {};
+let deactivatedBuiltins = {}; // list_key -> Set of deactivated built-in values
 
 export const LIST_LABELS = {
   country: 'Country',
@@ -25,26 +32,72 @@ export const LIST_LABELS = {
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.
-  // sub_industry is dependent on Industry and isn't Settings-extensible for now.
-  // scope (Sources / Data & Insights) is deliberately not here either — it's organised
-  // into 3 fixed visual groups (see SCOPE_GROUPS in options.js) that a flat appended
-  // custom value would break; add to a group directly in code if the taxonomy grows.
+  // sub_industry is handled separately (see getSubIndustryOptions) — it's dependent
+  // on Industry, keyed as 'sub_industry:<industry>' rather than a flat list.
+  // scope (Sources / Data & Insights) is handled separately too (see
+  // mergedScopeGroups) — it's organised into 3 fixed visual groups, not a flat list.
+};
+
+// Which table(s)/column(s) actually store a given list's values — used to check
+// whether a value is safe to hard-delete (zero dependencies) versus needing
+// Deactivate instead. Also exactly the map a future Phase 2 "rename" cascade would
+// reuse to run its UPDATE ... WHERE = 'old value' statements.
+const LIST_USAGE = {
+  industry: [{ table: 'programmes', column: 'industry' }],
+  sub_industry: [{ table: 'programmes', column: 'sub_industry' }],
+  programme_positioning: [{ table: 'programmes', column: 'programme_positioning' }],
+  target_customer: [{ table: 'programmes', column: 'target_customer', array: true }],
+  geographic_scope: [{ table: 'programmes', column: 'geographic_scope', array: true }],
+  membership_type: [{ table: 'programmes', column: 'membership_type' }],
+  access_registration: [{ table: 'programmes', column: 'access_registration' }],
+  mechanisms: [
+    { table: 'programmes', column: 'mechanisms', array: true },
+    { table: 'likes', column: 'target_label', extraEq: { target_type: 'mechanism' } }
+  ],
+  benefits: [
+    { table: 'programmes', column: 'benefits', array: true },
+    { table: 'likes', column: 'target_label', extraEq: { target_type: 'benefit' } }
+  ],
+  discount_type: [{ table: 'programmes', column: 'discount_types', array: true }],
+  qualification_unit: [{ table: 'programme_tiers', column: 'qualification_unit' }],
+  source_type: [{ table: 'sources', column: 'source_type' }],
+  insight_type: [{ table: 'figures', column: 'insight_type' }],
+  meeting_type: [{ table: 'meetings', column: 'meeting_type' }],
+  task_type: [{ table: 'tasks', column: 'task_type' }],
+  psychological_effect: [{ table: 'likes', column: 'psychological_effect', array: true }],
+  scope: [
+    { table: 'sources', column: 'scope', array: true },
+    { table: 'figures', column: 'scope', array: true }
+  ]
 };
 
 export async function loadCustomOptions() {
-  const { data } = await supabase.from('custom_options').select('*').order('value');
+  const [{ data: customData }, { data: deactivatedData }] = await Promise.all([
+    supabase.from('custom_options').select('*').order('value'),
+    supabase.from('deactivated_options').select('*')
+  ]);
+
   Object.keys(cache).forEach(k => delete cache[k]);
-  (data || []).forEach(row => {
+  (customData || []).forEach(row => {
     if (!cache[row.list_key]) cache[row.list_key] = [];
     cache[row.list_key].push(row);
+  });
+
+  deactivatedBuiltins = {};
+  (deactivatedData || []).forEach(row => {
+    if (!deactivatedBuiltins[row.list_key]) deactivatedBuiltins[row.list_key] = new Set();
+    deactivatedBuiltins[row.list_key].add(row.value);
   });
 }
 
 // Returns the merged list of plain string values for a picklist (built-in + custom),
-// inserting custom values before a trailing 'Other' / 'None' sentinel when present.
+// for NEW entries: built-ins hidden via deactivated_options are excluded, custom rows
+// with active=false are excluded. inputHTML/selectOptionsHTML separately make sure an
+// already-selected-but-now-inactive value stays visible when editing an existing record.
 export function getOptionList(key) {
-  const base = OPTIONS[key] || [];
-  const custom = (cache[key] || []).map(r => r.value);
+  const deactivated = deactivatedBuiltins[key];
+  const base = (OPTIONS[key] || []).filter(v => !deactivated || !deactivated.has(typeof v === 'object' ? v.value : v));
+  const custom = (cache[key] || []).filter(r => r.active !== false).map(r => r.value);
   if (!custom.length) return base;
 
   const sentinels = ['Other', 'None'];
@@ -53,10 +106,115 @@ export function getOptionList(key) {
   return [...base.slice(0, trailingIdx), ...custom, ...base.slice(trailingIdx)];
 }
 
+// All custom rows for a list, active AND inactive — Settings shows both (inactive
+// ones dimmed) so the team can see and reactivate what's been turned off.
 export function getCustomRows(key) {
   return cache[key] || [];
 }
 
+export function getDeactivatedBuiltins(key) {
+  return [...(deactivatedBuiltins[key] || [])];
+}
+
 export function listKeys() {
   return Object.keys(LIST_LABELS);
+}
+
+// ---------------- Sub-Industry (dependent on Industry, not a flat list) ----------------
+
+function subIndustryKey(industry) { return `sub_industry:${industry}`; }
+
+export function getSubIndustryOptions(industry, industrySubs) {
+  const key = subIndustryKey(industry);
+  const deactivated = deactivatedBuiltins[key];
+  const base = (industrySubs[industry] || []).filter(v => !deactivated || !deactivated.has(v));
+  const custom = (cache[key] || []).filter(r => r.active !== false).map(r => r.value);
+  if (!custom.length) return base;
+
+  const trailingIdx = base.findIndex(v => v === 'Other');
+  if (trailingIdx === -1) return [...base, ...custom];
+  return [...base.slice(0, trailingIdx), ...custom, ...base.slice(trailingIdx)];
+}
+
+export function getAllSubIndustryRows(industry) {
+  return getCustomRows(subIndustryKey(industry));
+}
+
+export async function addSubIndustry(industry, value) {
+  return addOption(subIndustryKey(industry), value);
+}
+
+// ---------------- Scope (shared by Sources + Data & Insights, 3 fixed groups) ----------------
+
+// Merges custom Scope values into the 3 fixed groups, respecting deactivation, and
+// always keeping an already-selected-but-now-inactive value visible so an existing
+// record never silently loses a tag it was saved with.
+export function mergedScopeGroups(selected = []) {
+  const deactivated = deactivatedBuiltins['scope'] || new Set();
+  const customRows = cache['scope'] || [];
+  const groups = {};
+
+  Object.entries(SCOPE_GROUPS).forEach(([group, values]) => {
+    groups[group] = values.filter(v => !deactivated.has(v) || selected.includes(v));
+  });
+  groups['Other'] = groups['Other'] || [];
+  if (!Object.values(groups).flat().includes(SCOPE_OTHER)) groups['Other'] = [SCOPE_OTHER];
+
+  customRows.forEach(row => {
+    const group = row.group_name && groups[row.group_name] !== undefined ? row.group_name : 'Other';
+    if (row.active !== false || selected.includes(row.value)) {
+      if (!groups[group].includes(row.value)) groups[group] = [...groups[group], row.value];
+    }
+  });
+
+  return groups;
+}
+
+export async function addScopeValue(groupName, value) {
+  const { error } = await supabase.from('custom_options').insert({ list_key: 'scope', value, group_name: groupName });
+  return { error };
+}
+
+// ---------------- Usage / safe-delete ----------------
+
+// Counts how many existing records still reference a value — 0 means Delete is safe;
+// otherwise only Deactivate is offered (Delete would silently orphan real data).
+export async function countOptionUsage(listKey, value) {
+  const checks = LIST_USAGE[listKey] || [];
+  let total = 0;
+  for (const check of checks) {
+    let q = supabase.from(check.table).select('id', { count: 'exact', head: true });
+    q = check.array ? q.contains(check.column, [value]) : q.eq(check.column, value);
+    if (check.extraEq) Object.entries(check.extraEq).forEach(([k, v]) => { q = q.eq(k, v); });
+    const { count } = await q;
+    total += count || 0;
+  }
+  return total;
+}
+
+export function hasUsageCheck(listKey) {
+  return !!LIST_USAGE[listKey];
+}
+
+// ---------------- Add / Deactivate / Delete (generic, used by Settings) ----------------
+
+export async function addOption(key, value, extra = {}) {
+  const { error } = await supabase.from('custom_options').insert({ list_key: key, value, ...extra });
+  return { error };
+}
+
+export async function setOptionActive(rowId, active) {
+  return supabase.from('custom_options').update({ active }).eq('id', rowId);
+}
+
+export async function deleteOption(rowId) {
+  return supabase.from('custom_options').delete().eq('id', rowId);
+}
+
+export async function deactivateBuiltin(listKey, value) {
+  return supabase.from('deactivated_options').insert({ list_key: listKey, value });
+}
+
+export async function reactivateBuiltin(listKey, value) {
+  return supabase.from('deactivated_options').delete().eq('list_key', listKey).eq('value', value);
 }

@@ -4,7 +4,7 @@ import { escapeHtml } from './fields.js';
 import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions } from './questions.js';
 import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps } from './next-steps.js';
 
-initNav('reports');
+await initNav('reports');
 
 const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PROJECT_START = new Date(2026, 8, 14); // Monday 14 Sep 2026 — used only to number weeks

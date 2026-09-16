@@ -2,9 +2,9 @@ import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { INSIGHT_FIELDS, INSIGHT_TYPE_DEFINITIONS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
-import { loadCustomOptions } from './customOptions.js';
+import { loadCustomOptions, getCustomRows } from './customOptions.js';
 
-initNav('figures');
+await initNav('figures');
 await loadCustomOptions();
 
 const listEl = document.getElementById('insight-list');
@@ -21,9 +21,20 @@ let sources = [];
 let allInsights = [];
 let scopeFilterSelected = [];
 
+// The 8 built-in definitions are fixed/developer-controlled; a custom Information
+// Type added via Settings can carry its own short definition (stored in
+// custom_options.note), shown as a tooltip the same way.
+function definitionFor(type) {
+  if (INSIGHT_TYPE_DEFINITIONS[type]) return INSIGHT_TYPE_DEFINITIONS[type];
+  const custom = getCustomRows('insight_type').find(r => r.value === type);
+  return custom?.note || '';
+}
+
 function typeLegendHTML() {
-  return Object.entries(INSIGHT_TYPE_DEFINITIONS).map(([type, def]) =>
-    `<span class="type-legend-item" title="${escapeHtml(def)}">${escapeHtml(type)}</span>`
+  const builtIn = Object.keys(INSIGHT_TYPE_DEFINITIONS);
+  const custom = getCustomRows('insight_type').filter(r => r.active !== false).map(r => r.value);
+  return [...builtIn, ...custom].map(type =>
+    `<span class="type-legend-item" title="${escapeHtml(definitionFor(type))}">${escapeHtml(type)}</span>`
   ).join('<span class="type-legend-sep"> · </span>');
 }
 document.getElementById('type-legend').innerHTML = typeLegendHTML();
@@ -57,7 +68,7 @@ function renderRow(f) {
   return `
     <div class="list-row">
       <div class="list-row-top">
-        <div class="badge badge-green" title="${escapeHtml(INSIGHT_TYPE_DEFINITIONS[f.insight_type] || '')}">${escapeHtml(f.insight_type || 'Other')}</div>
+        <div class="badge badge-green" title="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
         ${isUrl ? `<a href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener" class="btn-outline btn-sm">Visit Website</a>` : ''}
       </div>
       <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(f.insight_text)}</div>
