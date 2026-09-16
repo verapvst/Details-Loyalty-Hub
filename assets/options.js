@@ -237,10 +237,16 @@ export function generateFullCitation({ source_name, author_org, year, source_typ
 
 // source_id is added dynamically once sources are loaded (see figures.js). Scope is
 // rendered separately as grouped checkboxes, inherited from the chosen Source at creation.
+// title: short and searchable — what the main Data & Insights list shows. Required.
+// insight_text ("Main Insight"): the concise, reusable takeaway — optional, rich text.
+// supporting_detail ("Source Detail", column name unchanged): the longer extracted
+// evidence — optional, rich text. Both stay actual `figures` columns; only the field
+// labels/type changed, so no data was renamed or moved.
 export const INSIGHT_FIELDS = [
-  { key: 'insight_text', label: 'Insight / Finding', type: 'textarea', full: true, required: true },
+  { key: 'title', label: 'Insight Title', type: 'text', full: true, required: true },
   { key: 'insight_type', label: 'Type', type: 'select', options: 'insight_type', required: true },
-  { key: 'supporting_detail', label: 'Supporting Detail', type: 'textarea', full: true }
+  { key: 'insight_text', label: 'Main Insight', type: 'richtext', full: true, minHeight: 100 },
+  { key: 'supporting_detail', label: 'Source Detail', type: 'richtext', full: true, minHeight: 160 }
 ];
 
 // format/location/online_link/participants are deliberately not here — they're

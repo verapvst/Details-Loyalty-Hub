@@ -3,6 +3,7 @@ import { initNav } from './app.js';
 import { escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor, typeLegendHTML } from './insightModal.js';
+import { fieldPlainText } from './richText.js';
 
 await initNav('figures');
 await loadCustomOptions();
@@ -42,9 +43,16 @@ function displaySourceName(s) {
   return s.source_name || s.citation_tag || 'Untitled source';
 }
 
-// Compact, scannable row: Type, the insight itself, Scope tags, and a clickable
-// Source reference — nothing else. Full text, citations, and Edit/Delete all live
-// on the Insight Detail page (insight.html) — this list is for browsing, not reading.
+// The Title is what the list shows; a legacy insight saved before Title existed
+// falls back to a plain-text rendering of its Main Insight (same "graceful fallback
+// for old rows" pattern used for Source Name elsewhere in this app).
+function displayTitle(f) {
+  return f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
+}
+
+// Compact, scannable row: Type, the Title, Scope tags, and a clickable Source
+// reference — nothing else. Main Insight, Source Detail, citations and Edit/Delete
+// all live on the Insight Detail page (insight.html) — this list is for browsing.
 function renderRow(f) {
   const sourceName = f.sources ? displaySourceName(f.sources) : null;
   const shortCitation = f.sources ? (f.sources.short_citation || f.sources.citation_tag) : null;
@@ -60,7 +68,7 @@ function renderRow(f) {
         <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
         ${shortCitation ? `<span data-source-link="${f.source_id}" class="badge badge-muted" title="${escapeHtml(sourceName || '')}">${escapeHtml(shortCitation)}</span>` : ''}
       </div>
-      <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(f.insight_text)}</div>
+      <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(displayTitle(f))}</div>
       ${scopeChips ? `<div class="chip-row" style="margin: 10px 0 0;">${scopeChips}</div>` : ''}
     </a>
   `;
@@ -88,7 +96,7 @@ function applyFiltersAndRender() {
     // Scope filter uses OR logic: match if the insight has ANY of the selected tags.
     if (scopeFilterSelected.length && !(f.scope || []).some(v => scopeFilterSelected.includes(v))) return false;
     if (q) {
-      const hay = `${f.insight_text || ''} ${f.supporting_detail || ''} ${f.sources ? displaySourceName(f.sources) : ''}`.toLowerCase();
+      const hay = `${f.title || ''} ${fieldPlainText(f.insight_text)} ${fieldPlainText(f.supporting_detail)} ${f.sources ? displaySourceName(f.sources) : ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -140,7 +148,7 @@ document.getElementById('btn-clear-filters').addEventListener('click', () => {
 });
 
 async function loadSources() {
-  const { data } = await supabase.from('sources').select('id, source_name, citation_tag, short_citation, scope').order('source_name');
+  const { data } = await supabase.from('sources').select('id, source_name, citation_tag, short_citation, author_org, year, scope').order('source_name');
   sources = data || [];
   addBtn.disabled = sources.length === 0;
   noSourcesNote.hidden = sources.length > 0;

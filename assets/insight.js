@@ -3,6 +3,7 @@ import { initNav, showToast } from './app.js';
 import { escapeHtml, copyToClipboard } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor } from './insightModal.js';
+import { toEditableHtml, fieldPlainText } from './richText.js';
 
 await initNav('figures');
 await loadCustomOptions();
@@ -28,8 +29,14 @@ function displaySourceName(s) {
   return s?.source_name || s?.citation_tag || 'Untitled source';
 }
 
-function copyBtnHTML(action, label) {
-  return `<button type="button" class="btn-outline btn-sm" data-copy="${action}">${label}</button>`;
+// A legacy insight saved before Title existed falls back to a plain-text rendering
+// of its Main Insight — same graceful-fallback pattern used elsewhere in this app.
+function displayTitle(f) {
+  return f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
+}
+
+function copyBtnHTML(action, label, { small } = {}) {
+  return `<button type="button" class="${small ? 'btn-text' : 'btn-outline btn-sm'}" data-copy="${action}">${label}</button>`;
 }
 
 function sourceFieldHTML(label, value) {
@@ -52,17 +59,31 @@ function sourceFieldHTMLRaw(label, html) {
   `;
 }
 
+// A content block with its own small Copy action next to the heading — each layer
+// (Main Insight / Source Detail) is independently reusable, so its copy action lives
+// right where its content is rather than bunched into one generic toolbar.
+function contentBlockHTML(heading, richValue, copyAction, copyLabel) {
+  if (!richValue) return '';
+  return `
+    <div class="record-block">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="margin-bottom: 0;">${heading}</h3>
+        ${copyBtnHTML(copyAction, copyLabel, { small: true })}
+      </div>
+      <div class="rich-text-display">${toEditableHtml(richValue)}</div>
+    </div>
+  `;
+}
+
 function render() {
   const s = insight.sources;
   const isUrl = /^https?:\/\//i.test(s?.link_or_path || '');
   const scopeChips = (insight.scope || []).map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('');
   const sourceScopeChips = (s?.scope || []).map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('');
 
-  const actions = [
-    copyBtnHTML('insight', 'Copy Insight'),
-    insight.supporting_detail ? copyBtnHTML('supporting', 'Copy Supporting Detail') : '',
-    s?.short_citation ? copyBtnHTML('short-citation', 'Copy Short Citation') : '',
-    s?.full_citation ? copyBtnHTML('full-citation', 'Copy Full Citation') : '',
+  const headerActions = [
+    copyBtnHTML('title', 'Copy Title'),
+    copyBtnHTML('all', 'Copy All'),
     isUrl ? `<a href="${escapeHtml(s.link_or_path)}" target="_blank" rel="noopener" class="btn-outline btn-sm">Visit Source ↗</a>` : ''
   ].filter(Boolean).join('');
 
@@ -71,21 +92,20 @@ function render() {
       <div class="record-head-inner">
         <a href="figures.html" class="record-back">&larr; Back to Data &amp; Insights</a>
         <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(insight.insight_type))}" style="margin-bottom: 10px;">${escapeHtml(insight.insight_type || 'Other')}</div>
-        <div class="record-title" style="font-size: 28px;">${escapeHtml(insight.insight_text)}</div>
+        <div class="record-title" style="font-size: 28px;">${escapeHtml(displayTitle(insight))}</div>
         ${scopeChips ? `<div class="chip-row" style="margin: 14px 0 0;">${scopeChips}</div>` : ''}
-        <div class="record-actions" style="margin-top: 18px; flex-wrap: wrap;">${actions}</div>
+        <div class="record-actions" style="margin-top: 18px; flex-wrap: wrap;">${headerActions}</div>
       </div>
     </div>
     <div class="record-body">
-      ${insight.supporting_detail ? `
-        <div class="record-block">
-          <h3>Supporting Detail</h3>
-          <p style="font-size: 14px; line-height: 1.6; color: var(--dark); white-space: pre-wrap;">${escapeHtml(insight.supporting_detail)}</p>
-        </div>
-      ` : ''}
+      ${contentBlockHTML('Main Insight', insight.insight_text, 'insight', 'Copy Insight')}
+      ${contentBlockHTML('Source Detail', insight.supporting_detail, 'supporting', 'Copy Source Detail')}
 
       <div class="record-block">
-        <h3>Source</h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <h3 style="margin-bottom: 0;">Source</h3>
+          ${s?.full_citation ? copyBtnHTML('full-citation', 'Copy Full Citation', { small: true }) : ''}
+        </div>
         <div class="record-grid">
           ${sourceFieldHTMLRaw('Source / Article Name', s ? `<a href="source.html?id=${s.id}" style="color: var(--accent);">${escapeHtml(displaySourceName(s))}</a>` : null)}
           ${sourceFieldHTML('Author / Organisation', s?.author_org)}
@@ -120,11 +140,15 @@ function render() {
 
   root.querySelectorAll('[data-copy]').forEach(btn => {
     btn.addEventListener('click', async () => {
+      const title = displayTitle(insight);
+      const mainInsight = fieldPlainText(insight.insight_text);
+      const sourceDetail = fieldPlainText(insight.supporting_detail);
       const texts = {
-        insight: insight.insight_text,
-        supporting: insight.supporting_detail,
-        'short-citation': s?.short_citation,
-        'full-citation': s?.full_citation
+        title,
+        insight: mainInsight,
+        supporting: sourceDetail,
+        'full-citation': s?.full_citation,
+        all: [title, mainInsight, sourceDetail, s?.full_citation ? `Source: ${s.full_citation}` : ''].filter(Boolean).join('\n\n')
       };
       const ok = await copyToClipboard(texts[btn.dataset.copy]);
       showToast(ok ? 'Copied.' : 'Could not copy — select the text manually.', !ok);
@@ -145,7 +169,7 @@ function render() {
 async function load() {
   const [{ data, error }, { data: allSources }] = await Promise.all([
     supabase.from('figures').select('*, sources(*)').eq('id', insightId).single(),
-    supabase.from('sources').select('id, source_name, citation_tag, scope').order('source_name')
+    supabase.from('sources').select('id, source_name, citation_tag, author_org, year, scope').order('source_name')
   ]);
 
   if (error || !data) {

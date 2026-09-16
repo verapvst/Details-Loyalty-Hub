@@ -4,6 +4,7 @@ import { escapeHtml, copyToClipboard } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 import { openSourceModal } from './sourceModal.js';
 import { definitionFor } from './insightModal.js';
+import { fieldPlainText } from './richText.js';
 
 await initNav('sources');
 await loadCustomOptions();
@@ -43,12 +44,13 @@ function fieldHTML(label, value) {
 }
 
 function insightRowHTML(f) {
+  const title = f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
   return `
     <a href="insight.html?id=${f.id}" class="list-row" style="display: block; text-decoration: none; color: inherit;">
       <div class="list-row-top">
         <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
       </div>
-      <div class="list-row-title" style="margin-top: 8px; font-size: 14px;">${escapeHtml(f.insight_text)}</div>
+      <div class="list-row-title" style="margin-top: 8px; font-size: 14px;">${escapeHtml(title)}</div>
     </a>
   `;
 }
@@ -136,7 +138,7 @@ function render() {
 async function load() {
   const [{ data, error }, { data: relatedInsights }] = await Promise.all([
     supabase.from('sources').select('*').eq('id', sourceId).single(),
-    supabase.from('figures').select('id, insight_text, insight_type').eq('source_id', sourceId).order('created_at', { ascending: false })
+    supabase.from('figures').select('id, title, insight_text, insight_type').eq('source_id', sourceId).order('created_at', { ascending: false })
   ]);
 
   if (error || !data) {

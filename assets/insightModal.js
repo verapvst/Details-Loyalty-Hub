@@ -7,6 +7,7 @@ import { getIdentity, showToast } from './app.js';
 import { INSIGHT_FIELDS, INSIGHT_TYPE_DEFINITIONS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { getCustomRows } from './customOptions.js';
+import { wireRichTextEditors, getRichTextValue } from './richText.js';
 
 // The 8 built-in definitions are fixed/developer-controlled; a custom Information
 // Type added via Settings can carry its own short definition (stored in
@@ -25,6 +26,64 @@ export function typeLegendHTML() {
   ).join('<span class="type-legend-sep"> · </span>');
 }
 
+function sourceDisplayName(s) {
+  return s.source_name || s.citation_tag || 'Untitled source';
+}
+
+// A searchable combobox rather than a plain <select> — scales to a much larger source
+// library than a native dropdown would. Reuses the same sources data already loaded
+// for the page (no separate source-management system); already alphabetical (the
+// caller's query is ordered by source_name), search narrows further by name or author.
+function sourcePickerHTML(selectedSource) {
+  const label = selectedSource ? sourceDisplayName(selectedSource) : '';
+  return `
+    <div class="source-picker">
+      <input type="text" id="source-search" placeholder="Search sources by name…" autocomplete="off" value="${escapeHtml(label)}" />
+      <input type="hidden" name="source_id" id="source-id-input" value="${selectedSource ? selectedSource.id : ''}" />
+      <div class="source-picker-dropdown" id="source-picker-dropdown" hidden></div>
+    </div>
+  `;
+}
+
+function wireSourcePicker({ form, sources, onSelect }) {
+  const searchInput = form.querySelector('#source-search');
+  const hiddenInput = form.querySelector('#source-id-input');
+  const dropdown = form.querySelector('#source-picker-dropdown');
+
+  function renderOptions(query) {
+    const q = query.trim().toLowerCase();
+    const matches = !q ? sources : sources.filter(s =>
+      sourceDisplayName(s).toLowerCase().includes(q) || (s.author_org || '').toLowerCase().includes(q)
+    );
+    dropdown.innerHTML = matches.length
+      ? matches.map(s => `
+        <div class="source-picker-option" data-id="${s.id}">
+          <div class="source-picker-option-name">${escapeHtml(sourceDisplayName(s))}</div>
+          ${(s.author_org || s.year) ? `<div class="source-picker-option-meta">${[s.author_org, s.year].filter(Boolean).map(v => escapeHtml(String(v))).join(' · ')}</div>` : ''}
+        </div>
+      `).join('')
+      : `<div class="source-picker-empty">No sources match.</div>`;
+    dropdown.hidden = false;
+
+    dropdown.querySelectorAll('.source-picker-option').forEach(opt => {
+      opt.addEventListener('mousedown', (e) => e.preventDefault()); // survive the input's blur
+      opt.addEventListener('click', () => {
+        const picked = sources.find(s => s.id === opt.dataset.id);
+        searchInput.value = sourceDisplayName(picked);
+        hiddenInput.value = picked.id;
+        dropdown.hidden = true;
+        onSelect(picked);
+      });
+    });
+  }
+
+  searchInput.addEventListener('focus', () => renderOptions(''));
+  searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+  document.addEventListener('click', (e) => {
+    if (!dropdown.hidden && !e.target.closest('.source-picker')) dropdown.hidden = true;
+  });
+}
+
 // One modal for both Add (insight=null) and Edit (insight=existing row). Scope starts
 // as a snapshot copy of the chosen Source's Scope (not a live link) and stays fully
 // editable from that point on — picking a different source only re-copies its Scope
@@ -37,7 +96,7 @@ export function openInsightModal({ insight, sources, onChange }) {
     document.body.appendChild(root);
   }
 
-  const sourceOptions = sources.map(s => `<option value="${s.id}" ${insight && insight.source_id === s.id ? 'selected' : ''}>${escapeHtml(s.source_name || s.citation_tag || 'Untitled source')}</option>`).join('');
+  const selectedSource = insight ? sources.find(s => s.id === insight.source_id) : null;
   const fieldsHTML = INSIGHT_FIELDS.map(f => `
     <div class="form-field ${f.full ? 'full' : ''}">
       <label>${f.label}${f.required ? ' *' : ''}</label>
@@ -48,7 +107,7 @@ export function openInsightModal({ insight, sources, onChange }) {
 
   root.innerHTML = `
     <div class="modal-overlay form-overlay" id="add-modal">
-      <div class="form-modal" style="max-width: 560px;">
+      <div class="form-modal" style="max-width: 620px;">
         <div class="form-modal-head">
           <h2>${insight ? 'Edit Insight' : 'Add Insight'}</h2>
           <button type="button" class="form-modal-close" id="close-btn">&times;</button>
@@ -59,10 +118,7 @@ export function openInsightModal({ insight, sources, onChange }) {
             <div class="form-grid">
               <div class="form-field full">
                 <label>Source *</label>
-                <select name="source_id" id="insight-source-select" required>
-                  <option value=""></option>
-                  ${sourceOptions}
-                </select>
+                ${sourcePickerHTML(selectedSource)}
               </div>
               ${fieldsHTML}
             </div>
@@ -86,18 +142,28 @@ export function openInsightModal({ insight, sources, onChange }) {
   document.getElementById('cancel-btn').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
-  document.getElementById('insight-source-select').addEventListener('change', (e) => {
-    const scopeContainer = document.getElementById('insight-scope-groups');
-    const currentlyChecked = readCheckboxGroup(form, 'scope');
-    if (currentlyChecked.length) return; // don't overwrite a researcher's own edits
-    const picked = sources.find(s => s.id === e.target.value);
-    scopeContainer.innerHTML = scopeCheckboxGroupsHTML(picked?.scope || []);
+  wireRichTextEditors(form);
+  wireSourcePicker({
+    form, sources,
+    onSelect: (picked) => {
+      const scopeContainer = document.getElementById('insight-scope-groups');
+      const currentlyChecked = readCheckboxGroup(form, 'scope');
+      if (currentlyChecked.length) return; // don't overwrite a researcher's own edits
+      scopeContainer.innerHTML = scopeCheckboxGroupsHTML(picked?.scope || []);
+    }
   });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const errorEl = document.getElementById('form-error');
     errorEl.hidden = true;
+
+    const sourceId = form.elements['source_id'].value;
+    if (!sourceId) {
+      errorEl.textContent = 'Select a Source.';
+      errorEl.hidden = false;
+      return;
+    }
 
     const scope = readCheckboxGroup(form, 'scope');
     if (!scope.length) {
@@ -107,8 +173,10 @@ export function openInsightModal({ insight, sources, onChange }) {
     }
 
     const data = readFormValues(e.target, INSIGHT_FIELDS);
-    data.source_id = e.target.elements.source_id.value;
+    data.source_id = sourceId;
     data.scope = scope;
+    data.insight_text = getRichTextValue(form, 'insight_text');
+    data.supporting_detail = getRichTextValue(form, 'supporting_detail');
 
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = true;

@@ -264,6 +264,47 @@ ul { list-style: none; }
 .form-field textarea { resize: vertical; min-height: 64px; font-family: inherit; }
 .form-field input:focus, .form-field select:focus, .form-field textarea:focus { background: var(--white); box-shadow: 0 0 0 2px var(--dark); }
 
+/* ---------- Rich-text field (Add/Edit Insight: Main Insight / Source Detail) ---------- */
+.rich-text-toolbar { display: flex; gap: 4px; margin-bottom: 6px; }
+.rich-text-toolbar button {
+  padding: 5px 10px; border-radius: 6px; background: var(--surface-alt); color: var(--muted);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.rich-text-toolbar button:hover { background: var(--border); color: var(--dark); }
+.rich-text-editable {
+  padding: 12px 14px; border-radius: var(--radius); background: var(--surface-alt);
+  font-size: 13px; color: var(--dark); line-height: 1.6; overflow-y: auto; max-height: 340px;
+}
+.rich-text-editable:focus { background: var(--white); box-shadow: 0 0 0 2px var(--dark); outline: none; }
+.rich-text-editable p { margin: 0 0 10px; }
+.rich-text-editable p:last-child { margin-bottom: 0; }
+.rich-text-editable ul, .rich-text-editable ol { margin: 0 0 10px 20px; }
+.rich-text-editable ul { list-style: disc; } /* the app resets ul{list-style:none} globally */
+.rich-text-editable ol { list-style: decimal; }
+.rich-text-editable li { margin-bottom: 2px; }
+
+/* Read-only rendering of the same rich content on the Insight Detail page */
+.rich-text-display { font-size: 14px; line-height: 1.6; color: var(--dark); }
+.rich-text-display p { margin: 0 0 12px; }
+.rich-text-display p:last-child { margin-bottom: 0; }
+.rich-text-display ul, .rich-text-display ol { margin: 0 0 12px 20px; }
+.rich-text-display ul { list-style: disc; }
+.rich-text-display ol { list-style: decimal; }
+.rich-text-display li { margin-bottom: 2px; }
+
+/* ---------- Source picker (Add/Edit Insight: searchable combobox) ---------- */
+.source-picker { position: relative; }
+.source-picker-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+  max-height: 260px; overflow-y: auto; background: var(--white); border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+}
+.source-picker-option { padding: 9px 14px; cursor: pointer; }
+.source-picker-option:hover, .source-picker-option.active { background: var(--surface-alt); }
+.source-picker-option-name { font-size: 13px; color: var(--dark); }
+.source-picker-option-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.source-picker-empty { padding: 10px 14px; font-size: 12px; color: var(--muted); }
+
 .tier-rows { display: flex; flex-direction: column; gap: 10px; }
 .tier-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 12px; align-items: center; }
 .tier-row input { padding: 9px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; }

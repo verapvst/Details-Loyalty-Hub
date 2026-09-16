@@ -1,6 +1,7 @@
 import { PINNED_COUNTRIES } from './options.js';
 import { getOptionList, mergedScopeGroups } from './customOptions.js';
 import { getAppSetting } from './appSettings.js';
+import { richTextEditorHTML } from './richText.js';
 
 // Plain-text clipboard copy for detail-view "Copy Insight / Copy Citation" actions —
 // clean text suitable for pasting into a slide, thesis, or an AI prompt, no HTML.
@@ -129,6 +130,8 @@ export function inputHTML(field, value) {
       return `<select name="${field.key}" ${req}>${selectOptionsHTML(field.options, v)}</select>`;
     case 'multiselect':
       return checkboxGroupHTML(field.key, field.options, value);
+    case 'richtext':
+      return richTextEditorHTML(field.key, v, { minHeight: field.minHeight });
     case 'textarea':
       return `<textarea name="${field.key}" rows="3" ${req}>${escapeHtml(v)}</textarea>`;
     case 'number':
@@ -145,7 +148,7 @@ export function inputHTML(field, value) {
 export function readFormValues(formEl, allFields) {
   const data = {};
   allFields.forEach(field => {
-    if (field.type === 'multiselect') return; // read separately via readCheckboxGroup
+    if (field.type === 'multiselect' || field.type === 'richtext') return; // read separately (readCheckboxGroup / getRichTextValue)
     const el = formEl.elements[field.key];
     if (!el) return;
     const raw = el.value.trim();
