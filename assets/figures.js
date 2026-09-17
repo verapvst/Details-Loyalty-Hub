@@ -53,8 +53,10 @@ function displayTitle(f) {
 }
 
 // Library row, not a card: Title + where it came from (the source's short citation
-// already encodes Author · Year) as the two lines, Type/Visual as small badges on
-// the right. The thumbnail is real data, not decoration — an insight's own uploaded
+// already encodes Author · Year) as the two lines, Type as a small badge on the
+// right. No separate Visual badge — the thumbnail itself (when there is one) already
+// says "this has a visual", so the badge would just repeat what the logo shows.
+// The thumbnail is real data, not decoration — an insight's own uploaded
 // Visual/Evidence image when it has one, nothing invented for insights that don't.
 // Scope, Main Insight, Source Detail, citations and Edit/Delete all live on the
 // Insight Detail page (insight.html) — this list is for browsing/scanning.
@@ -72,7 +74,6 @@ function renderRow(f) {
       </div>
       <div class="lib-row-meta">
         <span class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</span>
-        ${f.visual_type ? `<span class="badge badge-muted">${escapeHtml(f.visual_type)}</span>` : ''}
       </div>
     </a>
   `;
