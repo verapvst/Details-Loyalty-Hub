@@ -139,7 +139,7 @@ export function openTargetPickerModal({ programmeId, programmeName, programme, t
 
     if (type === 'other' || currentOptions.length === 0) {
       valueWrap.innerHTML = `
-        <label>${type === 'other' ? 'Describe it' : `No ${targetTypeLabel(type).toLowerCase()} values found on this programme — describe it`}</label>
+        <label>${type === 'other' ? 'Describe it' : `No ${targetTypeLabel(type).toLowerCase()} values found on this programme, describe it`}</label>
         <input type="text" name="target_value_other" placeholder="e.g. a detail not yet captured elsewhere" required />
       `;
     } else {
@@ -198,7 +198,7 @@ export function openLikeModal({ programmeId, programmeName, targetType, targetLa
           <div class="form-modal-body">
             <div class="form-field full">
               <label>What did you like?</label>
-              <div class="like-target-display">${escapeHtml(programmeName)} — ${escapeHtml(targetLabel)} <span class="badge badge-muted" style="margin-left:6px;">${targetTypeLabel(targetType)}</span></div>
+              <div class="like-target-display">${escapeHtml(programmeName)} · ${escapeHtml(targetLabel)} <span class="badge badge-muted" style="margin-left:6px;">${targetTypeLabel(targetType)}</span></div>
             </div>
             <div class="form-field full">
               <label>Why is it interesting?</label>

@@ -31,7 +31,7 @@ function shortDate(dateStr) {
 function weekLabel(periodStart, periodEnd) {
   const start = new Date(periodStart + 'T00:00:00');
   const weekNum = Math.round((start - PROJECT_START) / (7 * 86400000)) + 1;
-  const prefix = weekNum >= 1 ? `Week ${weekNum} — ` : '';
+  const prefix = weekNum >= 1 ? `Week ${weekNum}: ` : '';
   return `${prefix}${shortDate(periodStart)} – ${shortDate(periodEnd)}`;
 }
 
@@ -106,8 +106,8 @@ function buildFavouritesSection(likes) {
   if (!likes.length) return '(None added this period.)';
   return likes.map(l => {
     const programme = l.programmes?.programme_name || 'Unknown programme';
-    const why = l.description ? ` — ${l.description}` : '';
-    return `• ${programme} — ${l.target_label}${why}`;
+    const why = l.description ? ` (${l.description})` : '';
+    return `• ${programme}: ${l.target_label}${why}`;
   }).join('\n');
 }
 
@@ -119,7 +119,7 @@ function buildInsightsSection(figures) {
   return figures.map(f => {
     const title = f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
     const source = f.sources ? (f.sources.source_name || f.sources.citation_tag) : null;
-    return `• ${title}${source ? ` — ${source}` : ''}`;
+    return `• ${title}${source ? ` (${source})` : ''}`;
   }).join('\n');
 }
 
@@ -131,7 +131,7 @@ function buildMeetingsSection(meetings) {
     const time = m.meeting_time ? ` · ${m.meeting_time.slice(0, 5)}` : '';
     const status = m.status === 'cancelled' ? ' [Cancelled]' : '';
     const notes = m.notes ? `\n  Notes: ${m.notes}` : '';
-    return `• ${m.meeting_date}${time} — ${m.title} (${m.meeting_type})${status}${notes}`;
+    return `• ${m.meeting_date}${time}: ${m.title} (${m.meeting_type})${status}${notes}`;
   });
   return [header, '', ...lines].join('\n');
 }
@@ -182,6 +182,50 @@ async function generateReport(periodStart, periodEnd) {
   };
 }
 
+// ---------------- Copy-to-clipboard: real <ul><li> bullets, not a literal "• " ----------------
+// Report sections are plain-text textareas (so they stay simple, editable, and easy to
+// review before pasting) and use a literal "• " prefix to read as a bullet list on the
+// site. Pasted as plain text, that character rides along as content — inside an existing
+// PowerPoint/Word bullet list, it shows up as a second bullet next to the slide's own one.
+// Rather than change how the list looks on the page, every copy path (the "Copy Report"
+// button, and selecting text in a section box and pressing Ctrl/Cmd-C) also writes a
+// text/html payload where "• " lines become real <li> elements with no leading character —
+// Office reads that as a genuine list and applies its own bullet, and anything that only
+// understands plain text still gets the literal "• " version, unchanged.
+function linesToClipboardHtml(lines) {
+  let html = '';
+  let listBuffer = [];
+  const flushList = () => {
+    if (listBuffer.length) {
+      html += `<ul>${listBuffer.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`;
+      listBuffer = [];
+    }
+  };
+  lines.forEach(line => {
+    const bulletMatch = line.match(/^•\s?(.*)$/);
+    if (bulletMatch) {
+      listBuffer.push(bulletMatch[1]);
+      return;
+    }
+    flushList();
+    html += line.trim() === '' ? '<p>&nbsp;</p>' : `<p>${escapeHtml(line)}</p>`;
+  });
+  flushList();
+  return html;
+}
+
+// Wires a section textarea so a manual selection + copy also gets the text/html bullet
+// fix above, not just the whole-report "Copy Report" button.
+function wireBulletCopyFix(textarea) {
+  textarea.addEventListener('copy', (e) => {
+    const selected = textarea.value.slice(textarea.selectionStart, textarea.selectionEnd);
+    if (!selected || !e.clipboardData) return; // let the browser's default copy happen
+    e.clipboardData.setData('text/plain', selected);
+    e.clipboardData.setData('text/html', linesToClipboardHtml(selected.split('\n')));
+    e.preventDefault();
+  });
+}
+
 // ---------------- UI wiring ----------------
 
 const startInput = document.getElementById('period-start');
@@ -200,6 +244,8 @@ const sectionEls = {
 };
 
 let currentPeriod = null;
+
+Object.values(sectionEls).forEach(wireBulletCopyFix);
 
 function fillSections(content) {
   Object.entries(sectionEls).forEach(([key, el]) => { el.value = content[key] || ''; });
@@ -249,28 +295,36 @@ document.getElementById('btn-save-report').addEventListener('click', async () =>
 
 document.getElementById('btn-copy-report').addEventListener('click', async () => {
   if (!currentPeriod) return;
-  const doc = [
+  const lines = [
     `WEEKLY REPORT`,
     weekLabel(currentPeriod.start, currentPeriod.end),
     '',
-    '01 — Progress', sectionEls.progress.value,
+    '01. Progress', sectionEls.progress.value,
     '',
-    '02 — Favourites', sectionEls.favourites.value,
+    '02. Favourites', sectionEls.favourites.value,
     '',
-    '03 — Insights', sectionEls.insights.value,
+    '03. Insights', sectionEls.insights.value,
     '',
-    '04 — Meetings & Discussions', sectionEls.meetings.value,
+    '04. Meetings & Discussions', sectionEls.meetings.value,
     '',
-    '05 — Questions & Support Needed', sectionEls.questions.value,
+    '05. Questions & Support Needed', sectionEls.questions.value,
     '',
-    '06 — Next Steps', sectionEls.next_steps.value
-  ].join('\n');
+    '06. Next Steps', sectionEls.next_steps.value
+  ];
+  const doc = lines.join('\n');
 
   try {
-    await navigator.clipboard.writeText(doc);
+    if (window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain': new Blob([doc], { type: 'text/plain' }),
+        'text/html': new Blob([linesToClipboardHtml(doc.split('\n'))], { type: 'text/html' })
+      })]);
+    } else {
+      await navigator.clipboard.writeText(doc);
+    }
     showToast('Report copied to clipboard.');
   } catch {
-    showToast('Could not copy automatically — select the sections manually.', true);
+    showToast('Could not copy automatically. Select the sections manually.', true);
   }
 });
 

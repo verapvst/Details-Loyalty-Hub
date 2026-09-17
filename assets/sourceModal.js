@@ -42,7 +42,7 @@ export function openSourceModal({ source, onChange }) {
             <div class="form-error" id="form-error" hidden></div>
             <div class="form-grid">${fieldsHTML}</div>
             <div class="form-section-label" style="margin-top: 16px;">Scope *</div>
-            <div class="settings-hint" style="margin-bottom: 6px;">What this source is about — select every topic it covers.</div>
+            <div class="settings-hint" style="margin-bottom: 6px;">What this source is about. Select every topic it covers.</div>
             ${scopeCheckboxGroupsHTML(source?.scope || [])}
           </div>
           <div class="form-modal-foot">

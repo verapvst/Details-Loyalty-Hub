@@ -100,7 +100,7 @@ function visualEvidenceFieldHTML(insight) {
       </div>
       <div class="visual-evidence-drop" id="visual-evidence-drop" ${(hasType && !existingUrl) ? '' : 'hidden'}>
         <p>Drag and drop an image, or <span class="visual-evidence-browse">choose a file</span></p>
-        <p class="settings-hint" style="margin: 0;">PNG, JPG or WebP — up to 8MB.</p>
+        <p class="settings-hint" style="margin: 0;">PNG, JPG or WebP, up to 8MB.</p>
         <input type="file" id="visual-evidence-input" accept="${IMAGE_ACCEPT.join(',')}" hidden />
       </div>
       <div class="form-error" id="visual-evidence-error" hidden></div>
@@ -154,7 +154,7 @@ function wireVisualEvidence(form, insight) {
       return;
     }
     if (file.size > IMAGE_MAX_BYTES) {
-      errorEl.textContent = 'That image is larger than 8MB — please use a smaller file.';
+      errorEl.textContent = 'That image is larger than 8MB. Please use a smaller file.';
       errorEl.hidden = false;
       return;
     }
@@ -232,32 +232,57 @@ export function sortSourcesByRecency(sources, usage) {
 }
 
 // A searchable combobox rather than a plain <select> — scales to a much larger source
-// library than a native dropdown would. Default (empty search) view is recency-first
-// (see loadSourceUsage/sortSourcesByRecency); search matches by name, author/org,
-// short citation and source type, kept in that same recency order.
+// library than a native dropdown would. Default sort is recency-first (see
+// loadSourceUsage/sortSourcesByRecency), with A–Z / Z–A / Recently Added as explicit
+// alternatives once the library grows past what recency alone can navigate. Search
+// matches by name, author/org, short citation and source type, kept in the chosen sort.
+const SOURCE_SORTS = {
+  'recent-use': 'Recently Used',
+  'az': 'A–Z',
+  'za': 'Z–A',
+  'recent-add': 'Recently Added'
+};
+
+function sortSources(sources, sortMode, usage) {
+  if (sortMode === 'az') return [...sources].sort((a, b) => sourceDisplayName(a).localeCompare(sourceDisplayName(b)));
+  if (sortMode === 'za') return [...sources].sort((a, b) => sourceDisplayName(b).localeCompare(sourceDisplayName(a)));
+  if (sortMode === 'recent-add') return [...sources].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  return sortSourcesByRecency(sources, usage);
+}
+
 function sourcePickerHTML(selectedSource) {
   const label = selectedSource ? sourceDisplayName(selectedSource) : '';
+  const sortOptionsHTML = Object.entries(SOURCE_SORTS).map(([value, text]) => `<option value="${value}">${text}</option>`).join('');
   return `
     <div class="source-picker">
-      <input type="text" id="source-search" placeholder="Search sources by name, author or type…" autocomplete="off" value="${escapeHtml(label)}" />
+      <div class="source-picker-controls">
+        <input type="text" id="source-search" placeholder="Search sources by name, author or type…" autocomplete="off" value="${escapeHtml(label)}" />
+        <select id="source-sort" class="source-picker-sort" aria-label="Sort sources">${sortOptionsHTML}</select>
+      </div>
       <input type="hidden" name="source_id" id="source-id-input" value="${selectedSource ? selectedSource.id : ''}" />
       <div class="source-picker-dropdown" id="source-picker-dropdown" hidden></div>
     </div>
   `;
 }
 
-// `getSources`/`getUsedIds` are functions (not plain values) so the picker keeps
-// showing an immediate, unsorted list on first focus and silently upgrades to the
-// recency-sorted one once loadSourceUsage() resolves — no spinner, no blocking.
-function wireSourcePicker({ form, getSources, getUsedIds, onSelect }) {
+// `getSources`/`getUsage` are functions (not plain values) so the picker keeps
+// showing an immediate, unsorted list on first focus and silently upgrades once
+// loadSourceUsage() resolves — no spinner, no blocking. The "Recently Used / All
+// Sources" grouping only makes sense for the default recency sort with no active
+// search; switching to A–Z, Z–A or Recently Added (or typing a query) shows one flat,
+// explicitly-ordered list instead.
+function wireSourcePicker({ form, getSources, getUsage, onSelect }) {
   const searchInput = form.querySelector('#source-search');
+  const sortSelect = form.querySelector('#source-sort');
   const hiddenInput = form.querySelector('#source-id-input');
   const dropdown = form.querySelector('#source-picker-dropdown');
 
   function renderOptions(query) {
-    const sources = getSources();
+    const sortMode = sortSelect.value;
+    const usage = getUsage();
+    const sorted = sortSources(getSources(), sortMode, usage);
     const q = query.trim().toLowerCase();
-    const matches = !q ? sources : sources.filter(s => {
+    const matches = !q ? sorted : sorted.filter(s => {
       const hay = `${sourceDisplayName(s)} ${s.author_org || ''} ${s.short_citation || ''} ${s.source_type || ''}`.toLowerCase();
       return hay.includes(q);
     });
@@ -265,14 +290,13 @@ function wireSourcePicker({ form, getSources, getUsedIds, onSelect }) {
     if (!matches.length) {
       dropdown.innerHTML = `<div class="source-picker-empty">No sources match.</div>`;
     } else {
-      const usedIds = getUsedIds();
-      const usedCount = !q ? matches.filter(s => usedIds.has(s.id)).length : 0;
       const optionHTML = s => `
         <div class="source-picker-option" data-id="${s.id}">
           <div class="source-picker-option-name">${escapeHtml(sourceDisplayName(s))}</div>
           ${(s.author_org || s.year) ? `<div class="source-picker-option-meta">${[s.author_org, s.year].filter(Boolean).map(v => escapeHtml(String(v))).join(' · ')}</div>` : ''}
         </div>
       `;
+      const usedCount = (!q && sortMode === 'recent-use') ? matches.filter(s => usage.has(s.id)).length : 0;
       dropdown.innerHTML = (usedCount > 0 && usedCount < matches.length)
         ? `<div class="source-picker-group-label">Recently Used</div>${matches.slice(0, usedCount).map(optionHTML).join('')}` +
           `<div class="source-picker-group-label">All Sources</div>${matches.slice(usedCount).map(optionHTML).join('')}`
@@ -294,6 +318,8 @@ function wireSourcePicker({ form, getSources, getUsedIds, onSelect }) {
 
   searchInput.addEventListener('focus', () => renderOptions(''));
   searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+  sortSelect.addEventListener('mousedown', (e) => e.stopPropagation());
+  sortSelect.addEventListener('change', () => renderOptions(searchInput.value));
   document.addEventListener('click', (e) => {
     if (!dropdown.hidden && !e.target.closest('.source-picker')) dropdown.hidden = true;
   });
@@ -342,7 +368,7 @@ export function openInsightModal({ insight, sources, onChange }) {
               ${fieldsHTML}
             </div>
             <div class="form-section-label" style="margin-top: 16px;">Scope *</div>
-            <div class="settings-hint" style="margin-bottom: 6px;">Starts from the Source's Scope — narrow it down or add to it for this specific insight.</div>
+            <div class="settings-hint" style="margin-bottom: 6px;">Starts from the Source's Scope. Narrow it down or add to it for this specific insight.</div>
             <div id="insight-scope-groups">${scopeCheckboxGroupsHTML(insight?.scope || [])}</div>
           </div>
           <div class="form-modal-foot">
@@ -368,15 +394,11 @@ export function openInsightModal({ insight, sources, onChange }) {
   // Sources render immediately in whatever order the caller passed in; once usage
   // loads (near-instant, one small query) the picker silently re-sorts to
   // recently-used-first without blocking the modal or showing a spinner.
-  let orderedSources = sources;
-  let usedIds = new Set();
-  loadSourceUsage().then(usage => {
-    orderedSources = sortSourcesByRecency(sources, usage);
-    usedIds = new Set(usage.keys());
-  });
+  let sourceUsage = new Map();
+  loadSourceUsage().then(usage => { sourceUsage = usage; });
 
   wireSourcePicker({
-    form, getSources: () => orderedSources, getUsedIds: () => usedIds,
+    form, getSources: () => sources, getUsage: () => sourceUsage,
     onSelect: (picked) => {
       const scopeContainer = document.getElementById('insight-scope-groups');
       const currentlyChecked = readCheckboxGroup(form, 'scope');

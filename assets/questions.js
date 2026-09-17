@@ -47,7 +47,7 @@ export function openQuestionModal({ question, onChange }) {
                 </select>
               </div>
               <div class="form-field full">
-                <label>Title <span style="font-weight:400; color: var(--muted);">(optional — shown on the list; falls back to the text below)</span></label>
+                <label>Title <span style="font-weight:400; color: var(--muted);">(optional, shown on the list; falls back to the text below)</span></label>
                 <input type="text" name="title" value="${escapeHtml(question?.title)}" placeholder="Short label, e.g. Blockchain Loyalty" />
               </div>
               <div class="form-field full">
@@ -55,7 +55,7 @@ export function openQuestionModal({ question, onChange }) {
                 <textarea name="question_text" rows="3" required placeholder="e.g. Should we include luxury hospitality as its own benchmark category? / Need access to the customer segmentation data.">${escapeHtml(question?.question_text)}</textarea>
               </div>
               <div class="form-field full">
-                <label>Details <span style="font-weight:400; color: var(--muted);">(optional — full context, shown only when opened)</span></label>
+                <label>Details <span style="font-weight:400; color: var(--muted);">(optional, full context, shown only when opened)</span></label>
                 <textarea name="details" rows="5" placeholder="Background, why it matters, what's needed to resolve it…">${escapeHtml(question?.details)}</textarea>
               </div>
             </div>
@@ -246,7 +246,7 @@ export function renderQuestionsSection(container, questions, { onChange }) {
        <div id="resolved-list" hidden style="margin-top:8px;">${resolved.map(questionRowHTML).join('')}</div>`
     : '';
 
-  container.innerHTML = (openHTML || `<div class="empty-state"><div class="em-title">Nothing active</div><p>All caught up — add a new item, or check resolved history below.</p></div>`) + resolvedHTML;
+  container.innerHTML = (openHTML || `<div class="empty-state"><div class="em-title">Nothing active</div><p>All caught up. Add a new item, or check resolved history below.</p></div>`) + resolvedHTML;
 
   const toggle = document.getElementById('toggle-resolved');
   if (toggle) {

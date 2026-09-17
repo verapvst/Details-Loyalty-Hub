@@ -550,7 +550,7 @@ async function openEditMeetingModal(meeting) {
     </div>
   `).join('');
   const scopeNote = scope !== 'occurrence'
-    ? `<p class="settings-hint" style="margin: -6px 0 14px;">Date can only be changed for a single occurrence — editing "${scope === 'series' ? 'entire series' : 'this and following'}" applies to time, format, location, link, notes and participants only.</p>`
+    ? `<p class="settings-hint" style="margin: -6px 0 14px;">Date can only be changed for a single occurrence. Editing "${scope === 'series' ? 'entire series' : 'this and following'}" applies to time, format, location, link, notes and participants only.</p>`
     : '';
 
   root.innerHTML = `
@@ -944,12 +944,12 @@ function openAddPollModal() {
     const slots = pollSlotsFor(params);
 
     if (!slots.length) {
-      errorEl.textContent = 'No candidate slots in that range — check your dates and times.';
+      errorEl.textContent = 'No candidate slots in that range. Check your dates and times.';
       errorEl.hidden = false;
       return;
     }
     if (slots.length > 300) {
-      errorEl.textContent = `That range would create ${slots.length} slots — narrow the dates, hours, or use a longer slot length.`;
+      errorEl.textContent = `That range would create ${slots.length} slots. Narrow the dates, hours, or use a longer slot length.`;
       errorEl.hidden = false;
       return;
     }
@@ -1046,7 +1046,7 @@ function openEditPollModal(poll) {
 
     if (toRemove.length) {
       const msg = responsesLost
-        ? `This change removes ${toRemove.length} slot${toRemove.length === 1 ? '' : 's'} with ${responsesLost} response${responsesLost === 1 ? '' : 's'} already recorded — those responses will be lost. Continue?`
+        ? `This change removes ${toRemove.length} slot${toRemove.length === 1 ? '' : 's'} with ${responsesLost} response${responsesLost === 1 ? '' : 's'} already recorded. Those responses will be lost. Continue?`
         : `This change removes ${toRemove.length} candidate slot${toRemove.length === 1 ? '' : 's'}. Continue?`;
       if (!confirm(msg)) return;
     }
@@ -1083,7 +1083,7 @@ function openScheduleMeetingModal(poll) {
       <div class="form-modal" style="max-width: 480px;">
         <div class="form-modal-head"><h2>Schedule Meeting</h2><button type="button" class="form-modal-close" id="close-btn">&times;</button></div>
         <div class="form-modal-body">
-          <p class="settings-hint" style="margin-bottom:16px;">These are only suggestions from the poll's availability — the date and time are confirmed on the next step.</p>
+          <p class="settings-hint" style="margin-bottom:16px;">These are only suggestions from the poll's availability. The date and time are confirmed on the next step.</p>
           ${top.length ? `
             <div class="form-section-label">Recommended times</div>
             <div class="schedule-suggestions">
@@ -1097,7 +1097,7 @@ function openScheduleMeetingModal(poll) {
                 </button>
               `).join('')}
             </div>
-          ` : `<p class="settings-hint">No one has submitted availability yet — you can still pick a custom time.</p>`}
+          ` : `<p class="settings-hint">No one has submitted availability yet. You can still pick a custom time.</p>`}
         </div>
         <div class="form-modal-foot">
           <button type="button" class="btn-text" id="cancel-btn">Cancel</button>
@@ -1306,7 +1306,7 @@ async function openEditTaskModal(task) {
     </div>
   `).join('');
   const scopeNote = scope !== 'occurrence'
-    ? `<p class="settings-hint" style="margin: -6px 0 14px;">Due date can only be changed for a single occurrence — editing "${scope === 'series' ? 'entire series' : 'this and following'}" applies to title, description, status, task type and assignees only.</p>`
+    ? `<p class="settings-hint" style="margin: -6px 0 14px;">Due date can only be changed for a single occurrence. Editing "${scope === 'series' ? 'entire series' : 'this and following'}" applies to title, description, status, task type and assignees only.</p>`
     : '';
 
   root.innerHTML = `

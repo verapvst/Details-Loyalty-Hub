@@ -39,7 +39,7 @@ export function openNextStepModal({ step, onChange }) {
         <form id="next-step-form">
           <div class="form-modal-body">
             <div class="form-field full">
-              <label>Title <span style="font-weight:400; color: var(--muted);">(optional — shown on the list; falls back to the text below)</span></label>
+              <label>Title <span style="font-weight:400; color: var(--muted);">(optional, shown on the list; falls back to the text below)</span></label>
               <input type="text" name="title" value="${escapeHtml(step?.title)}" placeholder="Short label, e.g. Benchmark Analysis" />
             </div>
             <div class="form-field full">
@@ -47,7 +47,7 @@ export function openNextStepModal({ step, onChange }) {
               <textarea name="text" rows="2" required placeholder="e.g. Start analysing the benchmark data">${escapeHtml(step?.text)}</textarea>
             </div>
             <div class="form-field full">
-              <label>Details <span style="font-weight:400; color: var(--muted);">(optional — full context, shown only when opened)</span></label>
+              <label>Details <span style="font-weight:400; color: var(--muted);">(optional, full context, shown only when opened)</span></label>
               <textarea name="details" rows="5" placeholder="What this involves, why it's next…">${escapeHtml(step?.details)}</textarea>
             </div>
           </div>
@@ -164,13 +164,13 @@ export function renderNextStepsSection(container, steps, { onChange }) {
   const done = steps.filter(s => s.status === 'done');
 
   if (!steps.length) {
-    container.innerHTML = `<div class="empty-state"><div class="em-title">No Next Steps yet</div><p>Add a high-level direction for the project — not an assigned task.</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="em-title">No Next Steps yet</div><p>Add a high-level direction for the project, not an assigned task.</p></div>`;
     return;
   }
 
   const activeHTML = active.length
     ? active.map(stepRowHTML).join('')
-    : `<div class="empty-state"><div class="em-title">Nothing active</div><p>All done for now — add a new direction, or check completed ones below.</p></div>`;
+    : `<div class="empty-state"><div class="em-title">Nothing active</div><p>All done for now. Add a new direction, or check completed ones below.</p></div>`;
   const doneHTML = done.length
     ? `<button type="button" class="btn-text" id="toggle-done-steps" style="margin-top:10px;">Show done (${done.length})</button>
        <div id="done-steps-list" hidden style="margin-top:8px;">${done.map(stepRowHTML).join('')}</div>`

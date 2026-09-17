@@ -166,7 +166,7 @@ function mechanismsBenefitsBlockHTML() {
       ? `<div class="record-field full"><label>Points Details</label><span class="value">${
           programme.points_expires === true ? `Expires${programme.points_expiration_period ? ` (${escapeHtml(programme.points_expiration_period)})` : ''}` :
           programme.points_expires === false ? 'Does not expire' : ''
-        }${programme.points_notes ? ` — ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
+        }${programme.points_notes ? ` · ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
     const discountInfo = mechanisms.includes('Discounts') && programme.discount_types && programme.discount_types.length
       ? `<div class="record-field full"><label>Discount Type</label>${chipsOrEmpty(programme.discount_types)}</div>` : '';
     const partnerInfo = mechanisms.includes('Partnerships') && programme.partner_companies && programme.partner_companies.length

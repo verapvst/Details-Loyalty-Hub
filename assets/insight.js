@@ -166,7 +166,7 @@ function render() {
         all: [title, mainInsight, sourceDetail, s?.full_citation ? `Source: ${s.full_citation}` : ''].filter(Boolean).join('\n\n')
       };
       const ok = await copyToClipboard(texts[btn.dataset.copy]);
-      showToast(ok ? 'Copied.' : 'Could not copy — select the text manually.', !ok);
+      showToast(ok ? 'Copied.' : 'Could not copy. Select the text manually.', !ok);
     });
   });
 

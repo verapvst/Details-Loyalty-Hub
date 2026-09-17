@@ -135,7 +135,7 @@ function openFavoriteDetailModal(g, { onChange }) {
               <div class="badge badge-muted" style="margin-bottom: 8px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
               <h2 style="font-size: 20px;">
                 <a href="programme.html?id=${g.programme_id}" class="favorite-programme-link">${escapeHtml(g.programme_name)}</a>
-                <span style="color: var(--muted); font-weight: 400;"> — ${escapeHtml(g.target_label)}</span>
+                <span style="color: var(--muted); font-weight: 400;"> · ${escapeHtml(g.target_label)}</span>
               </h2>
             </div>
             <button type="button" class="form-modal-close" id="favorite-detail-close">&times;</button>
@@ -143,7 +143,7 @@ function openFavoriteDetailModal(g, { onChange }) {
           <div class="form-modal-body">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
               <span id="favorite-detail-heart"></span>
-              <span class="settings-hint" style="margin: 0;">${summary.mine ? 'You liked this — click the heart to remove or edit your note.' : 'Click the heart to add your own note.'}</span>
+              <span class="settings-hint" style="margin: 0;">${summary.mine ? 'You liked this. Click the heart to remove or edit your note.' : 'Click the heart to add your own note.'}</span>
             </div>
             <div class="favorite-entries">${entriesHTML || '<div class="settings-hint" style="margin:0;">No notes yet.</div>'}</div>
           </div>

@@ -66,6 +66,7 @@ function updateScopeFilterButtonLabel() {
 function sortForDisplay(list) {
   const sort = sortSelect.value;
   if (sort === 'az') return [...list].sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  if (sort === 'za') return [...list].sort((a, b) => displayName(b).localeCompare(displayName(a)));
   if (sort === 'recent-add') return [...list].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
   return sortSourcesByRecency(list, usage);
 }

@@ -140,7 +140,7 @@ async function renderIdentityModal({ forceChoice }) {
     <div class="modal-overlay" id="identity-overlay">
       <div class="identity-modal">
         <h2>Who's this?</h2>
-        <p>Pick your name — it's used to tag what you add or edit.</p>
+        <p>Pick your name, it's used to tag what you add or edit.</p>
         <div class="identity-grid">${picks}</div>
       </div>
     </div>

@@ -115,7 +115,7 @@ function render() {
     btn.addEventListener('click', async () => {
       const texts = { 'short-citation': source.short_citation, 'full-citation': source.full_citation };
       const ok = await copyToClipboard(texts[btn.dataset.copy]);
-      showToast(ok ? 'Copied.' : 'Could not copy — select the text manually.', !ok);
+      showToast(ok ? 'Copied.' : 'Could not copy. Select the text manually.', !ok);
     });
   });
 
@@ -125,7 +125,7 @@ function render() {
   document.getElementById('btn-delete').addEventListener('click', async () => {
     const { count } = await supabase.from('figures').select('id', { count: 'exact', head: true }).eq('source_id', source.id);
     if (count > 0) {
-      showToast(`Can't delete — ${count} insight${count === 1 ? '' : 's'} still cite${count === 1 ? 's' : ''} this source. Remove or reassign them first.`, true);
+      showToast(`Can't delete: ${count} insight${count === 1 ? '' : 's'} still cite${count === 1 ? 's' : ''} this source. Remove or reassign them first.`, true);
       return;
     }
     if (!confirm('Delete this source?')) return;

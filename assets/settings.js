@@ -114,7 +114,7 @@ function wireCardActions(container, listKey, rerender) {
     btn.addEventListener('click', async () => {
       await deactivateBuiltin(listKey, btn.dataset.deactivateBuiltin);
       await loadCustomOptions();
-      showToast('Deactivated — hidden from new entries, existing records unaffected.');
+      showToast('Deactivated. Hidden from new entries, existing records unaffected.');
       rerender();
     });
   });
@@ -134,7 +134,7 @@ function wireCardActions(container, listKey, rerender) {
     btn.addEventListener('click', async () => {
       await setOptionActive(btn.dataset.deactivateCustom, false);
       await loadCustomOptions();
-      showToast('Deactivated — hidden from new entries, existing records unaffected.');
+      showToast('Deactivated. Hidden from new entries, existing records unaffected.');
       rerender();
     });
   });
@@ -156,7 +156,7 @@ function wireCardActions(container, listKey, rerender) {
       const value = btn.dataset.deleteValue;
       const usage = hasUsageCheck(key) ? await countOptionUsage(key, value) : 0;
       if (usage > 0) {
-        showToast(`Can't delete — still used by ${usage} record${usage === 1 ? '' : 's'}. It stays deactivated instead.`, true);
+        showToast(`Can't delete: still used by ${usage} record${usage === 1 ? '' : 's'}. It stays deactivated instead.`, true);
         return;
       }
       if (!confirm(`Permanently delete "${value}"? This can't be undone.`)) return;
@@ -191,7 +191,7 @@ function renderNavigationCard() {
     </div>
   `).join('');
 
-  container.innerHTML = cardShellHTML('Tab display names', 'The technical key and route never change — only what the team sees.', rowsHTML);
+  container.innerHTML = cardShellHTML('Tab display names', 'The technical key and route never change; only what the team sees.', rowsHTML);
 
   container.querySelectorAll('[data-nav-save]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -201,7 +201,7 @@ function renderNavigationCard() {
       if (!value) return;
       const { error } = await setAppSetting(`nav_label:${key}`, value);
       if (error) { showToast(`Couldn't save: ${error.message}`, true); return; }
-      showToast('Tab name updated — reload other pages to see it in the nav.');
+      showToast('Tab name updated. Reload other pages to see it in the nav.');
     });
   });
 }
@@ -220,7 +220,7 @@ function renderTeamCard() {
     </span>
   `).join('') : '<span class="settings-hint" style="margin:0;">No team members yet.</span>';
 
-  container.innerHTML = cardShellHTML('Members', 'Add / Deactivate only for now — renaming a member safely needs a cascade tool (Phase 2), see the Settings proposal.', `
+  container.innerHTML = cardShellHTML('Members', 'Add / Deactivate only for now. Renaming a member safely needs a cascade tool (Phase 2), see the Settings proposal.', `
     <div class="chip-row">${rowsHTML}</div>
     <div class="settings-add-row" style="margin-top: 14px;">
       <input type="text" id="add-team-member" placeholder="Add a team member…" />
@@ -245,7 +245,7 @@ function renderTeamCard() {
     btn.addEventListener('click', async () => {
       await supabase.from('app_team_members').update({ active: false }).eq('id', btn.dataset.teamDeactivate);
       await loadTeamMembers();
-      showToast('Deactivated — removed from future pickers, existing records unaffected.');
+      showToast('Deactivated. Removed from future pickers, existing records unaffected.');
       renderTeamCard();
     });
   });
@@ -279,7 +279,7 @@ function renderPinnedCountriesCard() {
 
   const addOptionsHTML = allCountries.filter(c => !pinned.includes(c)).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
 
-  container.innerHTML = cardShellHTML('Pinned Countries', 'Shown at the top of every Country dropdown, in this order — a genuine exception since the full list is 190+ options long.', `
+  container.innerHTML = cardShellHTML('Pinned Countries', 'Shown at the top of every Country dropdown, in this order (a genuine exception since the full list is 190+ options long).', `
     <div class="settings-pinned-list">${rowsHTML || '<span class="settings-hint" style="margin:0;">No countries pinned.</span>'}</div>
     <div class="settings-add-row" style="margin-top: 14px;">
       <select id="add-pinned-country"><option value="">Add a country to pin…</option>${addOptionsHTML}</select>
@@ -415,7 +415,7 @@ function renderScopeCard() {
 
   const groupOptionsHTML = Object.keys(SCOPE_GROUPS).map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
 
-  container.innerHTML = cardShellHTML('Scope', 'Shared by Sources and Data & Insights. The 3 groups are fixed — add new values within one of them.', `
+  container.innerHTML = cardShellHTML('Scope', 'Shared by Sources and Data & Insights. The 3 groups are fixed; add new values within one of them.', `
     ${groupsHTML}
     <div class="settings-add-row" style="margin-top: 14px;">
       <select id="scope-group-select">${groupOptionsHTML}</select>

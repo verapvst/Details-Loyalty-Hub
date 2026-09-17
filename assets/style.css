@@ -292,6 +292,13 @@ ul { list-style: none; }
 
 /* ---------- Source picker (Add/Edit Insight: searchable combobox) ---------- */
 .source-picker { position: relative; }
+.source-picker-controls { display: flex; align-items: center; gap: 8px; }
+.source-picker-controls #source-search { flex: 1; min-width: 0; }
+.source-picker-controls .source-picker-sort {
+  flex: none; width: auto; max-width: 150px; padding: 7px 26px 7px 12px; border: none; border-radius: 20px;
+  font-size: 12px; font-weight: 500; color: var(--dark); background: var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%236E6E73" stroke-width="1.4" fill="none"/></svg>') no-repeat right 10px center;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+}
 .source-picker-dropdown {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
   max-height: 260px; overflow-y: auto; background: var(--white); border-radius: var(--radius);
@@ -461,7 +468,7 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .compact-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
 .compact-card-head { display: flex; align-items: flex-start; gap: 10px; }
 .compact-card-logo, .compact-card-logo-fallback { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; }
-.compact-card-logo { overflow: hidden; background: var(--surface-alt); }
+.compact-card-logo { overflow: hidden; background: transparent; }
 .compact-card-logo img { width: 100%; height: 100%; object-fit: contain; }
 .compact-card-logo-fallback {
   background: var(--surface-alt); color: var(--muted); font-family: var(--font-body);
