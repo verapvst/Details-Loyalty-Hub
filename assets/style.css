@@ -452,15 +452,50 @@ ul { list-style: none; }
 .list-rows { display: flex; flex-direction: column; gap: 14px; }
 a.list-row { transition: transform var(--transition), box-shadow var(--transition); }
 a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
-.list-row { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 22px 26px; }
-.list-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
-.list-row-title { font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -0.005em; }
+.list-row { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 18px 22px; }
+.list-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 8px; }
+/* Sans-serif, not the editorial display face — a scannable research-tool list, not a
+   magazine. Applies wherever .list-row is still used (Sources, Saved Reports, the
+   Source Detail page's own Insights list); Favorites and Data & Insights have moved
+   to .compact-card below and don't use this class any more. */
+.list-row-title { font-family: var(--font-body); font-size: 15px; font-weight: 600; letter-spacing: -0.002em; }
 .list-row-body { font-size: 13px; color: var(--dark); line-height: 1.7; }
 .list-row-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 11px; color: var(--muted); }
 .list-row-meta a { color: var(--accent); font-weight: 500; }
 .figure-value { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); line-height: 1; }
 
-/* ---------- Favorites (aggregated) ---------- */
+/* ---------- Compact card (Favorites, Data & Insights) ----------
+   A denser, research-library alternative to .programme-card: smaller padding, a
+   sans-serif title (not the editorial display face), a small logo/initial and one
+   secondary line — everything else lives behind a click. Reuses .card-grid's
+   auto-fill mechanic at a narrower minmax so ~3 columns fit at typical widths
+   instead of ~4, without hard-coding a column count that breaks on other viewports. */
+.compact-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.compact-card {
+  display: block; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px 16px; cursor: pointer; text-decoration: none; color: inherit;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.compact-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+.compact-card-head { display: flex; align-items: flex-start; gap: 10px; }
+.compact-card-logo, .compact-card-logo-fallback { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; }
+.compact-card-logo { overflow: hidden; background: var(--surface-alt); }
+.compact-card-logo img { width: 100%; height: 100%; object-fit: contain; }
+.compact-card-logo-fallback {
+  background: var(--surface-alt); color: var(--muted); font-family: var(--font-body);
+  font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.compact-card-body { min-width: 0; flex: 1; }
+.compact-card-title {
+  font-family: var(--font-body); font-size: 13.5px; font-weight: 600; line-height: 1.4; color: var(--dark);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.compact-card-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compact-card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.compact-card-meta .badge { font-size: 9px; padding: 3px 8px; }
+
+/* ---------- Favorites: entries inside the detail modal (openFavoriteDetailModal) ----------
+   The overview is .compact-card above; this is what a card expands into on click. */
 .favorite-entries { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
 .favorite-entry { padding-top: 12px; border-top: 1px solid var(--border); }
 .favorite-entry:first-child { padding-top: 0; border-top: none; }
@@ -468,16 +503,6 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .favorite-entry-person { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-mid); }
 .favorite-entry-desc { font-size: 13px; color: var(--dark); line-height: 1.6; }
 .favorite-entry-notes { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 4px; }
-.favorite-row { cursor: pointer; padding: 14px 18px; }
-.favorite-row .list-row-top { margin-bottom: 4px; }
-.favorite-row .list-row-title { font-size: 13px; font-family: var(--font-body); font-weight: 600; }
-.favorite-row .favorite-entries { margin-top: 8px; gap: 8px; }
-.favorite-row .favorite-entry { padding-top: 8px; }
-.favorite-row .favorite-entry-desc { font-size: 12px; }
-.favorite-row .favorite-entry-notes { font-size: 11px; margin-top: 2px; }
-.favorite-row .favorite-entry-head { gap: 6px; margin-bottom: 3px; }
-.favorite-row .favorite-entry-person { font-size: 10px; }
-.favorite-row .chip { padding: 2px 8px; font-size: 9px; }
 .favorite-programme-link { color: var(--accent); }
 .favorite-programme-link:hover { text-decoration: underline; }
 
@@ -624,6 +649,13 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .settings-jump-nav a:hover { color: var(--dark); }
 .settings-cards { display: flex; flex-direction: column; gap: 20px; }
 .settings-chip.inactive { opacity: 0.5; }
+
+/* ---------- Settings: locked-by-default ---------- */
+.settings-lock-banner {
+  max-width: 1280px; margin: 20px auto 0; padding: 0 40px;
+  font-size: 12px; color: var(--muted);
+}
+#settings-content.settings-locked { pointer-events: none; opacity: 0.55; user-select: none; }
 .settings-chip.inactive span:first-child { text-decoration: line-through; }
 .chip .chip-action { background: none; border: none; color: var(--muted-light); font-size: 10px; font-weight: 500; padding: 2px 3px; cursor: pointer; white-space: nowrap; }
 .chip .chip-action:hover { color: var(--muted); }

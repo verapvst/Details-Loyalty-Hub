@@ -480,3 +480,29 @@ renderFlatListCard(sourcesInsightsContainer, 'insight_type', 'Information Type',
 const calendarContainer = document.getElementById('calendar-settings-cards');
 renderFlatListCard(calendarContainer, 'meeting_type', 'Meeting Type');
 renderFlatListCard(calendarContainer, 'task_type', 'Task Type');
+
+// ---------------- Locked by default ----------------
+// Every field above saves itself immediately on interaction (no single form/Save
+// button) — CSS-disabling the whole content area is what actually keeps a stray
+// click from changing anything, rather than trying to gate each control one by one.
+// "Done" just re-locks; nothing here defers changes to commit later, so there's no
+// real "Cancel" to offer without rebuilding every card as a staged form.
+const settingsContent = document.getElementById('settings-content');
+const lockBanner = document.getElementById('settings-lock-banner');
+const editBtn = document.getElementById('btn-settings-edit');
+let settingsLocked = true;
+
+function applySettingsLockState() {
+  settingsContent.classList.toggle('settings-locked', settingsLocked);
+  lockBanner.hidden = !settingsLocked;
+  editBtn.textContent = settingsLocked ? 'Edit' : 'Done';
+  editBtn.classList.toggle('btn-primary', !settingsLocked);
+  editBtn.classList.toggle('btn-outline', settingsLocked);
+}
+
+editBtn.addEventListener('click', () => {
+  settingsLocked = !settingsLocked;
+  applySettingsLockState();
+});
+
+applySettingsLockState();

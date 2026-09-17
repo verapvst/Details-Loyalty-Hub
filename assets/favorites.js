@@ -14,6 +14,10 @@ const searchInput = document.getElementById('search-input');
 let allLikes = [];
 let groups = [];
 
+function groupKey(g) {
+  return `${g.programme_id}|${g.target_type}|${g.target_label}`;
+}
+
 // One Like row per person's annotation on a target — grouped here into one card per
 // (programme, target) so the shared heart/count and each person's note sit together.
 function buildGroups() {
@@ -24,6 +28,8 @@ function buildGroups() {
       map.set(key, {
         programme_id: l.programme_id,
         programme_name: l.programmes?.programme_name || 'Unknown programme',
+        cover_image_url: l.programmes?.cover_image_url || null,
+        industry: l.programmes?.industry || null,
         target_type: l.target_type,
         target_label: l.target_label,
         target_id: l.target_id,
@@ -54,110 +60,149 @@ function populateFilters() {
   filterProgramme.value = currentProg;
 }
 
-function renderGroup(g) {
-  const summary = likeSummary(g.entries, g.target_type, g.target_label);
-  const entriesHTML = g.entries.map(e => `
-    <div class="favorite-entry">
-      <div class="favorite-entry-head">
-        <span class="favorite-entry-person">${escapeHtml(e.liked_by || 'Unknown')}</span>
-        ${(e.psychological_effect && e.psychological_effect.length) ? `
-          <div class="chip-row" style="margin: 0;">
-            ${e.psychological_effect.map(p => `<span class="chip" style="padding: 3px 10px;">${escapeHtml(p)}</span>`).join('')}
-          </div>
-        ` : ''}
-        <button type="button" class="btn-text" data-like-edit="${e.id}" style="margin-left: auto;">Edit</button>
-        <button type="button" class="task-remove" data-like-delete="${e.id}">&times;</button>
-      </div>
-      ${e.description ? `<div class="favorite-entry-desc">${escapeHtml(e.description)}</div>` : ''}
-      ${e.psychological_effect_notes ? `<div class="favorite-entry-notes">${escapeHtml(e.psychological_effect_notes)}</div>` : ''}
-    </div>
-  `).join('');
+function initial(name) {
+  return (name || '?').trim().charAt(0).toUpperCase();
+}
+
+// The card's title is the actual takeaway (why someone found it interesting), not
+// just what was tagged — falls back to the target label when no one has written a
+// description yet, same "graceful fallback" pattern used for Insight titles.
+function cardTitle(g) {
+  return g.entries.find(e => e.description)?.description || g.target_label;
+}
+
+// Compact research-library entry: small programme logo (only if the programme has
+// one — cover_image_url, already used elsewhere in the app — nothing new to source),
+// the like/takeaway as the title, programme + industry as secondary text. Everything
+// else (who liked it, psychological effect, edit/delete, the heart) lives behind a
+// click — see openFavoriteDetailModal.
+function renderCard(g) {
+  const subParts = [g.programme_name, g.industry].filter(Boolean);
+  const logo = g.cover_image_url
+    ? `<div class="compact-card-logo"><img src="${escapeHtml(g.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
+    : `<div class="compact-card-logo-fallback">${escapeHtml(initial(g.programme_name))}</div>`;
 
   return `
-    <div class="list-row favorite-row" data-programme-id="${g.programme_id}" data-programme-name="${escapeHtml(g.programme_name)}">
-      <div class="list-row-top">
-        <div>
-          <div class="badge badge-muted" style="margin-bottom: 4px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
-          <div class="list-row-title">
-            <a href="programme.html?id=${g.programme_id}" class="favorite-programme-link">${escapeHtml(g.programme_name)}</a>
-            <span style="color: var(--muted); font-weight: 400;"> — ${escapeHtml(g.target_label)}</span>
-          </div>
-        </div>
-        <div class="favorite-heart-wrap" data-programme-id="${g.programme_id}" data-programme-name="${escapeHtml(g.programme_name)}">
-          ${heartHTML(g.target_type, g.target_label, g.target_id, summary)}
+    <div class="compact-card" data-group-key="${escapeHtml(groupKey(g))}">
+      <div class="compact-card-head">
+        ${logo}
+        <div class="compact-card-body">
+          <div class="compact-card-title">${escapeHtml(cardTitle(g))}</div>
+          <div class="compact-card-sub">${escapeHtml(subParts.join(' · '))}</div>
         </div>
       </div>
-      <div class="favorite-entries">${entriesHTML}</div>
+      <div class="compact-card-meta">
+        <span class="badge badge-muted">${escapeHtml(targetTypeLabel(g.target_type))}</span>
+        ${g.entries.length > 1 ? `<span class="badge badge-muted">${g.entries.length} notes</span>` : ''}
+      </div>
     </div>
   `;
 }
 
-// heartHTML's buttons only carry target info — each card here can belong to a
-// different programme, so wire per-card rather than reusing likes.js's wireHearts
-// (which assumes every heart in a container shares one programme/likes context).
-function wireFavoriteHearts() {
-  listEl.querySelectorAll('.favorite-heart-wrap').forEach(wrap => {
-    const btn = wrap.querySelector('.like-heart');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const programmeId = wrap.dataset.programmeId;
-      const programmeName = wrap.dataset.programmeName;
-      const targetType = btn.dataset.targetType;
-      const targetLabel = btn.dataset.targetLabel;
-      const targetId = btn.dataset.targetId || null;
-      const groupEntries = allLikes.filter(l =>
-        l.programme_id === programmeId && l.target_type === targetType && l.target_label === targetLabel
-      );
-      const { mine } = likeSummary(groupEntries, targetType, targetLabel);
-      openLikeModal({
-        programmeId, programmeName, targetType, targetLabel, targetId,
-        existingLike: mine, likes: groupEntries,
-        onChange: loadAllLikes
+// Read/edit surface for one group — everything the old inline card used to show
+// (every entry, psychological effect, notes, per-entry Edit/Delete, the heart) now
+// lives here instead of in the overview. Re-renders itself in place after any change
+// so Edit/Delete/heart all stay usable without closing and reopening.
+function openFavoriteDetailModal(g, { onChange }) {
+  let root = document.getElementById('favorite-detail-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'favorite-detail-root';
+    document.body.appendChild(root);
+  }
+
+  function renderModal() {
+    const summary = likeSummary(g.entries, g.target_type, g.target_label);
+    const entriesHTML = g.entries.map(e => `
+      <div class="favorite-entry">
+        <div class="favorite-entry-head">
+          <span class="favorite-entry-person">${escapeHtml(e.liked_by || 'Unknown')}</span>
+          ${(e.psychological_effect && e.psychological_effect.length) ? `
+            <div class="chip-row" style="margin: 0;">
+              ${e.psychological_effect.map(p => `<span class="chip" style="padding: 3px 10px;">${escapeHtml(p)}</span>`).join('')}
+            </div>
+          ` : ''}
+          <button type="button" class="btn-text" data-like-edit="${e.id}" style="margin-left: auto;">Edit</button>
+          <button type="button" class="task-remove" data-like-delete="${e.id}">&times;</button>
+        </div>
+        ${e.description ? `<div class="favorite-entry-desc">${escapeHtml(e.description)}</div>` : ''}
+        ${e.psychological_effect_notes ? `<div class="favorite-entry-notes">${escapeHtml(e.psychological_effect_notes)}</div>` : ''}
+      </div>
+    `).join('');
+
+    root.innerHTML = `
+      <div class="modal-overlay" id="favorite-detail-modal">
+        <div class="form-modal" style="max-width: 560px;">
+          <div class="form-modal-head">
+            <div>
+              <div class="badge badge-muted" style="margin-bottom: 8px;">${escapeHtml(targetTypeLabel(g.target_type))}</div>
+              <h2 style="font-size: 20px;">
+                <a href="programme.html?id=${g.programme_id}" class="favorite-programme-link">${escapeHtml(g.programme_name)}</a>
+                <span style="color: var(--muted); font-weight: 400;"> — ${escapeHtml(g.target_label)}</span>
+              </h2>
+            </div>
+            <button type="button" class="form-modal-close" id="favorite-detail-close">&times;</button>
+          </div>
+          <div class="form-modal-body">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <span id="favorite-detail-heart"></span>
+              <span class="settings-hint" style="margin: 0;">${summary.mine ? 'You liked this — click the heart to remove or edit your note.' : 'Click the heart to add your own note.'}</span>
+            </div>
+            <div class="favorite-entries">${entriesHTML || '<div class="settings-hint" style="margin:0;">No notes yet.</div>'}</div>
+          </div>
+          <div class="form-modal-foot">
+            <button type="button" class="btn-text" id="favorite-detail-close-btn">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('favorite-detail-heart').innerHTML = heartHTML(g.target_type, g.target_label, g.target_id, summary);
+
+    const overlay = document.getElementById('favorite-detail-modal');
+    const close = () => root.innerHTML = '';
+    document.getElementById('favorite-detail-close').addEventListener('click', close);
+    document.getElementById('favorite-detail-close-btn').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    const openEditor = (existingLike) => openLikeModal({
+      programmeId: g.programme_id, programmeName: g.programme_name,
+      targetType: g.target_type, targetLabel: g.target_label, targetId: g.target_id,
+      existingLike, likes: g.entries,
+      onChange: async () => { await onChange(); refreshAndRerender(); }
+    });
+
+    root.querySelector('.like-heart').addEventListener('click', () => openEditor(summary.mine));
+    root.querySelectorAll('[data-like-edit]').forEach(btn => {
+      btn.addEventListener('click', () => openEditor(g.entries.find(e => e.id === btn.dataset.likeEdit)));
+    });
+    root.querySelectorAll('[data-like-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this favorite?')) return;
+        await supabase.from('likes').delete().eq('id', btn.dataset.likeDelete);
+        await onChange();
+        refreshAndRerender();
       });
     });
-  });
+  }
+
+  // After any change, re-derive this group from the freshly reloaded data — if the
+  // last entry was just deleted the group no longer exists, so close instead.
+  function refreshAndRerender() {
+    if (!document.getElementById('favorite-detail-modal')) return; // closed itself meanwhile
+    const updated = groups.find(gr => groupKey(gr) === groupKey(g));
+    if (!updated) { root.innerHTML = ''; return; }
+    g.entries = updated.entries;
+    renderModal();
+  }
+
+  renderModal();
 }
 
-function wireEntryDelete() {
-  listEl.querySelectorAll('[data-like-delete]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!confirm('Delete this favorite?')) return;
-      await supabase.from('likes').delete().eq('id', btn.dataset.likeDelete);
-      await loadAllLikes();
-    });
-  });
-}
-
-// Any team member can edit any entry (matches the rest of the app — tasks, meetings,
-// sources are all editable by anyone), not just the person who originally added it.
-function wireEntryEdit() {
-  listEl.querySelectorAll('[data-like-edit]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const entry = allLikes.find(l => l.id === btn.dataset.likeEdit);
-      if (!entry) return;
-      const groupEntries = allLikes.filter(l =>
-        l.programme_id === entry.programme_id && l.target_type === entry.target_type && l.target_label === entry.target_label
-      );
-      openLikeModal({
-        programmeId: entry.programme_id,
-        programmeName: entry.programmes?.programme_name || 'Unknown programme',
-        targetType: entry.target_type, targetLabel: entry.target_label, targetId: entry.target_id,
-        existingLike: entry, likes: groupEntries,
-        onChange: loadAllLikes
-      });
-    });
-  });
-}
-
-// The programme name is a real link (for hover affordance / opening in a new tab),
-// but the whole row is clickable too — only the heart, edit and delete buttons opt out.
-function wireRowNavigation() {
-  listEl.querySelectorAll('.favorite-row').forEach(row => {
-    row.addEventListener('click', (e) => {
-      if (e.target.closest('.like-heart') || e.target.closest('[data-like-delete]') || e.target.closest('[data-like-edit]') || e.target.closest('a')) return;
-      window.location.href = `programme.html?id=${row.dataset.programmeId}`;
+function wireCardClicks() {
+  listEl.querySelectorAll('.compact-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const group = groups.find(g => groupKey(g) === card.dataset.groupKey);
+      if (group) openFavoriteDetailModal(group, { onChange: loadAllLikes });
     });
   });
 }
@@ -189,17 +234,14 @@ function applyFiltersAndRender() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(renderGroup).join('');
-  wireFavoriteHearts();
-  wireEntryEdit();
-  wireEntryDelete();
-  wireRowNavigation();
+  listEl.innerHTML = filtered.map(renderCard).join('');
+  wireCardClicks();
 }
 
 async function loadAllLikes() {
   const { data, error } = await supabase
     .from('likes')
-    .select('*, programmes(programme_name)')
+    .select('*, programmes(programme_name, cover_image_url, industry)')
     .order('created_at', { ascending: false });
 
   if (error) {

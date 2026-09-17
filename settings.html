@@ -16,6 +16,7 @@
       <h1>Settings</h1>
       <p>Project configuration the team manages itself — tab names, team members, and every picklist below, without needing a code change.</p>
     </div>
+    <button class="btn-outline" id="btn-settings-edit" type="button">Edit</button>
   </div>
 </div>
 
@@ -28,6 +29,10 @@
     <a href="#settings-calendar">Calendar &amp; Tasks</a>
   </div>
 </div>
+
+<div class="settings-lock-banner" id="settings-lock-banner">Settings are locked — click Edit to make changes.</div>
+
+<div id="settings-content">
 
 <section class="section" id="settings-navigation">
   <div class="section-head"><h2 class="section-title">Navigation</h2></div>
@@ -58,6 +63,8 @@
   <div class="settings-hint" style="margin: -10px 0 16px;">Project conventions for meetings and tasks.</div>
   <div id="calendar-settings-cards" class="settings-cards"></div>
 </section>
+
+</div>
 
 <script type="module" src="assets/settings.js"></script>
 </body>

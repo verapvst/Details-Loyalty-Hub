@@ -52,40 +52,27 @@ function displayTitle(f) {
   return f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
 }
 
-// Compact, scannable row: Type, the Title, Scope tags, and a clickable Source
-// reference — nothing else. Main Insight, Source Detail, citations and Edit/Delete
-// all live on the Insight Detail page (insight.html) — this list is for browsing.
-function renderRow(f) {
-  const sourceName = f.sources ? displaySourceName(f.sources) : null;
-  const shortCitation = f.sources ? (f.sources.short_citation || f.sources.citation_tag) : null;
-  const scopeChips = (f.scope || []).map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('');
+// A compact research-library card, not a full content card: Title + where it came
+// from (the source's short citation already encodes Author · Year), Type/Visual as
+// small badges. Scope, Main Insight, Source Detail, citations and Edit/Delete all
+// live on the Insight Detail page (insight.html) — this grid is for browsing/scanning.
+function renderCard(f) {
+  const sourceLabel = f.sources ? (f.sources.short_citation || displaySourceName(f.sources)) : null;
 
-  // The Source badge needs to be its own click target (jump straight to the source)
-  // nested inside the row's own click target (open the insight) — an <a> can't
-  // validly contain another <a> (the browser silently closes the outer one early,
-  // splitting the card in two), so the inner one is a <span> wired up in JS instead.
   return `
-    <a href="insight.html?id=${f.id}" class="list-row" style="display: block; text-decoration: none; color: inherit;">
-      <div class="list-row-top">
-        <div class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</div>
-        ${f.visual_type ? `<span class="badge badge-muted">${escapeHtml(f.visual_type)}</span>` : ''}
-        ${shortCitation ? `<span data-source-link="${f.source_id}" class="badge badge-muted" title="${escapeHtml(sourceName || '')}">${escapeHtml(shortCitation)}</span>` : ''}
+    <a href="insight.html?id=${f.id}" class="compact-card">
+      <div class="compact-card-head">
+        <div class="compact-card-body">
+          <div class="compact-card-title">${escapeHtml(displayTitle(f))}</div>
+          ${sourceLabel ? `<div class="compact-card-sub">${escapeHtml(sourceLabel)}</div>` : ''}
+        </div>
       </div>
-      <div class="list-row-title" style="margin-top: 10px;">${escapeHtml(displayTitle(f))}</div>
-      ${scopeChips ? `<div class="chip-row" style="margin: 10px 0 0;">${scopeChips}</div>` : ''}
+      <div class="compact-card-meta">
+        <span class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</span>
+        ${f.visual_type ? `<span class="badge badge-muted">${escapeHtml(f.visual_type)}</span>` : ''}
+      </div>
     </a>
   `;
-}
-
-function wireRowLinks() {
-  listEl.querySelectorAll('[data-source-link]').forEach(el => {
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.location.href = `source.html?id=${el.dataset.sourceLink}`;
-    });
-  });
 }
 
 function applyFiltersAndRender() {
@@ -116,8 +103,7 @@ function applyFiltersAndRender() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(renderRow).join('');
-  wireRowLinks();
+  listEl.innerHTML = filtered.map(renderCard).join('');
 }
 
 function updateScopeFilterButtonLabel() {
