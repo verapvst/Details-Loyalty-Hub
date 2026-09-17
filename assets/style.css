@@ -216,24 +216,6 @@ ul { list-style: none; }
 .section-title { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); }
 .section-count { font-size: 12px; color: var(--muted); }
 
-/* ---------- Programme card grid ---------- */
-.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-.programme-card {
-  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow);
-  padding: 24px; cursor: pointer; transition: transform var(--transition), box-shadow var(--transition);
-}
-.programme-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.card-badge {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--accent); background: var(--accent-light); padding: 5px 12px; border-radius: 20px; white-space: nowrap;
-}
-.card-name { font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.005em; margin-bottom: 4px; }
-.card-company { font-size: 12px; color: var(--muted); }
-.card-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--surface-alt); }
-.card-meta-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
-.card-meta-item strong { color: var(--dark); font-weight: 500; }
-
 .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
 .empty-state p { font-size: 14px; margin-top: 8px; }
 .empty-state .em-title { font-family: var(--font-display); font-size: 24px; font-weight: 500; color: var(--dark); }
@@ -464,12 +446,12 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .list-row-meta a { color: var(--accent); font-weight: 500; }
 .figure-value { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); line-height: 1; }
 
-/* ---------- Compact card (Favorites, Data & Insights) ----------
-   A denser, research-library alternative to .programme-card: smaller padding, a
-   sans-serif title (not the editorial display face), a small logo/initial and one
-   secondary line — everything else lives behind a click. Reuses .card-grid's
-   auto-fill mechanic at a narrower minmax so ~3 columns fit at typical widths
-   instead of ~4, without hard-coding a column count that breaks on other viewports. */
+/* ---------- Compact card (Programmes database) ----------
+   Programmes are the primary objects browsed here, so they stay card-based — just
+   denser than the old .programme-card: smaller padding, a sans-serif title (not the
+   editorial display face), a small logo/initial and one secondary line, badges for
+   the rest. A narrower minmax than a plain 4-up grid so ~3 columns fit at typical
+   widths, without hard-coding a column count that breaks on other viewports. */
 .compact-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
 .compact-card {
   display: block; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -493,6 +475,36 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .compact-card-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .compact-card-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
 .compact-card-meta .badge { font-size: 9px; padding: 3px 8px; }
+
+/* ---------- Library row (Favorites, Data & Insights) ----------
+   No card/container per item on purpose — a research-library reading list, not a
+   dashboard grid: one horizontal row, a hairline separator, generous whitespace.
+   Hover adds a soft highlight (affordance that the row is clickable) without ever
+   boxing an individual row in a border. */
+.lib-list { display: flex; flex-direction: column; }
+.lib-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 10px; margin: 0 -10px; border-bottom: 1px solid var(--border);
+  cursor: pointer; text-decoration: none; color: inherit; border-radius: var(--radius);
+  transition: background var(--transition);
+}
+.lib-row:hover { background: var(--surface-alt); }
+.lib-row:last-child { border-bottom: none; }
+.lib-row-logo, .lib-row-logo-fallback { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; }
+.lib-row-logo { overflow: hidden; background: var(--surface-alt); }
+.lib-row-logo img { width: 100%; height: 100%; object-fit: contain; }
+.lib-row-logo-fallback {
+  background: var(--surface-alt); color: var(--muted); font-family: var(--font-body);
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.lib-row-body { min-width: 0; flex: 1; }
+.lib-row-title {
+  font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--dark); line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lib-row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-row-meta { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+.lib-row-meta .badge { font-size: 9px; padding: 3px 8px; }
 
 /* ---------- Favorites: entries inside the detail modal (openFavoriteDetailModal) ----------
    The overview is .compact-card above; this is what a card expands into on click. */
@@ -672,13 +684,10 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .settings-pinned-actions { display: flex; align-items: center; gap: 4px; }
 .settings-pinned-actions button:disabled { opacity: 0.3; cursor: default; }
 
-/* ---------- Programme cover image ----------
+/* ---------- Programme cover image (Programme Detail page) ----------
    Small and unboxed on purpose: most of these are brand logos on a transparent
    background, so a cropped/bordered photo-style frame looks wrong. object-fit:
    contain keeps the whole mark visible with no visible edge behind it. */
-.card-heading { display: flex; align-items: center; gap: 14px; }
-.card-logo { width: 44px; height: 44px; flex-shrink: 0; }
-.card-logo img { width: 100%; height: 100%; object-fit: contain; object-position: left center; }
 .record-logo { width: 60px; height: 60px; flex-shrink: 0; }
 .record-logo img { width: 100%; height: 100%; object-fit: contain; object-position: left center; }
 

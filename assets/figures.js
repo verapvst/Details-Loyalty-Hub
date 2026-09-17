@@ -2,7 +2,7 @@ import { supabase } from './supabase.js';
 import { initNav } from './app.js';
 import { escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
-import { openInsightModal, definitionFor, typeLegendHTML } from './insightModal.js';
+import { openInsightModal, definitionFor, typeLegendHTML, insightImageUrl } from './insightModal.js';
 import { fieldPlainText } from './richText.js';
 
 await initNav('figures');
@@ -52,22 +52,25 @@ function displayTitle(f) {
   return f.title || fieldPlainText(f.insight_text) || 'Untitled insight';
 }
 
-// A compact research-library card, not a full content card: Title + where it came
-// from (the source's short citation already encodes Author · Year), Type/Visual as
-// small badges. Scope, Main Insight, Source Detail, citations and Edit/Delete all
-// live on the Insight Detail page (insight.html) — this grid is for browsing/scanning.
-function renderCard(f) {
+// Library row, not a card: Title + where it came from (the source's short citation
+// already encodes Author · Year) as the two lines, Type/Visual as small badges on
+// the right. The thumbnail is real data, not decoration — an insight's own uploaded
+// Visual/Evidence image when it has one, nothing invented for insights that don't.
+// Scope, Main Insight, Source Detail, citations and Edit/Delete all live on the
+// Insight Detail page (insight.html) — this list is for browsing/scanning.
+function renderRow(f) {
   const sourceLabel = f.sources ? (f.sources.short_citation || displaySourceName(f.sources)) : null;
+  const thumbUrl = f.image_path ? insightImageUrl(f.image_path) : null;
+  const logo = thumbUrl ? `<div class="lib-row-logo"><img src="${escapeHtml(thumbUrl)}" alt="" onerror="this.parentElement.remove()" /></div>` : '';
 
   return `
-    <a href="insight.html?id=${f.id}" class="compact-card">
-      <div class="compact-card-head">
-        <div class="compact-card-body">
-          <div class="compact-card-title">${escapeHtml(displayTitle(f))}</div>
-          ${sourceLabel ? `<div class="compact-card-sub">${escapeHtml(sourceLabel)}</div>` : ''}
-        </div>
+    <a href="insight.html?id=${f.id}" class="lib-row">
+      ${logo}
+      <div class="lib-row-body">
+        <div class="lib-row-title">${escapeHtml(displayTitle(f))}</div>
+        ${sourceLabel ? `<div class="lib-row-sub">${escapeHtml(sourceLabel)}</div>` : ''}
       </div>
-      <div class="compact-card-meta">
+      <div class="lib-row-meta">
         <span class="badge badge-green has-tooltip" data-tooltip="${escapeHtml(definitionFor(f.insight_type))}">${escapeHtml(f.insight_type || 'Other')}</span>
         ${f.visual_type ? `<span class="badge badge-muted">${escapeHtml(f.visual_type)}</span>` : ''}
       </div>
@@ -103,7 +106,7 @@ function applyFiltersAndRender() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(renderCard).join('');
+  listEl.innerHTML = filtered.map(renderRow).join('');
 }
 
 function updateScopeFilterButtonLabel() {

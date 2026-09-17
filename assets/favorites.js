@@ -64,34 +64,31 @@ function initial(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
 }
 
-// The card's title is the actual takeaway (why someone found it interesting), not
+// The row's title is the actual takeaway (why someone found it interesting), not
 // just what was tagged — falls back to the target label when no one has written a
 // description yet, same "graceful fallback" pattern used for Insight titles.
-function cardTitle(g) {
+function rowTitle(g) {
   return g.entries.find(e => e.description)?.description || g.target_label;
 }
 
-// Compact research-library entry: small programme logo (only if the programme has
-// one — cover_image_url, already used elsewhere in the app — nothing new to source),
-// the like/takeaway as the title, programme + industry as secondary text. Everything
-// else (who liked it, psychological effect, edit/delete, the heart) lives behind a
-// click — see openFavoriteDetailModal.
-function renderCard(g) {
+// Library row, not a card: logo, title, secondary line, metadata badges on the
+// right — one line each, a hairline separator between rows, no container per item.
+// Everything else (who liked it, psychological effect, edit/delete, the heart)
+// lives behind a click — see openFavoriteDetailModal.
+function renderRow(g) {
   const subParts = [g.programme_name, g.industry].filter(Boolean);
   const logo = g.cover_image_url
-    ? `<div class="compact-card-logo"><img src="${escapeHtml(g.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
-    : `<div class="compact-card-logo-fallback">${escapeHtml(initial(g.programme_name))}</div>`;
+    ? `<div class="lib-row-logo"><img src="${escapeHtml(g.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
+    : `<div class="lib-row-logo-fallback">${escapeHtml(initial(g.programme_name))}</div>`;
 
   return `
-    <div class="compact-card" data-group-key="${escapeHtml(groupKey(g))}">
-      <div class="compact-card-head">
-        ${logo}
-        <div class="compact-card-body">
-          <div class="compact-card-title">${escapeHtml(cardTitle(g))}</div>
-          <div class="compact-card-sub">${escapeHtml(subParts.join(' · '))}</div>
-        </div>
+    <div class="lib-row" data-group-key="${escapeHtml(groupKey(g))}">
+      ${logo}
+      <div class="lib-row-body">
+        <div class="lib-row-title">${escapeHtml(rowTitle(g))}</div>
+        <div class="lib-row-sub">${escapeHtml(subParts.join(' · '))}</div>
       </div>
-      <div class="compact-card-meta">
+      <div class="lib-row-meta">
         <span class="badge badge-muted">${escapeHtml(targetTypeLabel(g.target_type))}</span>
         ${g.entries.length > 1 ? `<span class="badge badge-muted">${g.entries.length} notes</span>` : ''}
       </div>
@@ -198,10 +195,10 @@ function openFavoriteDetailModal(g, { onChange }) {
   renderModal();
 }
 
-function wireCardClicks() {
-  listEl.querySelectorAll('.compact-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const group = groups.find(g => groupKey(g) === card.dataset.groupKey);
+function wireRowClicks() {
+  listEl.querySelectorAll('.lib-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const group = groups.find(g => groupKey(g) === row.dataset.groupKey);
       if (group) openFavoriteDetailModal(group, { onChange: loadAllLikes });
     });
   });
@@ -234,8 +231,8 @@ function applyFiltersAndRender() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(renderCard).join('');
-  wireCardClicks();
+  listEl.innerHTML = filtered.map(renderRow).join('');
+  wireRowClicks();
 }
 
 async function loadAllLikes() {

@@ -47,30 +47,31 @@ function updateKPIs(list) {
   document.getElementById('kpi-countries').textContent = new Set(list.map(p => p.country).filter(Boolean)).size;
 }
 
+function initial(name) {
+  return (name || '?').trim().charAt(0).toUpperCase();
+}
+
 function renderCard(p) {
-  const badge = (p.mechanisms && p.mechanisms[0])
-    ? `<span class="card-badge">${escapeHtml(p.mechanisms[0])}</span>` : '';
+  const logo = p.cover_image_url
+    ? `<div class="compact-card-logo"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
+    : `<div class="compact-card-logo-fallback">${escapeHtml(initial(p.programme_name))}</div>`;
+
   const meta = [
-    p.country ? `<span class="card-meta-item">${escapeHtml(p.country)}</span>` : '',
-    p.industry ? `<span class="card-meta-item">${escapeHtml(p.industry)}</span>` : ''
+    (p.mechanisms && p.mechanisms[0]) ? `<span class="badge badge-green">${escapeHtml(p.mechanisms[0])}</span>` : '',
+    p.industry ? `<span class="badge badge-muted">${escapeHtml(p.industry)}</span>` : '',
+    p.country ? `<span class="badge badge-muted">${escapeHtml(p.country)}</span>` : ''
   ].join('');
 
-  const logo = p.cover_image_url
-    ? `<div class="card-logo"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>` : '';
-
   return `
-    <div class="programme-card" data-id="${p.id}">
-      <div class="card-top">
-        <div class="card-heading">
-          ${logo}
-          <div>
-            <div class="card-name">${escapeHtml(p.programme_name)}</div>
-            <div class="card-company">${escapeHtml(p.company || '')}</div>
-          </div>
+    <div class="compact-card" data-id="${p.id}">
+      <div class="compact-card-head">
+        ${logo}
+        <div class="compact-card-body">
+          <div class="compact-card-title">${escapeHtml(p.programme_name)}</div>
+          ${p.company ? `<div class="compact-card-sub">${escapeHtml(p.company)}</div>` : ''}
         </div>
-        ${badge}
       </div>
-      <div class="card-meta">${meta}</div>
+      ${meta ? `<div class="compact-card-meta">${meta}</div>` : ''}
     </div>
   `;
 }
@@ -104,7 +105,7 @@ function applyFiltersAndRender() {
   }
 
   cardGrid.innerHTML = filtered.map(renderCard).join('');
-  cardGrid.querySelectorAll('.programme-card').forEach(card => {
+  cardGrid.querySelectorAll('.compact-card').forEach(card => {
     card.addEventListener('click', () => {
       window.location.href = `programme.html?id=${encodeURIComponent(card.dataset.id)}`;
     });
