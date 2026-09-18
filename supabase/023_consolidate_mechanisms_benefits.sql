@@ -1,0 +1,14 @@
+-- No schema change needed — both `mechanisms` and `benefits` on `programmes` already
+-- exist as text[] (see 005_new_architecture.sql). This file documents an app-level
+-- taxonomy change: Mechanisms and Benefits were two overlapping picklists asking
+-- researchers to categorise the same concept twice (e.g. "Exclusivity" vs "Access /
+-- Exclusivity", "Experiences" vs "Experiences / Events"). They're consolidated (2026-09)
+-- into one "Mechanisms" taxonomy — see OPTIONS.mechanisms in assets/options.js for the
+-- merged list and its "Coupons / Vouchers" addition.
+--
+-- `benefits` is left in place, populated, and unused by the app going forward, matching
+-- this project's existing convention for deprecated fields (see 005's own comment). Its
+-- pre-migration values were merged into `mechanisms` by a one-time data migration
+-- (migration/consolidate_mechanisms.py), not by SQL, so the mapping logic and its
+-- reasoning live in one reviewable place. `likes.target_type = 'benefit'` rows were
+-- migrated to `target_type = 'mechanism'` the same way.

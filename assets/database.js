@@ -222,7 +222,7 @@ function wireMechanismToggle(form) {
   sync();
 }
 
-function mechanismsBenefitsSectionHTML(p = {}) {
+function mechanismsSectionHTML(p = {}) {
   const tiers = p.programme_tiers && p.programme_tiers.length ? p.programme_tiers : [{}];
   return `
     <div class="form-section-label">Mechanisms</div>
@@ -254,9 +254,6 @@ function mechanismsBenefitsSectionHTML(p = {}) {
       <div class="tier-rows" id="tier-rows">${tiers.map(tierRowHTML).join('')}</div>
       <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
     </div>
-
-    <div class="form-section-label" style="margin-top:20px;">Benefits</div>
-    ${inputHTML({ key: 'benefits', type: 'multiselect', options: 'benefits' }, p.benefits)}
   `;
 }
 
@@ -325,7 +322,7 @@ function openAddModal() {
             <div class="form-section-label" style="margin-top:20px;">Membership</div>
             <div class="form-grid">${fieldsGridHTML(PROGRAMME_MEMBERSHIP_FIELDS)}</div>
 
-            ${mechanismsBenefitsSectionHTML()}
+            ${mechanismsSectionHTML()}
             ${featuresSectionHTML()}
 
             <div class="form-section-label" style="margin-top:20px;">Source</div>
@@ -370,7 +367,6 @@ function openAddModal() {
       target_customer: readCheckboxGroup(form, 'target_customer'),
       geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
       mechanisms: readCheckboxGroup(form, 'mechanisms'),
-      benefits: readCheckboxGroup(form, 'benefits'),
       discount_types: readCheckboxGroup(form, 'discount_types'),
       points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
       points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,

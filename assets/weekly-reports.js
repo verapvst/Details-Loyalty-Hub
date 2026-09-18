@@ -60,7 +60,7 @@ function buildProgressSection(counts, doneTasks, inProgressTasks) {
   const lines = [];
   if (counts.programmesAdded) lines.push(`• ${pluralize(counts.programmesAdded, 'new loyalty programme')} added.`);
   if (counts.programmesUpdated) lines.push(`• ${pluralize(counts.programmesUpdated, 'programme')} updated with new information.`);
-  if (counts.favouritesAdded) lines.push(`• ${pluralize(counts.favouritesAdded, 'favourite')} added to the team's benchmark of interesting mechanisms and benefits.`);
+  if (counts.favouritesAdded) lines.push(`• ${pluralize(counts.favouritesAdded, 'favourite')} added to the team's benchmark of interesting mechanisms.`);
   if (counts.insightsAdded) lines.push(`• ${pluralize(counts.insightsAdded, 'insight')} added to Data & Insights.`);
 
   const blocks = [lines.join('\n')];

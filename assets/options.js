@@ -115,15 +115,17 @@ export const OPTIONS = {
     'Open registration', 'Application required', 'Request membership',
     'Invitation only', 'Referral required'
   ],
+  // Mechanisms: the concrete ways a programme creates, delivers or activates value for
+  // members. Formerly split across two overlapping fields (Mechanisms + Benefits) —
+  // consolidated into one taxonomy (2026-09) since the same concept (e.g. "Discounts",
+  // "Exclusivity"/"Access & Exclusivity", "Experiences"/"Experiences & Events") was
+  // being asked and answered twice. See migration/consolidate_mechanisms.py for the
+  // one-time data migration and its old-value -> new-value mapping.
   mechanisms: [
-    'Points', 'Cashback', 'Discounts', 'Tiering', 'Partnerships', 'Exclusivity',
-    'Community', 'Gamification', 'Personalisation', 'Experiences', 'Early Access',
-    'Referral', 'Status Recognition', 'Cross-brand / Ecosystem Access'
-  ],
-  benefits: [
-    'Free Product / Service Credit', 'Discounts', 'Cashback', 'Points / Redeemable Rewards',
-    'Upgrades', 'Priority Access', 'Complimentary Services', 'Access / Exclusivity',
-    'Experiences / Events', 'Personalised Benefits', 'Partner Benefits', 'Other'
+    'Points', 'Cashback', 'Discounts', 'Coupons / Vouchers', 'Free Product / Service Credit',
+    'Tiering', 'Upgrades', 'Priority Access', 'Early Access', 'Exclusivity',
+    'Complimentary Services', 'Experiences', 'Partnerships', 'Cross-brand / Ecosystem Access',
+    'Personalisation', 'Gamification', 'Community', 'Referral', 'Status Recognition', 'Other'
   ],
   discount_type: [
     'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',

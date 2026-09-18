@@ -58,7 +58,7 @@ export function wireHearts(container, ctx) {
 
 export function targetTypeLabel(type) {
   const labels = {
-    mechanism: 'Mechanism', benefit: 'Benefit', membership_type: 'Membership Type',
+    mechanism: 'Mechanism', membership_type: 'Membership Type',
     target_customer: 'Target Customer', tier: 'Tier', feature: 'Feature', other: 'Other'
   };
   return labels[type] || type;
@@ -71,7 +71,6 @@ export function targetTypeLabel(type) {
 function valueOptionsFor(targetType, { programme, tiers, features }) {
   switch (targetType) {
     case 'mechanism': return (programme.mechanisms || []).map(v => ({ value: v, id: null }));
-    case 'benefit': return (programme.benefits || []).map(v => ({ value: v, id: null }));
     case 'membership_type': return programme.membership_type ? [{ value: programme.membership_type, id: null }] : [];
     case 'target_customer': return (programme.target_customer || []).map(v => ({ value: v, id: null }));
     case 'tier': return (tiers || []).map(t => ({ value: t.tier_name, id: t.id }));
@@ -92,7 +91,7 @@ export function openTargetPickerModal({ programmeId, programmeName, programme, t
     document.body.appendChild(root);
   }
 
-  const TYPES = ['mechanism', 'benefit', 'membership_type', 'target_customer', 'tier', 'feature', 'other'];
+  const TYPES = ['mechanism', 'membership_type', 'target_customer', 'tier', 'feature', 'other'];
 
   root.innerHTML = `
     <div class="modal-overlay form-overlay" id="picker-modal">

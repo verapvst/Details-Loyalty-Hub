@@ -227,7 +227,7 @@ function applyFiltersAndRender() {
   if (!filtered.length) {
     listEl.innerHTML = groups.length
       ? `<div class="empty-state"><div class="em-title">No favorites match</div><p>Try adjusting or clearing the filters.</p></div>`
-      : `<div class="empty-state"><div class="em-title">No favorites yet</div><p>Heart a mechanism, benefit, or feature on any programme's page to see it here.</p></div>`;
+      : `<div class="empty-state"><div class="em-title">No favorites yet</div><p>Heart a mechanism or feature on any programme's page to see it here.</p></div>`;
     return;
   }
 

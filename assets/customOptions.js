@@ -22,7 +22,6 @@ export const LIST_LABELS = {
   membership_type: 'Membership Type',
   access_registration: 'Access / Registration',
   mechanisms: 'Mechanisms',
-  benefits: 'Benefits',
   discount_type: 'Discount Type',
   qualification_unit: 'Tier Qualification Unit',
   meeting_type: 'Meeting Type',
@@ -53,10 +52,6 @@ const LIST_USAGE = {
   mechanisms: [
     { table: 'programmes', column: 'mechanisms', array: true },
     { table: 'likes', column: 'target_label', extraEq: { target_type: 'mechanism' } }
-  ],
-  benefits: [
-    { table: 'programmes', column: 'benefits', array: true },
-    { table: 'likes', column: 'target_label', extraEq: { target_type: 'benefit' } }
   ],
   discount_type: [{ table: 'programmes', column: 'discount_types', array: true }],
   qualification_unit: [{ table: 'programme_tiers', column: 'qualification_unit' }],

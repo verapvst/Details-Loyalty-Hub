@@ -158,7 +158,7 @@ function featureRowEditHTML(f = {}) {
 
 const MECHANISM_BLOCKS = { Points: 'r-block-points', Discounts: 'r-block-discounts', Partnerships: 'r-block-partnerships', Tiering: 'r-block-tiering' };
 
-function mechanismsBenefitsBlockHTML() {
+function mechanismsBlockHTML() {
   const mechanisms = programme.mechanisms || [];
 
   if (!editing) {
@@ -174,11 +174,10 @@ function mechanismsBenefitsBlockHTML() {
 
     return `
       <div class="record-block">
-        <h3>Mechanisms &amp; Benefits</h3>
+        <h3>Mechanisms</h3>
         <div class="record-grid">
           <div class="record-field full"><label>Mechanisms</label>${likeableChipsHTML('mechanism', mechanisms)}</div>
           ${pointsInfo}${discountInfo}${partnerInfo}
-          <div class="record-field full"><label>Benefits</label>${likeableChipsHTML('benefit', programme.benefits)}</div>
         </div>
       </div>
       ${tiersDisplayBlockHTML()}
@@ -188,7 +187,7 @@ function mechanismsBenefitsBlockHTML() {
   const tierList = tiers.length ? tiers : [{}];
   return `
     <div class="record-block">
-      <h3>Mechanisms &amp; Benefits</h3>
+      <h3>Mechanisms</h3>
       <div class="form-section-label" style="margin-top:0;">Mechanisms</div>
       ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, mechanisms)}
 
@@ -218,9 +217,6 @@ function mechanismsBenefitsBlockHTML() {
         <div class="tier-rows" id="tier-rows">${tierList.map(tierRowEditHTML).join('')}</div>
         <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
       </div>
-
-      <div class="form-section-label">Benefits</div>
-      ${inputHTML({ key: 'benefits', type: 'multiselect', options: 'benefits' }, programme.benefits)}
     </div>
   `;
 }
@@ -273,7 +269,7 @@ function addFavouriteBlockHTML() {
   return `
     <div class="record-block">
       <h3>Favourite something from this programme</h3>
-      <p class="settings-hint" style="margin-bottom: 14px;">Didn't click a heart above? Pick any mechanism, benefit, tier, feature or other element to favourite it directly.</p>
+      <p class="settings-hint" style="margin-bottom: 14px;">Didn't click a heart above? Pick any mechanism, tier, feature or other element to favourite it directly.</p>
       <button type="button" class="btn-outline" id="btn-add-favourite">+ Add Favourite</button>
     </div>
   `;
@@ -339,7 +335,7 @@ function render() {
         ${classificationBlockHTML()}
         ${geographyBlockHTML()}
         ${membershipBlockHTML()}
-        ${mechanismsBenefitsBlockHTML()}
+        ${mechanismsBlockHTML()}
         ${featuresBlockHTML()}
         ${sourceBlockHTML()}
         ${addFavouriteBlockHTML()}
@@ -412,7 +408,6 @@ async function saveChanges() {
     target_customer: readCheckboxGroup(form, 'target_customer'),
     geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
     mechanisms: readCheckboxGroup(form, 'mechanisms'),
-    benefits: readCheckboxGroup(form, 'benefits'),
     discount_types: readCheckboxGroup(form, 'discount_types'),
     points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
     points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,

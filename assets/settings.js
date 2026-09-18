@@ -459,7 +459,6 @@ renderFlatListCard(programmesContainer, 'geographic_scope', 'Geographic Scope');
 renderFlatListCard(programmesContainer, 'membership_type', 'Membership Type');
 renderFlatListCard(programmesContainer, 'access_registration', 'Access / Registration');
 renderFlatListCard(programmesContainer, 'mechanisms', 'Mechanisms');
-renderFlatListCard(programmesContainer, 'benefits', 'Benefits');
 renderFlatListCard(programmesContainer, 'discount_type', 'Discount Types');
 renderFlatListCard(programmesContainer, 'qualification_unit', 'Tier Qualification Units');
 const pinnedHolder = document.createElement('div');
