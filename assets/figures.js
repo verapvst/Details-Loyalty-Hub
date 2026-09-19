@@ -15,6 +15,7 @@ const sectionCount = document.getElementById('section-count');
 const filterType = document.getElementById('filter-type');
 const filterVisual = document.getElementById('filter-visual');
 const filterSource = document.getElementById('filter-source');
+const filterAddedBy = document.getElementById('filter-added-by');
 const searchInput = document.getElementById('search-input');
 const scopeFilterBtn = document.getElementById('scope-filter-btn');
 const scopeFilterPanel = document.getElementById('scope-filter-panel');
@@ -39,6 +40,7 @@ function populateFilterOptions() {
   fill(filterType, distinctSorted(allInsights, 'insight_type'));
   fill(filterVisual, distinctSorted(allInsights, 'visual_type'));
   fill(filterSource, distinctSorted(allInsights.map(f => ({ source_name: f.sources ? displaySourceName(f.sources) : null })), 'source_name'));
+  fill(filterAddedBy, distinctSorted(allInsights, 'created_by'));
 }
 
 function displaySourceName(s) {
@@ -83,12 +85,14 @@ function applyFiltersAndRender() {
   const type = filterType.value;
   const visual = filterVisual.value;
   const sourceName = filterSource.value;
+  const addedBy = filterAddedBy.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allInsights.filter(f => {
     if (type && f.insight_type !== type) return false;
     if (visual && f.visual_type !== visual) return false;
     if (sourceName && (!f.sources || displaySourceName(f.sources) !== sourceName)) return false;
+    if (addedBy && f.created_by !== addedBy) return false;
     // Scope filter uses OR logic: match if the insight has ANY of the selected tags.
     if (scopeFilterSelected.length && !(f.scope || []).some(v => scopeFilterSelected.includes(v))) return false;
     if (q) {
@@ -130,12 +134,13 @@ document.addEventListener('click', (e) => {
   if (!scopeFilterPanel.hidden && !e.target.closest('.scope-filter')) scopeFilterPanel.hidden = true;
 });
 
-[filterType, filterVisual, filterSource].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterType, filterVisual, filterSource, filterAddedBy].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterType.value = '';
   filterVisual.value = '';
   filterSource.value = '';
+  filterAddedBy.value = '';
   searchInput.value = '';
   scopeFilterSelected = [];
   scopeFilterPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });

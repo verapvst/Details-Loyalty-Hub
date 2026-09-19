@@ -9,6 +9,7 @@ const listEl = document.getElementById('favorite-list');
 const sectionCount = document.getElementById('section-count');
 const filterType = document.getElementById('filter-type');
 const filterProgramme = document.getElementById('filter-programme');
+const filterAddedBy = document.getElementById('filter-added-by');
 const searchInput = document.getElementById('search-input');
 
 let allLikes = [];
@@ -50,14 +51,18 @@ function distinctSorted(list, key) {
 function populateFilters() {
   const currentType = filterType.value;
   const currentProg = filterProgramme.value;
+  const currentAddedBy = filterAddedBy.value;
 
   filterType.innerHTML = '<option value="">All</option>' +
     distinctSorted(groups, 'target_type').map(t => `<option value="${t}">${escapeHtml(targetTypeLabel(t))}</option>`).join('');
   filterProgramme.innerHTML = '<option value="">All</option>' +
     distinctSorted(groups, 'programme_name').map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  filterAddedBy.innerHTML = '<option value="">All</option>' +
+    distinctSorted(allLikes, 'liked_by').map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
 
   filterType.value = currentType;
   filterProgramme.value = currentProg;
+  filterAddedBy.value = currentAddedBy;
 }
 
 function initial(name) {
@@ -207,11 +212,13 @@ function wireRowClicks() {
 function applyFiltersAndRender() {
   const type = filterType.value;
   const prog = filterProgramme.value;
+  const addedBy = filterAddedBy.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = groups.filter(g => {
     if (type && g.target_type !== type) return false;
     if (prog && g.programme_name !== prog) return false;
+    if (addedBy && !g.entries.some(e => e.liked_by === addedBy)) return false;
     if (q) {
       const hay = [
         g.programme_name, g.target_label,
@@ -252,11 +259,12 @@ async function loadAllLikes() {
   applyFiltersAndRender();
 }
 
-[filterType, filterProgramme].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterType, filterProgramme, filterAddedBy].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterType.value = '';
   filterProgramme.value = '';
+  filterAddedBy.value = '';
   searchInput.value = '';
   applyFiltersAndRender();
 });

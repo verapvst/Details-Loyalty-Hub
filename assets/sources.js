@@ -13,6 +13,7 @@ const sectionCount = document.getElementById('section-count');
 const searchInput = document.getElementById('search-input');
 const sortSelect = document.getElementById('sort-select');
 const filterType = document.getElementById('filter-type');
+const filterAddedBy = document.getElementById('filter-added-by');
 const scopeFilterBtn = document.getElementById('scope-filter-btn');
 const scopeFilterPanel = document.getElementById('scope-filter-panel');
 
@@ -52,6 +53,11 @@ function populateFilterOptions() {
   filterType.innerHTML = '<option value="">All</option>' +
     distinctSorted(allSources, 'source_type').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   filterType.value = current;
+
+  const currentAddedBy = filterAddedBy.value;
+  filterAddedBy.innerHTML = '<option value="">All</option>' +
+    distinctSorted(allSources, 'created_by').map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  filterAddedBy.value = currentAddedBy;
 }
 
 function updateScopeFilterButtonLabel() {
@@ -76,6 +82,7 @@ function applyFiltersAndRender() {
 
   const filtered = allSources.filter(s => {
     if (filterType.value && s.source_type !== filterType.value) return false;
+    if (filterAddedBy.value && s.created_by !== filterAddedBy.value) return false;
     if (scopeFilterSelected.length && !(s.scope || []).some(v => scopeFilterSelected.includes(v))) return false;
     if (q) {
       const hay = `${displayName(s)} ${s.author_org || ''} ${s.source_type || ''} ${s.short_citation || ''}`.toLowerCase();
@@ -110,11 +117,12 @@ document.addEventListener('click', (e) => {
   if (!scopeFilterPanel.hidden && !e.target.closest('.scope-filter')) scopeFilterPanel.hidden = true;
 });
 
-[sortSelect, filterType].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[sortSelect, filterType, filterAddedBy].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   sortSelect.value = 'recent-use';
   filterType.value = '';
+  filterAddedBy.value = '';
   searchInput.value = '';
   scopeFilterSelected = [];
   scopeFilterPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });

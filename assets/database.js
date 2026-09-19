@@ -17,6 +17,7 @@ const sectionCount = document.getElementById('section-count');
 const filterIndustry = document.getElementById('filter-industry');
 const filterGeography = document.getElementById('filter-geography');
 const filterType = document.getElementById('filter-type');
+const filterAddedBy = document.getElementById('filter-added-by');
 const searchInput = document.getElementById('search-input');
 
 function distinctSorted(list, key) {
@@ -39,6 +40,7 @@ function populateFilterOptions() {
   fill(filterIndustry, distinctSorted(allProgrammes, 'industry'));
   fill(filterGeography, distinctFromArrays(allProgrammes, 'geographic_scope'));
   fill(filterType, distinctFromArrays(allProgrammes, 'mechanisms'));
+  fill(filterAddedBy, distinctSorted(allProgrammes, 'created_by'));
 }
 
 function updateKPIs(list) {
@@ -80,12 +82,14 @@ function applyFiltersAndRender() {
   const industry = filterIndustry.value;
   const geography = filterGeography.value;
   const type = filterType.value;
+  const addedBy = filterAddedBy.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allProgrammes.filter(p => {
     if (industry && p.industry !== industry) return false;
     if (geography && !(p.geographic_scope || []).includes(geography)) return false;
     if (type && !(p.mechanisms || []).includes(type)) return false;
+    if (addedBy && p.created_by !== addedBy) return false;
     if (q) {
       const hay = `${p.programme_name || ''} ${p.company || ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
@@ -129,12 +133,13 @@ async function loadProgrammes() {
   applyFiltersAndRender();
 }
 
-[filterIndustry, filterGeography, filterType].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterIndustry, filterGeography, filterType, filterAddedBy].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterIndustry.value = '';
   filterGeography.value = '';
   filterType.value = '';
+  filterAddedBy.value = '';
   searchInput.value = '';
   applyFiltersAndRender();
 });
