@@ -8,6 +8,7 @@ import { INSIGHT_FIELDS, INSIGHT_TYPE_DEFINITIONS } from './options.js';
 import { inputHTML, readFormValues, escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
 import { getCustomRows } from './customOptions.js';
 import { wireRichTextEditors, getRichTextValue } from './richText.js';
+import { teamMemberSelectHTML } from './teamMembers.js';
 
 // The 8 built-in definitions are fixed/developer-controlled; a custom Information
 // Type added via Settings can carry its own short definition (stored in
@@ -367,6 +368,7 @@ export function openInsightModal({ insight, sources, onChange }) {
               </div>
               ${fieldsHTML}
             </div>
+            ${insight ? `<div class="form-field" style="margin-top: 10px;"><label>Added by</label>${teamMemberSelectHTML('created_by', insight.created_by)}</div>` : ''}
             <div class="form-section-label" style="margin-top: 16px;">Scope *</div>
             <div class="settings-hint" style="margin-bottom: 6px;">Starts from the Source's Scope. Narrow it down or add to it for this specific insight.</div>
             <div id="insight-scope-groups">${scopeCheckboxGroupsHTML(insight?.scope || [])}</div>
@@ -451,6 +453,7 @@ export function openInsightModal({ insight, sources, onChange }) {
 
     let error;
     if (insight) {
+      data.created_by = form.elements['created_by'].value || null;
       data.updated_by = getIdentity();
       data.updated_at = new Date().toISOString();
       ({ error } = await supabase.from('figures').update(data).eq('id', insight.id));

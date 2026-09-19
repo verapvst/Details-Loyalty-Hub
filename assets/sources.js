@@ -4,9 +4,11 @@ import { escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields
 import { loadCustomOptions } from './customOptions.js';
 import { openSourceModal } from './sourceModal.js';
 import { loadSourceUsage, sortSourcesByRecency } from './insightModal.js';
+import { loadTeamMembers } from './teamMembers.js';
 
 await initNav('sources');
 await loadCustomOptions();
+await loadTeamMembers();
 
 const listEl = document.getElementById('source-list');
 const sectionCount = document.getElementById('section-count');

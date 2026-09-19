@@ -2,6 +2,7 @@ import { supabase } from './supabase.js';
 import { getIdentity, showToast } from './app.js';
 import { getOptionList } from './customOptions.js';
 import { escapeHtml } from './fields.js';
+import { teamMemberSelectHTML } from './teamMembers.js';
 
 export async function loadLikes(programmeId) {
   const { data } = await supabase.from('likes').select('*').eq('programme_id', programmeId);
@@ -199,6 +200,7 @@ export function openLikeModal({ programmeId, programmeName, targetType, targetLa
               <label>What did you like?</label>
               <div class="like-target-display">${escapeHtml(programmeName)} · ${escapeHtml(targetLabel)} <span class="badge badge-muted" style="margin-left:6px;">${targetTypeLabel(targetType)}</span></div>
             </div>
+            ${existingLike ? `<div class="form-field full"><label>Added by</label>${teamMemberSelectHTML('liked_by', existingLike.liked_by)}</div>` : ''}
             <div class="form-field full">
               <label>Why is it interesting?</label>
               <textarea name="description" rows="2" placeholder="Short 1-2 sentence description">${escapeHtml(existingLike?.description)}</textarea>
@@ -250,6 +252,7 @@ export function openLikeModal({ programmeId, programmeName, targetType, targetLa
 
     let error;
     if (existingLike) {
+      payload.liked_by = form.elements['liked_by'].value || existingLike.liked_by;
       ({ error } = await supabase.from('likes').update(payload).eq('id', existingLike.id));
     } else {
       ({ error } = await supabase.from('likes').insert({
@@ -264,7 +267,9 @@ export function openLikeModal({ programmeId, programmeName, targetType, targetLa
     }
 
     if (error) {
-      showToast(`Couldn't save like: ${error.message}`, true);
+      showToast(error.code === '23505'
+        ? `${payload.liked_by} already has a like on this — pick someone else, or edit their existing one instead.`
+        : `Couldn't save like: ${error.message}`, true);
       return;
     }
 

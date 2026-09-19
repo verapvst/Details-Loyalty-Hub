@@ -4,9 +4,11 @@ import { escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields
 import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor, typeLegendHTML, insightImageUrl } from './insightModal.js';
 import { fieldPlainText } from './richText.js';
+import { loadTeamMembers } from './teamMembers.js';
 
 await initNav('figures');
 await loadCustomOptions();
+await loadTeamMembers();
 
 const listEl = document.getElementById('insight-list');
 const noSourcesNote = document.getElementById('no-sources-note');

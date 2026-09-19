@@ -7,6 +7,7 @@
 // unrelated `team_members` table (full legal names, no `active` column) predating
 // this app — left completely untouched, see migration 017.
 import { supabase } from './supabase.js';
+import { escapeHtml } from './fields.js';
 
 let allRows = [];
 let loaded = false;
@@ -30,4 +31,18 @@ export function getAllTeamMembers() {
 
 export function teamMembersLoaded() {
   return loaded;
+}
+
+// A single-person <select> for "who added/liked this" fields (created_by, liked_by) —
+// lets a mistaken or bulk-assigned attribution be corrected by hand. Kept to a plain
+// <select> (not the avatar-grid identity picker) since this edits someone ELSE's
+// record, not "who am I right now". An already-set value outside the active team list
+// (a deactivated member, or a placeholder like "Migration") stays selectable, tagged
+// "(inactive)", so editing a record never silently drops what it was set to.
+export function teamMemberSelectHTML(fieldName, selected) {
+  const active = getActiveTeamMembers();
+  const options = (selected && !active.includes(selected)) ? [...active, selected] : active;
+  return `<select name="${escapeHtml(fieldName)}">${options.map(name => `
+    <option value="${escapeHtml(name)}" ${name === selected ? 'selected' : ''}>${escapeHtml(name)}${!active.includes(name) ? ' (inactive)' : ''}</option>
+  `).join('')}</select>`;
 }

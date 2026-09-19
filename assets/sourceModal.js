@@ -5,6 +5,7 @@ import { supabase } from './supabase.js';
 import { getIdentity, showToast } from './app.js';
 import { SOURCE_FIELDS, generateShortCitation, generateFullCitation } from './options.js';
 import { inputHTML, readFormValues, escapeHtml, scopeCheckboxGroupsHTML, readCheckboxGroup } from './fields.js';
+import { teamMemberSelectHTML } from './teamMembers.js';
 
 // One modal for both Add (source=null) and Edit (source=existing row). Short/Full
 // Citation are pre-filled from the other fields but stay fully editable — for a new
@@ -41,6 +42,7 @@ export function openSourceModal({ source, onChange }) {
           <div class="form-modal-body">
             <div class="form-error" id="form-error" hidden></div>
             <div class="form-grid">${fieldsHTML}</div>
+            ${source ? `<div class="form-field" style="margin-top: 10px;"><label>Added by</label>${teamMemberSelectHTML('created_by', source.created_by)}</div>` : ''}
             <div class="form-section-label" style="margin-top: 16px;">Scope *</div>
             <div class="settings-hint" style="margin-bottom: 6px;">What this source is about. Select every topic it covers.</div>
             ${scopeCheckboxGroupsHTML(source?.scope || [])}
@@ -111,6 +113,7 @@ export function openSourceModal({ source, onChange }) {
 
     let error;
     if (source) {
+      data.created_by = form.elements['created_by'].value || null;
       data.updated_by = getIdentity();
       data.updated_at = new Date().toISOString();
       ({ error } = await supabase.from('sources').update(data).eq('id', source.id));

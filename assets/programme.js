@@ -7,9 +7,11 @@ import {
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
 import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
+import { loadTeamMembers, teamMemberSelectHTML } from './teamMembers.js';
 
 await initNav('database');
 await loadCustomOptions();
+await loadTeamMembers();
 
 const root = document.getElementById('record-root');
 const params = new URLSearchParams(window.location.search);
@@ -55,6 +57,26 @@ function simpleFieldsBlockHTML(title, fields) {
     </div>
   `).join('');
   return `<div class="record-block"><h3>${title}</h3><div class="record-grid">${cells}</div></div>`;
+}
+
+// Identity + "Added by" (created_by) — kept out of PROGRAMME_IDENTITY_FIELDS since
+// that list is shared with the Add Programme modal, where created_by is silently set
+// from the current identity rather than picked. Editable here so a bulk/mistaken
+// attribution (e.g. everything imported under "Migration") can be corrected by hand.
+function identityBlockHTML() {
+  const cells = PROGRAMME_IDENTITY_FIELDS.map(f => `
+    <div class="record-field ${f.full ? 'full' : ''} ${editing ? 'editing' : ''}">
+      <label>${f.label}</label>
+      ${editing ? inputHTML(f, programme[f.key]) : valueOrEmpty(programme[f.key])}
+    </div>
+  `).join('');
+  const addedByCell = `
+    <div class="record-field ${editing ? 'editing' : ''}">
+      <label>Added by</label>
+      ${editing ? teamMemberSelectHTML('created_by', programme.created_by) : valueOrEmpty(programme.created_by)}
+    </div>
+  `;
+  return `<div class="record-block"><h3>Identity</h3><div class="record-grid">${cells}${addedByCell}</div></div>`;
 }
 
 function classificationBlockHTML() {
@@ -331,7 +353,7 @@ function render() {
     </div>
     <form id="record-form">
       <div class="record-body">
-        ${simpleFieldsBlockHTML('Identity', PROGRAMME_IDENTITY_FIELDS)}
+        ${identityBlockHTML()}
         ${classificationBlockHTML()}
         ${geographyBlockHTML()}
         ${membershipBlockHTML()}
@@ -405,6 +427,7 @@ async function saveChanges() {
     ...readFormValues(form, PROGRAMME_MEMBERSHIP_FIELDS),
     ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
     sub_industry: document.getElementById('record-sub-industry').value || null,
+    created_by: form.elements['created_by'].value || null,
     target_customer: readCheckboxGroup(form, 'target_customer'),
     geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
     mechanisms: readCheckboxGroup(form, 'mechanisms'),

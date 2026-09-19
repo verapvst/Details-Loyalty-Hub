@@ -5,9 +5,11 @@ import { loadCustomOptions } from './customOptions.js';
 import { openSourceModal } from './sourceModal.js';
 import { definitionFor } from './insightModal.js';
 import { fieldPlainText } from './richText.js';
+import { loadTeamMembers } from './teamMembers.js';
 
 await initNav('sources');
 await loadCustomOptions();
+await loadTeamMembers();
 
 const root = document.getElementById('record-root');
 const params = new URLSearchParams(window.location.search);

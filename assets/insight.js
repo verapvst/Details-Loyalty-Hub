@@ -4,9 +4,11 @@ import { escapeHtml, copyToClipboard } from './fields.js';
 import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor, insightImageUrl } from './insightModal.js';
 import { toEditableHtml, fieldPlainText } from './richText.js';
+import { loadTeamMembers } from './teamMembers.js';
 
 await initNav('figures');
 await loadCustomOptions();
+await loadTeamMembers();
 
 const root = document.getElementById('record-root');
 const params = new URLSearchParams(window.location.search);
