@@ -834,8 +834,12 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .lab-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--accent); margin-bottom: 14px; }
 .lab-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; align-items: start; }
 
-.kpi-context-line { font-size: 12px; color: var(--muted); margin-top: 14px; }
-.kpi-context-line b { color: var(--dark); font-weight: 600; }
+.kpi-row-single-line { grid-template-columns: unset; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; }
+.kpi-row-single-line .kpi-item { flex: 1 1 0; min-width: 128px; padding: 16px 16px; }
+.kpi-row-single-line .kpi-label { font-size: 9.5px; margin-bottom: 6px; white-space: nowrap; }
+.kpi-row-single-line .kpi-value { font-size: 26px; }
+.kpi-item-clickable { cursor: pointer; transition: box-shadow var(--transition), transform var(--transition); }
+.kpi-item-clickable:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
 
 /* ---------- Chart-builder controls ---------- */
 .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 18px; }
@@ -855,17 +859,20 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .chart-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
 .chart-card-title { font-size: 14px; font-weight: 600; color: var(--dark); }
 .chart-card-subtitle { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-.chart-toolbar { display: flex; gap: 4px; flex-shrink: 0; }
+.chart-toolbar { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
 .chart-tb-btn {
-  width: 28px; height: 28px; border-radius: 7px; background: var(--surface-alt); color: var(--muted);
-  font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background var(--transition), color var(--transition);
+  height: 26px; padding: 0 10px; border-radius: 7px; background: var(--surface-alt); color: var(--muted);
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; display: flex; align-items: center; gap: 5px;
+  white-space: nowrap; transition: background var(--transition), color var(--transition);
 }
+.chart-tb-btn .chart-tb-icon { font-size: 12px; line-height: 1; }
 .chart-tb-btn:hover { background: var(--accent-light); color: var(--accent-mid); }
 .chart-tb-save:hover { background: var(--accent-light); color: var(--accent); }
 .chart-card-body { overflow-x: auto; }
 .chart-card-body svg, .chart-modal-body svg { width: 100%; height: auto; display: block; }
-.hbar-rect-clickable, .donut-arc-clickable, .heatmap-cell-clickable { cursor: pointer; }
-.hbar-rect-clickable:hover, .donut-arc-clickable:hover { opacity: 0.82; }
+.hbar-rect-clickable, .donut-arc-clickable, .heatmap-cell-clickable,
+.bar-rect-clickable, .line-point-clickable { cursor: pointer; }
+.hbar-rect-clickable:hover, .donut-arc-clickable:hover, .bar-rect-clickable:hover, .heatmap-cell-clickable:hover { opacity: 0.8; }
 .chart-card-note { font-size: 11px; color: var(--muted-light); margin-top: 10px; font-style: italic; }
 .chart-empty-state { padding: 40px 20px; }
 
@@ -901,17 +908,21 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .data-table th:hover { color: var(--dark); }
 .data-table tbody tr:hover { background: var(--surface-alt); }
 
-/* ---------- Data quality ---------- */
-.data-quality-toggle { font-size: 12px; font-weight: 500; color: var(--accent); }
-.data-quality-row { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-top: 10px; }
-.data-quality-row .dq-label { width: 150px; flex-shrink: 0; color: var(--muted); }
-.data-quality-row .dq-bar-track { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-alt); overflow: hidden; }
-.data-quality-row .dq-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
-.data-quality-row .dq-pct { width: 84px; text-align: right; color: var(--dark); font-weight: 500; flex-shrink: 0; }
+/* ---------- Programme list modal (click-through "which programmes is this?") ---------- */
+.prog-list-count { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }
+.prog-list { display: flex; flex-direction: column; }
+.prog-list-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 4px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--dark);
+}
+.prog-list-row:hover { background: var(--surface-alt); }
+.prog-list-name { font-weight: 500; }
+.prog-list-company { color: var(--muted); font-size: 11.5px; flex-shrink: 0; }
 
 /* ---------- Category drill-down ---------- */
 .drilldown-panel { background: var(--surface-alt); border-radius: var(--radius); padding: 18px 20px; }
 .drilldown-empty { color: var(--muted); font-size: 12.5px; }
+.drilldown-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .drilldown-title { font-size: 15px; font-weight: 600; color: var(--dark); }
 .drilldown-count { font-size: 11.5px; color: var(--muted); margin-bottom: 14px; }
 .drilldown-block { margin-top: 14px; }
@@ -949,4 +960,5 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   .lab-grid-2 { grid-template-columns: 1fr; }
   .lab-card { padding: 20px; }
   .data-modal-body, .chart-modal-body { padding-left: 18px; padding-right: 18px; }
+  .kpi-row-single-line .kpi-item { min-width: 108px; }
 }

@@ -9,6 +9,12 @@ function slug(s) {
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'chart';
 }
 
+// Every toolbar/footer action button is icon + a short label (never an icon alone) —
+// easier to scan at a glance than a row of bare glyphs.
+function tbBtnHTML(action, icon, label, extraClass = '') {
+  return `<button type="button" class="chart-tb-btn ${extraClass}" data-action="${action}"><span class="chart-tb-icon">${icon}</span>${escapeHtml(label)}</button>`;
+}
+
 function getModalRoot() {
   let root = document.getElementById('analysis-modal-root');
   if (!root) {
@@ -60,8 +66,8 @@ function openDataModal({ title, headers, rows }) {
         <div class="data-modal-body">${renderDataTable(headers, rows)}</div>
         <div class="data-modal-foot">
           <span class="data-modal-hint">Click a column header to sort.</span>
-          <button type="button" class="btn-text" id="data-copy">Copy</button>
-          <button type="button" class="btn-text" id="data-csv">Download CSV</button>
+          ${tbBtnHTML('copy', '⧉', 'Copy')}
+          ${tbBtnHTML('csv', '⭳', 'CSV')}
           <button type="button" class="btn-outline" id="data-close2">Close</button>
         </div>
       </div>
@@ -70,12 +76,51 @@ function openDataModal({ title, headers, rows }) {
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
   document.getElementById('data-modal-close').addEventListener('click', closeModal);
   document.getElementById('data-close2').addEventListener('click', closeModal);
-  document.getElementById('data-copy').addEventListener('click', async () => {
+  root.querySelector('[data-action="copy"]').addEventListener('click', async () => {
     const ok = await copyTableToClipboard(headers, rows);
     showToast(ok ? 'Data copied — paste into Excel.' : 'Could not copy to clipboard.', !ok);
   });
-  document.getElementById('data-csv').addEventListener('click', () => downloadCSV(headers, rows, `${slug(title)}.csv`));
+  root.querySelector('[data-action="csv"]').addEventListener('click', () => downloadCSV(headers, rows, `${slug(title)}.csv`));
   wireTableSort(root, headers, rows);
+}
+
+// The click-through "which programmes is this?" modal — every clickable mark on the
+// page (a KPI card, a bar, a heatmap cell, a launch-trend point) opens this with the
+// exact subset of programmes behind that number, so where a number comes from is
+// never more than one click away.
+export function openProgrammeListModal({ title, subtitle, programmes }) {
+  const root = getModalRoot();
+  const rows = [...programmes].sort((a, b) => (a.programme_name || '').localeCompare(b.programme_name || ''));
+  root.innerHTML = `
+    <div class="modal-overlay" id="prog-list-overlay">
+      <div class="data-modal">
+        <div class="data-modal-head">
+          <div>
+            <h2>${escapeHtml(title)}</h2>
+            ${subtitle ? `<div class="chart-modal-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+          </div>
+          <button type="button" class="form-modal-close" id="prog-list-close">&times;</button>
+        </div>
+        <div class="data-modal-body">
+          <div class="prog-list-count">${rows.length} programme(s)</div>
+          <div class="prog-list">
+            ${rows.length ? rows.map(p => `
+              <a class="prog-list-row" href="programme.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">
+                <span class="prog-list-name">${escapeHtml(p.programme_name || 'Untitled programme')}</span>
+                <span class="prog-list-company">${escapeHtml(p.company || '')}</span>
+              </a>
+            `).join('') : '<div class="drilldown-empty">No programmes match.</div>'}
+          </div>
+        </div>
+        <div class="data-modal-foot">
+          <button type="button" class="btn-outline" id="prog-list-close2">Close</button>
+        </div>
+      </div>
+    </div>`;
+  const overlay = document.getElementById('prog-list-overlay');
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.getElementById('prog-list-close').addEventListener('click', closeModal);
+  document.getElementById('prog-list-close2').addEventListener('click', closeModal);
 }
 
 function openExpandModal({ title, subtitle, buildChart }) {
@@ -147,12 +192,12 @@ export function mountChartCard(container, opts) {
           ${subtitle ? `<div class="chart-card-subtitle">${escapeHtml(subtitle)}</div>` : ''}
         </div>
         <div class="chart-toolbar">
-          <button type="button" class="chart-tb-btn" data-action="view-data" title="View data">▤</button>
-          <button type="button" class="chart-tb-btn" data-action="expand" title="Expand">⤢</button>
-          <button type="button" class="chart-tb-btn" data-action="png" title="Download PNG">⭳</button>
-          <button type="button" class="chart-tb-btn" data-action="xlsx" title="Download XLSX">▦</button>
-          <button type="button" class="chart-tb-btn" data-action="copy" title="Copy Excel data">⧉</button>
-          ${onSave ? `<button type="button" class="chart-tb-btn chart-tb-save" data-action="save" title="Save analysis">☆</button>` : ''}
+          ${tbBtnHTML('view-data', '▤', 'Data')}
+          ${tbBtnHTML('expand', '⤢', 'Expand')}
+          ${tbBtnHTML('png', '⭳', 'PNG')}
+          ${tbBtnHTML('xlsx', '▦', 'XLSX')}
+          ${tbBtnHTML('copy', '⧉', 'Copy')}
+          ${onSave ? tbBtnHTML('save', '☆', 'Save', 'chart-tb-save') : ''}
         </div>
       </div>
       <div class="chart-card-body"></div>

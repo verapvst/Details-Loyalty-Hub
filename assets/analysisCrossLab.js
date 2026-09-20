@@ -4,9 +4,9 @@
 // Launch Year is one of the axes (delegates to the same time-series logic as Launch
 // Trends, since a "time" dimension needs per-year bucketing, not a static cross-tab).
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, crossTab, normaliseCell, timeSeries } from './analysisData.js';
+import { DIMENSIONS, crossTab, normaliseCell, timeSeries, programmesMatching } from './analysisData.js';
 import { renderHeatmap, renderBarChart, renderLineChart, compatibleChartTypes, fmtNum, fmtPct } from './charts.js';
-import { mountChartCard, showEmptyChartState } from './chartToolbar.js';
+import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis } from './analysisSaved.js';
 
 const AXIS_KEYS = ['industry', 'sub_industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'feature', 'launch_year'];
@@ -68,12 +68,23 @@ export function mount(container, ctx) {
     return parts.join(' · ');
   }
 
+  // Every chart variant gets the same click-through: a mark always resolves to the
+  // exact programmes it was drawn from, so it's never ambiguous what a number means.
+  function openCellProgrammes(yValue, xValue, programmes) {
+    const criteria = [{ dimKey: state.yKey, value: isTime(state.yKey) ? Number(yValue) : yValue }, { dimKey: state.xKey, value: isTime(state.xKey) ? Number(xValue) : xValue }];
+    const subset = programmesMatching(programmes, criteria);
+    openProgrammeListModal({ title: `${yValue} · ${xValue}`, subtitle: `${DIMENSIONS[state.yKey].label} × ${DIMENSIONS[state.xKey].label} · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
+  }
+
   function buildChartInto(el, programmes) {
     if (isTime(state.xKey) || isTime(state.yKey)) {
       const groupKey = isTime(state.xKey) ? state.yKey : state.xKey;
       const ts = timeSeries(programmes, { groupByKey: groupKey, measure: state.measure === 'companies' ? 'companies' : 'count' });
       if (!ts.years.length) { showEmptyChartState(el, 'No programmes with a recorded launch year match the current filters.'); return null; }
-      const spec = { title: crossTitle(), subtitle: subtitleText(ts.multiSelect ? 'multi-select — may exceed totals' : ''), categories: ts.years, series: ts.series };
+      const spec = {
+        title: crossTitle(), subtitle: subtitleText(ts.multiSelect ? 'multi-select — may exceed totals' : ''), categories: ts.years, series: ts.series,
+        onSelect: (year, seriesName) => openCellProgrammes(isTime(state.yKey) ? year : seriesName, isTime(state.xKey) ? year : seriesName, programmes)
+      };
       if (['line', 'area', 'stackedArea'].includes(state.chartType)) return renderLineChart(el, { ...spec, mode: state.chartType });
       const mode = state.chartType === 'stackedBar' ? 'stacked' : state.chartType === 'stacked100Bar' ? 'percent' : 'grouped';
       return renderBarChart(el, { ...spec, mode });
@@ -89,12 +100,16 @@ export function mount(container, ctx) {
         rows: table.yValues, cols: table.xValues,
         matrix: table.matrix.map((row, ri) => row.map((v, ci) => normaliseCell(v, ri, ci, table, state.normalise))),
         cellText: (v) => state.normalise === 'count' ? fmtNum(v) : fmtPct(v),
-        colorMax: state.normalise === 'count' ? undefined : 100
+        colorMax: state.normalise === 'count' ? undefined : 100,
+        onSelect: (yValue, xValue) => openCellProgrammes(yValue, xValue, programmes)
       });
     }
     const series = table.xValues.map((xv, ci) => ({ name: xv, values: table.yValues.map((yv, ri) => table.matrix[ri][ci]) }));
     const mode = state.chartType === 'stackedBar' ? 'stacked' : state.chartType === 'stacked100Bar' ? 'percent' : 'grouped';
-    return renderBarChart(el, { title: crossTitle(), subtitle: subtitleText(multiNote), categories: table.yValues, series, mode });
+    return renderBarChart(el, {
+      title: crossTitle(), subtitle: subtitleText(multiNote), categories: table.yValues, series, mode,
+      onSelect: (yValue, xValue) => openCellProgrammes(yValue, xValue, programmes)
+    });
   }
 
   function getTableData(programmes) {

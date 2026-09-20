@@ -1,10 +1,15 @@
 // Analysis tab — Mechanics Lab (sections 19-21): mechanism distribution, Mechanism ×
 // Industry, and mechanism co-occurrence. Mechanisms are multi-select throughout — every
 // chart here is explicitly labeled as such, and percentages are allowed to exceed 100%.
-import { distribution, crossTab, normaliseCell, mechanismCooccurrence } from './analysisData.js';
+import { distribution, crossTab, normaliseCell, mechanismCooccurrence, programmesMatching } from './analysisData.js';
 import { renderHBarChart, renderHeatmap, fmtNum, fmtPct } from './charts.js';
-import { mountChartCard, showEmptyChartState } from './chartToolbar.js';
+import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis } from './analysisSaved.js';
+
+function openMechanismList(title, criteria, programmes) {
+  const subset = programmesMatching(programmes, criteria);
+  openProgrammeListModal({ title, subtitle: `${fmtNum(subset.length)} programme(s)`, programmes: subset });
+}
 
 function distributionCard(container, ctx) {
   const state = { measure: 'count' };
@@ -31,7 +36,8 @@ function distributionCard(container, ctx) {
       buildChart: (el) => renderHBarChart(el, {
         title: 'Mechanism Distribution', subtitle,
         rows: dist.rows.map(r => ({ label: r.value, value: r.measureValue })),
-        valueLabel: (r) => state.measure === 'pct' ? fmtPct(r.value) : fmtNum(r.value)
+        valueLabel: (r) => state.measure === 'pct' ? fmtPct(r.value) : fmtNum(r.value),
+        onSelect: (mechanism) => openMechanismList(mechanism, [{ dimKey: 'mechanisms', value: mechanism }], programmes)
       }),
       getTableData: () => ({
         headers: ['Mechanism', 'Number of Programmes', '% of Programmes'],
@@ -77,7 +83,8 @@ function industryCard(container, ctx) {
         rows: table.yValues, cols: table.xValues,
         matrix: table.matrix.map((row, ri) => row.map((v, ci) => normaliseCell(v, ri, ci, table, state.normalise))),
         cellText: (v) => state.normalise === 'count' ? fmtNum(v) : fmtPct(v),
-        colorMax: state.normalise === 'count' ? undefined : 100
+        colorMax: state.normalise === 'count' ? undefined : 100,
+        onSelect: (industry, mechanism) => openMechanismList(`${industry} · ${mechanism}`, [{ dimKey: 'industry', value: industry }, { dimKey: 'mechanisms', value: mechanism }], programmes)
       }),
       getTableData: () => ({
         headers: ['Industry', ...table.xValues],
@@ -140,7 +147,8 @@ function cooccurrenceCard(container, ctx) {
         title: 'Mechanism Combinations', subtitle,
         rows: co.mechanisms, cols: co.mechanisms, matrix: displayMatrix,
         cellText: (v) => state.mode === 'count' ? fmtNum(v) : fmtPct(v),
-        colorMax: state.mode === 'count' ? undefined : 100
+        colorMax: state.mode === 'count' ? undefined : 100,
+        onSelect: (mechA, mechB) => openMechanismList(mechA === mechB ? mechA : `${mechA} + ${mechB}`, [{ dimKey: 'mechanisms', value: mechA }, { dimKey: 'mechanisms', value: mechB }], programmes)
       }),
       getTableData: () => ({
         headers: ['Mechanism', ...co.mechanisms],

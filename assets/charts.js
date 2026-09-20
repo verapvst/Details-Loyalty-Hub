@@ -74,7 +74,7 @@ function legendRow(svg, items, x, y, width) {
 // ---------------- Vertical bar / stacked / 100% stacked ----------------
 // spec: { title, subtitle, categories:[str], series:[{name,values:[num]}], mode:'grouped'|'stacked'|'percent', valueSuffix }
 export function renderBarChart(container, spec) {
-  const width = 680, height = 400;
+  const width = 540, height = 300;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
@@ -112,7 +112,8 @@ export function renderBarChart(container, spec) {
         const bh = (v / maxVal) * plotH;
         svg.appendChild(el('rect', {
           x: plotX + ci * groupW + barPad + si * bw, y: plotY + plotH - bh,
-          width: Math.max(bw - 3, 1), height: bh, rx: 2, fill: colorAt(si)
+          width: Math.max(bw - 3, 1), height: bh, rx: 2, fill: colorAt(si),
+          class: spec.onSelect ? 'bar-rect-clickable' : null, 'data-cat': cat, 'data-series': s.name
         }));
       });
     } else {
@@ -124,7 +125,8 @@ export function renderBarChart(container, spec) {
         const bh = (v / maxVal) * plotH;
         svg.appendChild(el('rect', {
           x: plotX + ci * groupW + barPad, y: plotY + plotH - acc - bh,
-          width: Math.max(groupW - barPad * 2, 1), height: bh, fill: colorAt(si)
+          width: Math.max(groupW - barPad * 2, 1), height: bh, fill: colorAt(si),
+          class: spec.onSelect ? 'bar-rect-clickable' : null, 'data-cat': cat, 'data-series': s.name
         }));
         acc += bh;
       });
@@ -136,6 +138,11 @@ export function renderBarChart(container, spec) {
   });
 
   svg.appendChild(el('line', { x1: plotX, y1: plotY + plotH, x2: plotX + plotW, y2: plotY + plotH, stroke: '#D8D8DC', 'stroke-width': 1 }));
+  if (spec.onSelect) {
+    svg.querySelectorAll('.bar-rect-clickable').forEach(rect => {
+      rect.addEventListener('click', () => spec.onSelect(rect.getAttribute('data-cat'), rect.getAttribute('data-series')));
+    });
+  }
   container.appendChild(svg);
   return svg;
 }
@@ -143,15 +150,15 @@ export function renderBarChart(container, spec) {
 // ---------------- Horizontal bar (distribution) ----------------
 // spec: { title, subtitle, rows:[{label,value,secondaryValue?}], valueLabel:fn, maxOverride, barColor }
 export function renderHBarChart(container, spec) {
-  const rowH = 24;
-  const width = 680;
+  const rowH = 20;
+  const width = 560;
   const height = 70 + spec.rows.length * rowH;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
-  const CHAR_W = 6.2;
-  const labelW = Math.min(220, Math.max(90, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
-  const plotX = 16 + labelW, plotY = topOffset + 6, plotW = width - plotX - 70;
+  const CHAR_W = 5.6;
+  const labelW = Math.min(170, Math.max(80, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
+  const plotX = 16 + labelW, plotY = topOffset + 6, plotW = width - plotX - 60;
   const maxVal = spec.maxOverride || niceMax(Math.max(...spec.rows.map(r => r.value), 1));
   const maxChars = Math.max(3, Math.floor((labelW - 4) / CHAR_W));
 
@@ -190,7 +197,7 @@ export function renderHBarChart(container, spec) {
 // ---------------- Line / Area / Stacked Area ----------------
 // spec: { title, subtitle, categories:[year], series:[{name,values}], mode:'line'|'area'|'stackedArea', percent }
 export function renderLineChart(container, spec) {
-  const width = 680, height = 400;
+  const width = 540, height = 300;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
@@ -248,7 +255,18 @@ export function renderLineChart(container, spec) {
       let d = `M ${pts[0][0]} ${pts[0][1]} `;
       pts.forEach(([x, y]) => { d += `L ${x} ${y} `; });
       svg.appendChild(el('path', { d, fill: 'none', stroke: colorAt(si), 'stroke-width': 2 }));
-      pts.forEach(([x, y]) => svg.appendChild(el('circle', { cx: x, cy: y, r: 2.4, fill: colorAt(si) })));
+      pts.forEach(([x, y], ci) => {
+        if (spec.onSelect) {
+          // A larger transparent hit-area circle under the small visible dot — keeps
+          // the mark's look unchanged while giving the click target more room.
+          const hitArea = el('circle', { cx: x, cy: y, r: 7, fill: 'transparent', class: 'line-point-clickable' });
+          hitArea.addEventListener('click', () => spec.onSelect(spec.categories[ci], s.name));
+          svg.appendChild(hitArea);
+          svg.appendChild(el('circle', { cx: x, cy: y, r: 2.4, fill: colorAt(si), style: 'pointer-events: none;' }));
+        } else {
+          svg.appendChild(el('circle', { cx: x, cy: y, r: 2.4, fill: colorAt(si) }));
+        }
+      });
     });
   }
 
@@ -265,10 +283,10 @@ export function renderLineChart(container, spec) {
 // ---------------- Donut ----------------
 // spec: { title, subtitle, data:[{label,value}] }
 export function renderDonutChart(container, spec) {
-  const width = 520, height = 340;
+  const width = 440, height = 280;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
-  const cx = 130, cy = topOffset + (height - topOffset - 20) / 2 + 6, r = 88, r0 = 52;
+  const cx = 112, cy = topOffset + (height - topOffset - 16) / 2 + 6, r = 72, r0 = 42;
   const total = spec.data.reduce((s, d) => s + d.value, 0) || 1;
 
   let angle = -Math.PI / 2;
@@ -289,12 +307,12 @@ export function renderDonutChart(container, spec) {
   svg.appendChild(text(cx, cy - 4, fmtNum(total), { 'font-size': 20, 'font-weight': 600, fill: '#1D1D1F', 'text-anchor': 'middle' }));
   svg.appendChild(text(cx, cy + 14, 'programmes', { 'font-size': 9.5, fill: '#6E6E73', 'text-anchor': 'middle' }));
 
-  let ly = topOffset + 14;
+  let ly = topOffset + 12;
   spec.data.forEach((d, i) => {
     const pct = total ? (d.value / total) * 100 : 0;
-    svg.appendChild(el('rect', { x: 260, y: ly - 9, width: 10, height: 10, rx: 2, fill: colorAt(i) }));
-    svg.appendChild(text(276, ly, `${d.label} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 11, fill: '#1D1D1F' }));
-    ly += 20;
+    svg.appendChild(el('rect', { x: 214, y: ly - 8, width: 9, height: 9, rx: 2, fill: colorAt(i) }));
+    svg.appendChild(text(228, ly, `${d.label} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 10, fill: '#1D1D1F' }));
+    ly += 17;
   });
 
   if (spec.onSelect) {
@@ -309,14 +327,14 @@ export function renderDonutChart(container, spec) {
 // ---------------- Heatmap ----------------
 // spec: { title, subtitle, rows:[str], cols:[str], matrix:[[num]], cellText:fn(v,r,c), colorMax, rowTotalLabel, colTotalLabel }
 export function renderHeatmap(container, spec) {
-  const ROW_CHAR_W = 6.4;
-  const rowLabelW = Math.min(200, Math.max(90, ...spec.rows.map(r => String(r).length * ROW_CHAR_W)));
+  const ROW_CHAR_W = 5.8;
+  const rowLabelW = Math.min(170, Math.max(80, ...spec.rows.map(r => String(r).length * ROW_CHAR_W)));
   const rowMaxChars = Math.max(3, Math.floor((rowLabelW - 4) / ROW_CHAR_W));
-  const cellW = Math.max(56, Math.min(84, 620 / Math.max(spec.cols.length, 1)));
-  const cellH = 30;
-  const width = rowLabelW + cellW * spec.cols.length + 30;
-  const colHeaderH = 54;
-  const height = 56 + colHeaderH + cellH * spec.rows.length + 20;
+  const cellW = Math.max(44, Math.min(64, 480 / Math.max(spec.cols.length, 1)));
+  const cellH = 24;
+  const width = rowLabelW + cellW * spec.cols.length + 24;
+  const colHeaderH = 46;
+  const height = 48 + colHeaderH + cellH * spec.rows.length + 16;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
@@ -343,12 +361,20 @@ export function renderHeatmap(container, spec) {
       const v = spec.matrix[ri][ci];
       const intensity = maxV ? Math.min(v / maxV, 1) : 0;
       const fill = mixColor('#F5EFE1', '#93753A', intensity);
-      svg.appendChild(el('rect', { x: plotX + ci * cellW, y: plotY + ri * cellH, width: cellW - 2, height: cellH - 2, rx: 3, fill }));
+      svg.appendChild(el('rect', {
+        x: plotX + ci * cellW, y: plotY + ri * cellH, width: cellW - 2, height: cellH - 2, rx: 3, fill,
+        class: spec.onSelect ? 'heatmap-cell-clickable' : null, 'data-row': String(r), 'data-col': String(c)
+      }));
       const cellStr = spec.cellText ? spec.cellText(v, ri, ci) : fmtNum(v);
-      svg.appendChild(text(plotX + ci * cellW + (cellW - 2) / 2, plotY + ri * cellH + cellH / 2 + 4, cellStr, { 'font-size': 10, fill: intensity > 0.55 ? '#FFFFFF' : '#1D1D1F', 'text-anchor': 'middle' }));
+      svg.appendChild(text(plotX + ci * cellW + (cellW - 2) / 2, plotY + ri * cellH + cellH / 2 + 4, cellStr, { 'font-size': 9.5, fill: intensity > 0.55 ? '#FFFFFF' : '#1D1D1F', 'text-anchor': 'middle' }));
     });
   });
 
+  if (spec.onSelect) {
+    svg.querySelectorAll('.heatmap-cell-clickable').forEach(rect => {
+      rect.addEventListener('click', () => spec.onSelect(rect.getAttribute('data-row'), rect.getAttribute('data-col')));
+    });
+  }
   container.appendChild(svg);
   return svg;
 }

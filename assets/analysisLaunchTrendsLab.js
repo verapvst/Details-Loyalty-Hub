@@ -3,9 +3,9 @@
 // nonsensical combinations (e.g. "% of Programmes" + 100% Stacked, which would
 // double-normalize) are never offered.
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, timeSeries } from './analysisData.js';
-import { renderBarChart, renderLineChart } from './charts.js';
-import { mountChartCard, showEmptyChartState } from './chartToolbar.js';
+import { DIMENSIONS, timeSeries, programmesMatching } from './analysisData.js';
+import { renderBarChart, renderLineChart, fmtNum } from './charts.js';
+import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis } from './analysisSaved.js';
 
 const GROUP_BY_KEYS = ['industry', 'sub_industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'feature'];
@@ -62,8 +62,22 @@ export function mount(container, ctx) {
     return parts.join(' · ');
   }
 
-  function buildChartInto(el, ts) {
-    const spec = { title: 'Launch Trends', subtitle: subtitleText(ts), categories: ts.years, series: ts.series };
+  function openYearProgrammes(year, seriesName, programmes) {
+    const criteria = [{ dimKey: 'launch_year', value: Number(year) }];
+    if (state.groupBy !== 'none') criteria.push({ dimKey: state.groupBy, value: seriesName });
+    const subset = programmesMatching(programmes, criteria);
+    openProgrammeListModal({
+      title: state.groupBy !== 'none' ? `${year} · ${seriesName}` : String(year),
+      subtitle: `Launched in ${year} · ${fmtNum(subset.length)} programme(s)`,
+      programmes: subset
+    });
+  }
+
+  function buildChartInto(el, ts, programmes) {
+    const spec = {
+      title: 'Launch Trends', subtitle: subtitleText(ts), categories: ts.years, series: ts.series,
+      onSelect: (year, seriesName) => openYearProgrammes(year, seriesName, programmes)
+    };
     if (['line', 'area', 'stackedArea'].includes(state.chartType)) {
       return renderLineChart(el, { ...spec, mode: state.chartType });
     }
@@ -83,7 +97,7 @@ export function mount(container, ctx) {
       title: 'Launch Trends',
       subtitle: subtitleText(ts),
       note: ts.missingLaunchYearCount ? `${ts.missingLaunchYearCount} programme(s) have no recorded launch year and are excluded from this chart.` : '',
-      buildChart: (el) => buildChartInto(el, ts),
+      buildChart: (el) => buildChartInto(el, ts, programmes),
       getTableData: () => ({
         headers: ['Launch Year', ...ts.series.map(s => s.name)],
         rows: ts.years.map((y, i) => [y, ...ts.series.map(s => roundForTable(s.values[i], state.measure))])

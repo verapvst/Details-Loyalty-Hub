@@ -4,9 +4,9 @@
 // scoped to the programmes that actually have tier rows recorded, and qualification
 // units/currencies are never diffed against each other.
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, tierOverview, tieringByDimension, tierJumps } from './analysisData.js';
+import { DIMENSIONS, tierOverview, tieringByDimension, tierJumps, programmesMatching } from './analysisData.js';
 import { renderHBarChart, fmtNum, fmtPct } from './charts.js';
-import { mountChartCard, showEmptyChartState } from './chartToolbar.js';
+import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis } from './analysisSaved.js';
 
 const TIERING_BY_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope'];
@@ -33,10 +33,20 @@ function overviewCard(container, ctx) {
       return;
     }
     const subtitle = `${ctx.filtersSummaryText()} · based on the ${fmtNum(ov.withStructureCount)} programme(s) with tier structure recorded`;
+    const bucketByLabel = new Map(distRows.map(d => [`${d.bucket} tier${d.bucket === '1' ? '' : 's'}`, d.bucket]));
     mountChartCard(cardRoot, {
       title: 'Tier Count Distribution', subtitle,
       note: `${fmtNum(ov.total - ov.withStructureCount)} programme(s) have no tier structure recorded (they may still use the Tiering mechanism without a documented structure).`,
-      buildChart: (el) => renderHBarChart(el, { title: 'Tier Count Distribution', subtitle, rows: distRows.map(d => ({ label: `${d.bucket} tier${d.bucket === '1' ? '' : 's'}`, value: d.count })) }),
+      buildChart: (el) => renderHBarChart(el, {
+        title: 'Tier Count Distribution', subtitle,
+        rows: distRows.map(d => ({ label: `${d.bucket} tier${d.bucket === '1' ? '' : 's'}`, value: d.count })),
+        onSelect: (label) => {
+          const bucket = bucketByLabel.get(label);
+          const subset = programmes.filter(p => Array.isArray(p.programme_tiers) &&
+            (bucket === '5+' ? p.programme_tiers.length >= 5 : p.programme_tiers.length === Number(bucket)));
+          openProgrammeListModal({ title: label, subtitle: `${fmtNum(subset.length)} programme(s)`, programmes: subset });
+        }
+      }),
       getTableData: () => ({ headers: ['Number of Tiers', 'Programmes'], rows: distRows.map(d => [d.bucket, d.count]) }),
       filename: 'tier-count-distribution',
       onSave: (name) => saveAnalysis({ name, lab: 'tier_overview', config: { globalFilters: ctx.getGlobalFilters() } })
@@ -73,7 +83,11 @@ function tieringByCard(container, ctx) {
         title, subtitle,
         rows: rows.map(r => ({ label: r.value, value: r.pct })),
         maxOverride: 100,
-        valueLabel: (r) => fmtPct(r.value)
+        valueLabel: (r) => fmtPct(r.value),
+        onSelect: (categoryValue) => {
+          const subset = programmesMatching(programmes, [{ dimKey: state.dimKey, value: categoryValue }, { dimKey: 'mechanisms', value: 'Tiering' }]);
+          openProgrammeListModal({ title: `${categoryValue} — Tiered`, subtitle: `${DIMENSIONS[state.dimKey].label} · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
+        }
       }),
       getTableData: () => ({ headers: [DIMENSIONS[state.dimKey].label, 'Tiered', 'Total', '% Tiered'], rows: rows.map(r => [r.value, r.tiered, r.total, Number(r.pct.toFixed(1))]) }),
       filename: `tiering-by-${state.dimKey}`,
@@ -121,12 +135,20 @@ function jumpsCard(container, ctx) {
 
     const title = state.mode === 'qualification' ? 'Average Tier Jump — by Qualification Unit' : 'Average Tier Jump — by Fee Currency';
     const subtitle = `${ctx.filtersSummaryText()} · average % increase from one tier to the next, within each ${state.mode === 'qualification' ? 'qualification unit' : 'currency'}`;
+    const segmentByLabel = new Map(summary.map(s => [`${s.segment} (${s.count} jump${s.count === 1 ? '' : 's'})`, s]));
     mountChartCard(cardRoot, {
       title, subtitle,
       buildChart: (el) => renderHBarChart(el, {
         title, subtitle,
         rows: summary.map(s => ({ label: `${s.segment} (${s.count} jump${s.count === 1 ? '' : 's'})`, value: s.avgPct })),
-        valueLabel: (r) => fmtPct(r.value)
+        valueLabel: (r) => fmtPct(r.value),
+        onSelect: (label) => {
+          const s = segmentByLabel.get(label);
+          if (!s) return;
+          const names = new Set(s.list.map(j => j.programme));
+          const subset = programmes.filter(p => names.has(p.programme_name));
+          openProgrammeListModal({ title: s.segment, subtitle: `Programmes with a tier jump in this segment · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
+        }
       }),
       getTableData: () => {
         const headers = state.mode === 'qualification'

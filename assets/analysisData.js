@@ -355,6 +355,15 @@ export function tierJumps(programmes) {
   return { byUnit, byCurrency };
 }
 
+// ---------------- Generic "which programmes is this?" lookup ----------------
+// criteria: [{dimKey, value}, ...] — every criterion must match (AND). Powers every
+// click-through on the page (a bar, a heatmap cell, a KPI card): the same function
+// works whether it's one dimension (a distribution bar) or two (a cross-tab cell,
+// including two values of the SAME multi-select dimension, e.g. a mechanism pair).
+export function programmesMatching(programmes, criteria) {
+  return programmes.filter(p => criteria.every(({ dimKey, value }) => valuesOf(DIMENSIONS[dimKey], p).includes(value)));
+}
+
 // ---------------- Category drill-down profile ----------------
 
 export function categoryProfile(programmes, dimKey, value) {
