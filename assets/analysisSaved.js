@@ -69,6 +69,7 @@ export async function addNote({ title, note_text, linked_analysis_id, tags }) {
     .select('*, analysis_saved(name, lab)').single();
   if (error) throw new Error(isMissingTableError(error) ? 'Research Notes aren’t set up yet — run supabase/024_analysis_lab.sql first.' : error.message);
   notes = [data, ...notes];
+  notifyChange();
   return data;
 }
 
@@ -76,6 +77,7 @@ export async function deleteNote(id) {
   const { error } = await supabase.from('analysis_notes').delete().eq('id', id);
   if (error) throw new Error(error.message);
   notes = notes.filter(n => n.id !== id);
+  notifyChange();
 }
 
 export const NOTE_TAGS = ['Trend', 'Industry', 'Mechanics', 'Membership', 'Positioning', 'Geography', 'Tiering', 'Potential Thesis Finding', 'Needs Validation'];

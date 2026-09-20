@@ -1,25 +1,34 @@
-// Analysis tab orchestrator: global filter bar, KPI snapshot, and every Lab. Loads the
-// full programme dataset once (assets/analysisData.js) and re-derives everything else
-// client-side on every filter change — no page reloads, matching the rest of the app.
+// My Laboratory orchestrator. Loads the dataset once and drives four workspaces
+// (Explore / Relate / Tiers / Saved) — only one visible at a time, all mounted once so
+// switching tabs never loses in-progress state. Reuses assets/analysisData.js for every
+// aggregation; this file is purely page chrome (header, compact filters, tabs, persistence).
 import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
-import { loadAnalysisDataset, applyGlobalFilters } from './analysisData.js';
+import { loadAnalysisDataset, applyGlobalFilters, snapshotKpis } from './analysisData.js';
+import { fmtNum } from './charts.js';
 
-import { mountKpiSnapshot } from './analysisKpiSnapshot.js';
-import { mount as mountLaunchTrends } from './analysisLaunchTrendsLab.js';
-import { mount as mountDistribution } from './analysisDistributionLab.js';
-import { mount as mountCross } from './analysisCrossLab.js';
-import { mount as mountMechanics } from './analysisMechanicsLab.js';
-import { mount as mountTier } from './analysisTierLab.js';
-import { mount as mountSavedNotes } from './analysisSavedNotes.js';
+import { mount as mountExplore } from './labExplore.js';
+import { mount as mountRelate } from './labRelate.js';
+import { mount as mountTiers } from './labTiers.js';
+import { mount as mountSaved } from './labSaved.js';
 
 await initNav('analysis');
 await loadCustomOptions();
 
-// ---------------- Global filter bar ----------------
+// ---------------- Lightweight persistence (session always; localStorage best-effort) ----------------
 
-const MULTI_FILTERS = [
+const STORAGE_PREFIX = 'lab_state_';
+function loadPersisted(key) {
+  try { const raw = localStorage.getItem(STORAGE_PREFIX + key); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+function savePersisted(key, value) {
+  try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* private mode etc. */ }
+}
+
+// ---------------- Global filters (compact chip row, not a wall of dropdowns) ----------------
+
+const FILTER_FIELDS = [
   { key: 'industry', label: 'Industry', optionKey: 'industry' },
   { key: 'geographic_scope', label: 'Geography', optionKey: 'geographic_scope' },
   { key: 'programme_positioning', label: 'Positioning', optionKey: 'programme_positioning' },
@@ -28,146 +37,180 @@ const MULTI_FILTERS = [
   { key: 'access_registration', label: 'Access', optionKey: 'access_registration' }
 ];
 
-const globalFilters = { yearMin: null, yearMax: null };
-MULTI_FILTERS.forEach(f => { globalFilters[f.key] = []; });
-
-function filterBarHTML() {
-  const multi = MULTI_FILTERS.map(f => `
-    <div class="filter-group scope-filter" data-filter-key="${f.key}">
-      <span class="filter-label">${escapeHtml(f.label)}</span>
-      <button type="button" class="filter-select multi-filter-btn" id="gf-btn-${f.key}">All</button>
-      <div class="scope-filter-panel" id="gf-panel-${f.key}" hidden>
-        <div class="checkbox-row">${getOptionList(f.optionKey).map(o => `<label class="checkbox-item"><input type="checkbox" value="${escapeHtml(o)}" /> ${escapeHtml(o)}</label>`).join('')}</div>
-      </div>
-    </div>
-  `).join('');
-  return `
-    ${multi}
-    <div class="filter-group year-range">
-      <span class="filter-label">Launch Year</span>
-      <input type="number" id="gf-year-min" placeholder="Min" />
-      <span>–</span>
-      <input type="number" id="gf-year-max" placeholder="Max" />
-    </div>
-    <button class="btn-clear-filters" id="gf-clear" type="button">Clear All</button>
-  `;
-}
-
-function updateFilterButtonLabel(key) {
-  const btn = document.getElementById(`gf-btn-${key}`);
-  const sel = globalFilters[key];
-  btn.textContent = !sel.length ? 'All' : (sel.length <= 2 ? sel.join(', ') : `${sel.length} selected`);
-}
-
-function wireFilterBar() {
-  MULTI_FILTERS.forEach(f => {
-    const btn = document.getElementById(`gf-btn-${f.key}`);
-    const panel = document.getElementById(`gf-panel-${f.key}`);
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const wasHidden = panel.hidden;
-      document.querySelectorAll('.scope-filter-panel').forEach(p => { p.hidden = true; });
-      panel.hidden = !wasHidden;
-    });
-    panel.addEventListener('change', () => {
-      globalFilters[f.key] = [...panel.querySelectorAll('input:checked')].map(cb => cb.value);
-      updateFilterButtonLabel(f.key);
-      rerenderAll();
-    });
-  });
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.scope-filter')) document.querySelectorAll('.scope-filter-panel').forEach(p => { p.hidden = true; });
-  });
-
-  const yearMin = document.getElementById('gf-year-min');
-  const yearMax = document.getElementById('gf-year-max');
-  [yearMin, yearMax].forEach(inp => inp.addEventListener('change', () => {
-    globalFilters.yearMin = yearMin.value ? Number(yearMin.value) : null;
-    globalFilters.yearMax = yearMax.value ? Number(yearMax.value) : null;
-    rerenderAll();
-  }));
-
-  document.getElementById('gf-clear').addEventListener('click', () => {
-    MULTI_FILTERS.forEach(f => {
-      globalFilters[f.key] = [];
-      document.querySelectorAll(`#gf-panel-${f.key} input`).forEach(cb => { cb.checked = false; });
-      updateFilterButtonLabel(f.key);
-    });
-    globalFilters.yearMin = null; globalFilters.yearMax = null;
-    yearMin.value = ''; yearMax.value = '';
-    rerenderAll();
-  });
-}
+const defaultFilters = { yearMin: null, yearMax: null };
+FILTER_FIELDS.forEach(f => { defaultFilters[f.key] = []; });
+const persistedFilters = loadPersisted('filters');
+const globalFilters = persistedFilters ? { ...defaultFilters, ...persistedFilters } : { ...defaultFilters };
 
 function filtersSummaryText() {
   const parts = [];
-  MULTI_FILTERS.forEach(f => { if (globalFilters[f.key].length) parts.push(`${f.label}: ${globalFilters[f.key].join(', ')}`); });
+  FILTER_FIELDS.forEach(f => { if (globalFilters[f.key].length) parts.push(`${f.label}: ${globalFilters[f.key].join(', ')}`); });
   if (globalFilters.yearMin != null || globalFilters.yearMax != null) {
     parts.push(`Launch Year: ${globalFilters.yearMin ?? '…'}–${globalFilters.yearMax ?? '…'}`);
   }
   return parts.length ? parts.join(' · ') : 'All programmes';
 }
 
-document.getElementById('global-filter-bar').innerHTML = filterBarHTML();
-wireFilterBar();
+function filterAddPanelHTML() {
+  const multi = FILTER_FIELDS.map(f => `
+    <div class="filter-add-field">
+      <div class="filter-add-field-label">${escapeHtml(f.label)}</div>
+      <div class="checkbox-row" data-field="${f.key}">${getOptionList(f.optionKey).map(o => `<label class="checkbox-item"><input type="checkbox" value="${escapeHtml(o)}" ${globalFilters[f.key].includes(o) ? 'checked' : ''} /> ${escapeHtml(o)}</label>`).join('')}</div>
+    </div>
+  `).join('');
+  return `
+    ${multi}
+    <div class="filter-add-field">
+      <div class="filter-add-field-label">Launch Year</div>
+      <div class="year-range">
+        <input type="number" id="gf-year-min" placeholder="Min" value="${globalFilters.yearMin ?? ''}" />
+        <span>–</span>
+        <input type="number" id="gf-year-max" placeholder="Max" value="${globalFilters.yearMax ?? ''}" />
+      </div>
+    </div>
+  `;
+}
 
-// ---------------- Labs ----------------
+function chipLabel(values) {
+  return values.length <= 2 ? values.join(', ') : `${values[0]}, +${values.length - 1}`;
+}
 
-const LAB_SECTION_IDS = {
-  launch_trends: 'lab-launch-trends', distribution: 'lab-distribution', cross_analysis: 'lab-cross',
-  mechanics_distribution: 'lab-mechanics', mechanics_industry: 'lab-mechanics', mechanics_cooccurrence: 'lab-mechanics',
-  tier_overview: 'lab-tiers', tier_by_dimension: 'lab-tiers', tier_jumps: 'lab-tiers'
-};
+function renderFilterChips() {
+  const chipsEl = document.getElementById('filter-chips');
+  const chips = [];
+  FILTER_FIELDS.forEach(f => {
+    if (globalFilters[f.key].length) chips.push({ key: f.key, label: `${f.label}: ${chipLabel(globalFilters[f.key])}` });
+  });
+  if (globalFilters.yearMin != null || globalFilters.yearMax != null) {
+    chips.push({ key: 'launchYear', label: `Launch Year: ${globalFilters.yearMin ?? '…'}–${globalFilters.yearMax ?? '…'}` });
+  }
+  chipsEl.innerHTML = chips.map(c => `<span class="filter-chip" data-chip="${c.key}">${escapeHtml(c.label)} <button type="button" aria-label="Remove filter">&times;</button></span>`).join('');
+  chipsEl.querySelectorAll('.filter-chip button').forEach(btn => btn.addEventListener('click', () => {
+    const key = btn.closest('.filter-chip').dataset.chip;
+    if (key === 'launchYear') { globalFilters.yearMin = null; globalFilters.yearMax = null; }
+    else globalFilters[key] = [];
+    document.querySelectorAll(`.checkbox-row[data-field="${key}"] input`).forEach(cb => { cb.checked = false; });
+    const yMin = document.getElementById('gf-year-min'), yMax = document.getElementById('gf-year-max');
+    if (yMin) yMin.value = ''; if (yMax) yMax.value = '';
+    onFiltersChanged();
+  }));
+}
 
-const labs = {};
+function wireFilterAddPanel() {
+  const btn = document.getElementById('filter-add-btn');
+  const panel = document.getElementById('filter-add-panel');
+  panel.innerHTML = filterAddPanelHTML();
+  btn.addEventListener('click', (e) => { e.stopPropagation(); panel.hidden = !panel.hidden; });
+  document.addEventListener('click', (e) => { if (!panel.hidden && !e.target.closest('.filter-add-wrap')) panel.hidden = true; });
+  panel.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      const field = e.target.closest('.checkbox-row').dataset.field;
+      globalFilters[field] = [...panel.querySelectorAll(`.checkbox-row[data-field="${field}"] input:checked`)].map(cb => cb.value);
+      onFiltersChanged();
+    }
+  });
+  const commitYear = () => {
+    const yMin = document.getElementById('gf-year-min'), yMax = document.getElementById('gf-year-max');
+    globalFilters.yearMin = yMin.value ? Number(yMin.value) : null;
+    globalFilters.yearMax = yMax.value ? Number(yMax.value) : null;
+    onFiltersChanged();
+  };
+  panel.querySelector('#gf-year-min').addEventListener('change', commitYear);
+  panel.querySelector('#gf-year-max').addEventListener('change', commitYear);
+}
+
+function onFiltersChanged() {
+  renderFilterChips();
+  savePersisted('filters', globalFilters);
+  rerenderAll();
+}
+
+function restoreFilterUI() {
+  renderFilterChips();
+  const panel = document.getElementById('filter-add-panel');
+  if (panel) panel.innerHTML = filterAddPanelHTML();
+}
+
+// ---------------- Header / orientation line ----------------
+
+function renderOrientationLine(programmes) {
+  const k = snapshotKpis(programmes);
+  document.getElementById('lab-orientation').textContent =
+    `${fmtNum(k.total)} programmes · ${fmtNum(k.companies)} companies · ${fmtNum(k.industries)} industries · ${fmtNum(k.countries)} countries`;
+}
+
+// ---------------- Workspace tabs ----------------
+
+const WORKSPACES = ['explore', 'relate', 'tiers', 'saved'];
+const workspaces = {};
+let activeTab = loadPersisted('activeTab') || 'explore';
+if (!WORKSPACES.includes(activeTab)) activeTab = 'explore';
+
+function showTab(tab) {
+  activeTab = tab;
+  savePersisted('activeTab', tab);
+  document.querySelectorAll('.lab-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+  WORKSPACES.forEach(w => { document.getElementById(`workspace-${w}`).hidden = w !== tab; });
+}
+
+function wireTabs() {
+  document.querySelectorAll('.lab-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+}
 
 function reopenAnalysis(row) {
   const config = row.config || {};
   const gf = config.globalFilters || {};
-  MULTI_FILTERS.forEach(f => {
-    globalFilters[f.key] = Array.isArray(gf[f.key]) ? gf[f.key] : [];
-    document.querySelectorAll(`#gf-panel-${f.key} input`).forEach(cb => { cb.checked = globalFilters[f.key].includes(cb.value); });
-    updateFilterButtonLabel(f.key);
-  });
+  FILTER_FIELDS.forEach(f => { globalFilters[f.key] = Array.isArray(gf[f.key]) ? gf[f.key] : []; });
   globalFilters.yearMin = gf.yearMin ?? null;
   globalFilters.yearMax = gf.yearMax ?? null;
-  document.getElementById('gf-year-min').value = globalFilters.yearMin ?? '';
-  document.getElementById('gf-year-max').value = globalFilters.yearMax ?? '';
-
+  restoreFilterUI();
+  savePersisted('filters', globalFilters);
   rerenderAll();
 
-  const controller = {
-    launch_trends: labs.launchTrends, distribution: labs.distribution, cross_analysis: labs.cross,
-    mechanics_distribution: labs.mechanics, mechanics_industry: labs.mechanics, mechanics_cooccurrence: labs.mechanics,
-    tier_overview: labs.tier, tier_by_dimension: labs.tier, tier_jumps: labs.tier
-  }[row.lab];
-  if (controller) controller.applyConfig({ ...config, lab: row.lab });
-
-  const sectionId = LAB_SECTION_IDS[row.lab];
-  if (sectionId) document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const ws = workspaces[row.lab];
+  if (ws) { ws.applyConfig(config); savePersisted(row.lab, ws.getConfig()); }
+  showTab(row.lab);
   showToast(`Reopened "${row.name}".`);
 }
 
-const ctx = { filtersSummaryText, getGlobalFilters: () => JSON.parse(JSON.stringify(globalFilters)), reopenAnalysis };
+// ---------------- Boot ----------------
 
-const renderKpi = mountKpiSnapshot();
-labs.launchTrends = mountLaunchTrends(document.getElementById('launch-trends-root'), ctx);
-labs.distribution = mountDistribution(document.getElementById('distribution-root'), ctx);
-labs.cross = mountCross(document.getElementById('cross-root'), ctx);
-labs.mechanics = mountMechanics(document.getElementById('mechanics-root'), ctx);
-labs.tier = mountTier(document.getElementById('tier-root'), ctx);
-mountSavedNotes(ctx);
+function makeCtx(workspaceKey) {
+  return {
+    filtersSummaryText,
+    getGlobalFilters: () => JSON.parse(JSON.stringify(globalFilters)),
+    reopenAnalysis,
+    persist: (state) => savePersisted(workspaceKey, state),
+    // Used by Explore's Mechanism → Tiering drill-down to bridge into the Tiers
+    // workspace as a natural continuation — the same global filters already apply
+    // there, so no extra scoping plumbing is needed.
+    switchTab: (tab) => showTab(tab)
+  };
+}
+
+wireFilterAddPanel();
+restoreFilterUI();
+wireTabs();
+showTab(activeTab);
+
+workspaces.explore = mountExplore(document.getElementById('workspace-explore'), makeCtx('explore'));
+workspaces.relate = mountRelate(document.getElementById('workspace-relate'), makeCtx('relate'));
+workspaces.tiers = mountTiers(document.getElementById('workspace-tiers'), makeCtx('tiers'));
+workspaces.saved = mountSaved(makeCtx('saved'));
+
+['explore', 'relate', 'tiers'].forEach(key => {
+  const persisted = loadPersisted(key);
+  if (persisted) workspaces[key].applyConfig(persisted);
+});
 
 let allProgrammes = [];
 
 function rerenderAll() {
   const filtered = applyGlobalFilters(allProgrammes, globalFilters);
-  renderKpi(filtered);
-  labs.launchTrends.render(filtered);
-  labs.distribution.render(filtered);
-  labs.cross.render(filtered);
-  labs.mechanics.render(filtered);
-  labs.tier.render(filtered);
+  renderOrientationLine(filtered);
+  workspaces.explore.render(filtered);
+  workspaces.relate.render(filtered);
+  workspaces.tiers.render(filtered);
 }
 
 try {

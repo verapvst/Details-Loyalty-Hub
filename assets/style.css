@@ -805,45 +805,87 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   .kpi-row { grid-template-columns: 1fr; }
 }
 
-/* ================= Analysis: Loyalty Research Laboratory ================= */
+/* ================= My Laboratory ================= */
+/* Segmented workspace model: Explore / Relate / Tiers / Saved. Only one workspace
+   renders at a time — this is a continuous research surface, not a stack of
+   dashboards, so containers/cards are used only where they aid grouping or
+   interaction, never as decoration. */
 
-.analysis-hero { padding: 44px 40px 8px; max-width: 1280px; margin: 0 auto; }
-.analysis-hero h1 { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 42px); font-weight: 500; letter-spacing: -0.01em; margin-bottom: 6px; }
-.analysis-hero p { color: var(--muted); font-size: 13px; max-width: 560px; }
+.lab-header { padding: 40px 40px 0; max-width: 1100px; margin: 0 auto; }
+.lab-header h1 { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 40px); font-weight: 500; letter-spacing: -0.01em; margin-bottom: 6px; }
+.lab-subtitle { color: var(--muted); font-size: 13px; max-width: 560px; }
+.lab-orientation { color: var(--muted-light); font-size: 12px; margin-top: 14px; }
 
-.lab-jump-nav-wrap { position: static; box-shadow: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
-.lab-jump-nav { gap: 20px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; }
-.lab-jump-nav a { white-space: nowrap; }
+/* ---------- Compact filter row: active filters only, everything else behind one button ---------- */
+.lab-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-bottom: 18px; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px 5px 12px; border-radius: 20px;
+  background: var(--accent-light); color: var(--accent-mid); font-size: 11.5px; font-weight: 500;
+}
+.filter-chip button { color: var(--accent-mid); font-size: 14px; line-height: 1; opacity: 0.7; padding: 2px; }
+.filter-chip button:hover { opacity: 1; }
+.filter-add-wrap { position: relative; }
+.filter-add-btn { font-size: 11.5px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 20px; background: var(--surface-alt); }
+.filter-add-btn:hover { color: var(--dark); background: var(--border); }
+.filter-add-panel {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 95; width: 340px; max-height: 420px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.14); display: flex; flex-direction: column; gap: 16px;
+}
+.filter-add-panel[hidden] { display: none; } /* [hidden] alone loses the specificity tie against this rule's own display */
+.filter-add-field-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.filter-add-field .checkbox-row { gap: 8px 14px; }
+.filter-add-field .checkbox-item { font-size: 12px; }
 
-/* Global filter bar — reuses .filter-bar/.filter-select; multi-selects reuse the
-   Data & Insights Scope-filter pattern (.scope-filter/.scope-filter-panel). */
 .year-range { display: flex; align-items: center; gap: 6px; }
 .year-range input {
   width: 62px; padding: 7px 10px; border: none; border-radius: 20px; background: var(--surface-alt);
   font-size: 12px; text-align: center; color: var(--dark); outline: none;
 }
 .year-range span { font-size: 11px; color: var(--muted-light); }
-.multi-filter-btn { min-width: 64px; text-align: left; }
 
-.lab-section { padding: 8px 40px 56px; max-width: 1280px; margin: 0 auto; scroll-margin-top: calc(var(--nav-h) + 90px); }
-.lab-section-head { margin-bottom: 6px; }
-.lab-section-title { font-family: var(--font-display); font-size: 26px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); }
-.lab-section-subtitle { font-size: 12.5px; color: var(--muted); margin-top: 4px; max-width: 620px; }
+/* ---------- Segmented workspace navigation ---------- */
+.lab-tabs-wrap { border-bottom: 1px solid var(--border); position: sticky; top: var(--nav-h); background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 80; }
+.lab-tabs { display: flex; gap: 4px; max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+.lab-tab {
+  padding: 14px 4px; margin-right: 26px; font-size: 14px; font-weight: 500; color: var(--muted);
+  border-bottom: 2px solid transparent; transition: color var(--transition), border-color var(--transition);
+}
+.lab-tab:hover { color: var(--dark); }
+.lab-tab.active { color: var(--dark); border-bottom-color: var(--accent); font-weight: 600; }
 
-.lab-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 26px 28px; margin-top: 18px; }
-.lab-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--accent); margin-bottom: 14px; }
-.lab-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; align-items: start; }
+.lab-main { max-width: 1100px; margin: 0 auto; padding: 32px 40px 80px; }
+.workspace[hidden] { display: none; }
 
-.kpi-row-single-line { grid-template-columns: unset; display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; }
-.kpi-row-single-line .kpi-item { flex: 1 1 0; min-width: 128px; padding: 16px 16px; }
-.kpi-row-single-line .kpi-label { font-size: 9.5px; margin-bottom: 6px; white-space: nowrap; }
-.kpi-row-single-line .kpi-value { font-size: 26px; }
-.kpi-item-clickable { cursor: pointer; transition: box-shadow var(--transition), transform var(--transition); }
-.kpi-item-clickable:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+/* ---------- Workspace primary interaction ---------- */
+.workspace-prompt { margin-bottom: 22px; }
+.workspace-prompt-label { font-family: var(--font-display); font-size: 19px; font-weight: 500; color: var(--dark); margin-bottom: 10px; }
+.control-select-lg { font-size: 14px; padding: 10px 34px 10px 14px; min-width: 220px; }
+
+.relate-xy-row { display: flex; align-items: flex-end; gap: 24px; margin-bottom: 6px; flex-wrap: wrap; }
+
+.try-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0 26px; }
+.try-chips-label { font-size: 11.5px; color: var(--muted-light); margin-right: 2px; }
+.try-chip { font-size: 11.5px; font-weight: 500; padding: 6px 13px; border-radius: 20px; background: var(--surface-alt); color: var(--dark); }
+.try-chip:hover { background: var(--accent-light); color: var(--accent-mid); }
+
+.workspace-secondary-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 20px; margin: 22px 0 18px; }
+.workspace-columns { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: start; }
+
+.tip-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
+  padding: 8px 12px; border-radius: var(--radius); background: var(--accent-light); color: var(--accent-mid); font-size: 11.5px;
+}
+.tip-dismiss { font-size: 14px; line-height: 1; opacity: 0.7; }
+.tip-dismiss:hover { opacity: 1; }
+
+.tiers-view-toggle { margin-bottom: 26px; }
 
 /* ---------- Chart-builder controls ---------- */
 .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 18px; }
 .control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group[hidden] { display: none; }
 .control-group label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .control-select {
   padding: 7px 30px 7px 12px; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 500;
@@ -859,15 +901,27 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .chart-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
 .chart-card-title { font-size: 14px; font-weight: 600; color: var(--dark); }
 .chart-card-subtitle { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-.chart-toolbar { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
-.chart-tb-btn {
-  height: 26px; padding: 0 10px; border-radius: 7px; background: var(--surface-alt); color: var(--muted);
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; display: flex; align-items: center; gap: 5px;
-  white-space: nowrap; transition: background var(--transition), color var(--transition);
+/* Save = analytical action (prominent); everything else is a utility tucked under
+   one "More" popover — replaces the old six-equal-weight-button toolbar. */
+.chart-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.btn-save {
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px;
+  background: var(--accent-light); color: var(--accent-mid); font-size: 12px; font-weight: 600;
+  transition: background var(--transition), color var(--transition);
 }
-.chart-tb-btn .chart-tb-icon { font-size: 12px; line-height: 1; }
-.chart-tb-btn:hover { background: var(--accent-light); color: var(--accent-mid); }
-.chart-tb-save:hover { background: var(--accent-light); color: var(--accent); }
+.btn-save:hover { background: var(--accent); color: var(--white); }
+.btn-save-icon { font-size: 13px; line-height: 1; }
+.more-menu-wrap { position: relative; }
+.btn-more { width: 28px; height: 28px; border-radius: 50%; color: var(--muted-light); font-size: 14px; letter-spacing: 1px; }
+.btn-more:hover { background: var(--surface-alt); color: var(--dark); }
+.more-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 95; min-width: 180px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14); display: flex; flex-direction: column;
+}
+.more-menu[hidden] { display: none; }
+.more-menu button { text-align: left; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; color: var(--dark); }
+.more-menu button:hover { background: var(--surface-alt); }
 .chart-card-body { overflow-x: auto; }
 /* Cap each chart to the compact size it was actually designed at (see --native-w in
    assets/charts.js) so a wide chart card on a big monitor doesn't stretch a small
@@ -891,11 +945,13 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .save-modal { max-width: 440px; padding: 28px 30px; gap: 14px; display: flex; flex-direction: column; }
 .save-modal h2 { font-family: var(--font-display); font-size: 20px; font-weight: 500; }
 .save-modal p { font-size: 12.5px; color: var(--muted); }
-.save-modal input {
+.save-modal-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.save-modal-optional { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.save-modal input, .save-modal textarea {
   padding: 10px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt);
-  font-size: 13px; outline: none;
+  font-size: 13px; outline: none; font-family: inherit; resize: vertical;
 }
-.save-modal input:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.save-modal input:focus, .save-modal textarea:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
 .save-modal-foot { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
 
 .data-modal-head, .chart-modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 28px; flex-shrink: 0; }
@@ -927,10 +983,18 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 /* ---------- Category drill-down ---------- */
 .drilldown-panel { background: var(--surface-alt); border-radius: var(--radius); padding: 18px 20px; }
 .drilldown-empty { color: var(--muted); font-size: 12.5px; }
-.drilldown-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .drilldown-title { font-size: 15px; font-weight: 600; color: var(--dark); }
-.drilldown-count { font-size: 11.5px; color: var(--muted); margin-bottom: 14px; }
-.drilldown-block { margin-top: 14px; }
+/* The programme count itself is the click target — visibly a link, not a hidden
+   affordance on the chart mark alone. */
+.drill-count-link {
+  display: inline-block; margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--accent-mid);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.drill-count-link:hover { color: var(--accent); }
+.drill-bridge-link { display: block; margin-top: 10px; font-size: 11.5px; font-weight: 500; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.drill-bridge-link:hover { color: var(--dark); }
+.drilldown-block { margin-top: 16px; }
+.drilldown-block-note { font-weight: 400; text-transform: none; letter-spacing: 0; }
 .drilldown-block-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .drilldown-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 5px; }
 .drilldown-bar-row .dbr-label { width: 120px; flex-shrink: 0; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -939,31 +1003,24 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .drilldown-bar-row .dbr-pct { width: 42px; text-align: right; color: var(--muted); flex-shrink: 0; }
 .distribution-row-clickable { cursor: pointer; }
 
-/* ---------- Saved analyses / notes ---------- */
-.saved-analysis-card, .note-card {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
-  padding: 16px 18px; border-radius: var(--radius); background: var(--surface-alt); margin-bottom: 10px;
+/* ---------- Saved: a research library, not a dashboard ---------- */
+.saved-list { display: flex; flex-direction: column; }
+.saved-item {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 18px 4px; border-bottom: 1px solid var(--border);
 }
-.saved-analysis-name { font-size: 13.5px; font-weight: 600; color: var(--dark); }
-.saved-analysis-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
-.saved-analysis-actions { display: flex; gap: 10px; flex-shrink: 0; }
-.note-title { font-size: 13.5px; font-weight: 600; color: var(--dark); }
-.note-text { font-size: 12.5px; color: var(--dark); margin-top: 6px; white-space: pre-wrap; }
-.note-meta { font-size: 11px; color: var(--muted); margin-top: 8px; }
-.note-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.tag-pill { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-light); color: var(--accent-mid); }
-.notes-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.notes-form input[type="text"], .notes-form textarea {
-  padding: 9px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; font-family: inherit;
-}
-.notes-form textarea { resize: vertical; min-height: 64px; }
-.notes-form input:focus, .notes-form textarea:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.saved-item-main { min-width: 0; }
+.saved-item-title { font-size: 14.5px; font-weight: 600; color: var(--dark); }
+.saved-item-config { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.saved-item-takeaway { font-size: 13px; color: var(--dark); margin-top: 8px; font-style: italic; max-width: 560px; }
+.saved-item-meta { font-size: 10.5px; color: var(--muted-light); margin-top: 8px; }
+.saved-item-actions { display: flex; gap: 12px; flex-shrink: 0; padding-top: 2px; }
 .setup-note { font-size: 12px; color: var(--muted); background: var(--surface-alt); padding: 12px 16px; border-radius: var(--radius); }
 
 @media (max-width: 860px) {
-  .analysis-hero, .lab-section { padding-left: 20px; padding-right: 20px; }
-  .lab-grid-2 { grid-template-columns: 1fr; }
-  .lab-card { padding: 20px; }
+  .lab-header, .lab-tabs, .lab-main { padding-left: 20px; padding-right: 20px; }
+  .workspace-columns { grid-template-columns: 1fr; }
+  .relate-xy-row { gap: 14px; }
   .data-modal-body, .chart-modal-body { padding-left: 18px; padding-right: 18px; }
-  .kpi-row-single-line .kpi-item { min-width: 108px; }
+  .filter-add-panel { width: calc(100vw - 40px); left: -20px; }
 }
