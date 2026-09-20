@@ -63,30 +63,46 @@ function titleBlock(svg, title, subtitle, width) {
   return subtitle ? 46 : (title ? 32 : 10);
 }
 
-function legendRow(svg, items, x, y, width) {
-  let cx = x;
-  const rowGap = 18;
-  let rows = 1;
+const LEGEND_ROW_GAP = 16;
+
+// Legend layout is measured BEFORE the chart's total height is fixed (see
+// legendRows() below) so the svg can grow to fit however many rows a many-series
+// chart wraps into — legend rows are never drawn past the bottom edge and clipped.
+function legendItemWidth(item) { return 11 + 6 + item.name.length * 5.6 + 16; }
+
+function legendRows(items, maxWidth) {
+  let cx = 0, rows = 1;
   items.forEach((item) => {
-    const w = 12 + 6 + item.name.length * 6.2 + 18;
-    if (cx + w > x + width && cx > x) { cx = x; y += rowGap; rows++; }
-    svg.appendChild(el('rect', { x: cx, y: y - 9, width: 10, height: 10, rx: 2, fill: item.color }));
-    svg.appendChild(text(cx + 16, y, item.name, { 'font-size': 10.5, fill: '#1D1D1F' }));
+    const w = legendItemWidth(item);
+    if (cx + w > maxWidth && cx > 0) { cx = 0; rows++; }
     cx += w;
   });
-  return rows * rowGap;
+  return rows;
+}
+
+function drawLegend(svg, items, x, y, maxWidth) {
+  let cx = x;
+  items.forEach((item) => {
+    const w = legendItemWidth(item);
+    if (cx + w > x + maxWidth && cx > x) { cx = x; y += LEGEND_ROW_GAP; }
+    svg.appendChild(el('rect', { x: cx, y: y - 8, width: 9, height: 9, rx: 2, fill: item.color }));
+    svg.appendChild(text(cx + 14, y, item.name, { 'font-size': 9, fill: '#1D1D1F' }));
+    cx += w;
+  });
 }
 
 // ---------------- Vertical bar / stacked / 100% stacked ----------------
 // spec: { title, subtitle, categories:[str], series:[{name,values:[num]}], mode:'grouped'|'stacked'|'percent', valueSuffix }
 export function renderBarChart(container, spec) {
-  const width = 460, height = 250;
+  const width = 460, baseHeight = 250;
+  const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
+  const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
+  const legendH = legendRowCount * LEGEND_ROW_GAP;
+  const height = baseHeight + legendH;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
-  const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
-  const legendH = spec.series.length > 1 ? legendRow(svg, legendItems, 16, height - 10, width - 32) : 0;
 
-  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = height - plotY - 26 - legendH;
+  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
   const percent = spec.mode === 'percent';
   const stacked = spec.mode === 'stacked' || percent;
@@ -144,6 +160,7 @@ export function renderBarChart(container, spec) {
   });
 
   svg.appendChild(el('line', { x1: plotX, y1: plotY + plotH, x2: plotX + plotW, y2: plotY + plotH, stroke: '#D8D8DC', 'stroke-width': 1 }));
+  if (legendRowCount) drawLegend(svg, legendItems, 16, baseHeight + 10, width - 32);
   if (spec.onSelect) {
     svg.querySelectorAll('.bar-rect-clickable').forEach(rect => {
       rect.addEventListener('click', () => spec.onSelect(rect.getAttribute('data-cat'), rect.getAttribute('data-series')));
@@ -203,13 +220,15 @@ export function renderHBarChart(container, spec) {
 // ---------------- Line / Area / Stacked Area ----------------
 // spec: { title, subtitle, categories:[year], series:[{name,values}], mode:'line'|'area'|'stackedArea', percent }
 export function renderLineChart(container, spec) {
-  const width = 460, height = 250;
+  const width = 460, baseHeight = 250;
+  const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
+  const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
+  const legendH = legendRowCount * LEGEND_ROW_GAP;
+  const height = baseHeight + legendH;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
-  const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
-  const legendH = spec.series.length > 1 ? legendRow(svg, legendItems, 16, height - 10, width - 32) : 0;
 
-  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = height - plotY - 26 - legendH;
+  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
   const stacked = spec.mode === 'stackedArea';
   const percent = !!spec.percent;
@@ -281,6 +300,7 @@ export function renderLineChart(container, spec) {
     if (ci % labelStep === 0) svg.appendChild(text(xAt(ci), plotY + plotH + 16, String(cat), { 'font-size': 9.5, fill: '#6E6E73', 'text-anchor': 'middle' }));
   });
   svg.appendChild(el('line', { x1: plotX, y1: plotY + plotH, x2: plotX + plotW, y2: plotY + plotH, stroke: '#D8D8DC', 'stroke-width': 1 }));
+  if (legendRowCount) drawLegend(svg, legendItems, 16, baseHeight + 10, width - 32);
 
   container.appendChild(svg);
   return svg;
