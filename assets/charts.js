@@ -279,19 +279,16 @@ export function renderLineChart(container, spec) {
       }
       let d = `M ${pts[0][0]} ${pts[0][1]} `;
       pts.forEach(([x, y]) => { d += `L ${x} ${y} `; });
-      svg.appendChild(el('path', { d, fill: 'none', stroke: colorAt(si), 'stroke-width': 2 }));
-      pts.forEach(([x, y], ci) => {
-        if (spec.onSelect) {
-          // A larger transparent hit-area circle under the small visible dot — keeps
-          // the mark's look unchanged while giving the click target more room.
+      svg.appendChild(el('path', { d, fill: 'none', stroke: colorAt(si), 'stroke-width': 1.1, 'stroke-linejoin': 'round' }));
+      if (spec.onSelect) {
+        // No visible dot — just an invisible hit-area circle per point, so the line
+        // itself stays a clean thin stroke while every point is still clickable.
+        pts.forEach(([x, y], ci) => {
           const hitArea = el('circle', { cx: x, cy: y, r: 7, fill: 'transparent', class: 'line-point-clickable' });
           hitArea.addEventListener('click', () => spec.onSelect(spec.categories[ci], s.name));
           svg.appendChild(hitArea);
-          svg.appendChild(el('circle', { cx: x, cy: y, r: 2.4, fill: colorAt(si), style: 'pointer-events: none;' }));
-        } else {
-          svg.appendChild(el('circle', { cx: x, cy: y, r: 2.4, fill: colorAt(si) }));
-        }
-      });
+        });
+      }
     });
   }
 
