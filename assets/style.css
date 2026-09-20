@@ -869,7 +869,12 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .chart-tb-btn:hover { background: var(--accent-light); color: var(--accent-mid); }
 .chart-tb-save:hover { background: var(--accent-light); color: var(--accent); }
 .chart-card-body { overflow-x: auto; }
-.chart-card-body svg, .chart-modal-body svg { width: 100%; height: auto; display: block; }
+/* Cap each chart to the compact size it was actually designed at (see --native-w in
+   assets/charts.js) so a wide chart card on a big monitor doesn't stretch a small
+   chart into oversized, hard-to-scan cells. The Expand modal lifts this cap on
+   purpose — growing bigger is the point there. */
+.chart-card-body svg { width: 100%; max-width: var(--native-w, 640px); height: auto; display: block; }
+.chart-modal-body svg { width: 100%; height: auto; display: block; }
 .hbar-rect-clickable, .donut-arc-clickable, .heatmap-cell-clickable,
 .bar-rect-clickable, .line-point-clickable { cursor: pointer; }
 .hbar-rect-clickable:hover, .donut-arc-clickable:hover, .bar-rect-clickable:hover, .heatmap-cell-clickable:hover { opacity: 0.8; }

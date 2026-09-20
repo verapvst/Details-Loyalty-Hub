@@ -45,16 +45,22 @@ function niceMax(max) {
 }
 
 // No width/height attributes: the SVG's intrinsic aspect ratio comes from viewBox
-// alone, so CSS (`width:100%; height:auto`) can scale it fluidly — in the normal
-// card and, larger, inside the Expand modal — without letterboxing or distortion.
+// alone, so CSS (`width:100%; height:auto`) can scale it fluidly. `--native-w` records
+// the size the chart was actually designed at: inside a normal chart card (which can
+// be much wider than the chart on a big monitor) CSS caps width to this, so compact
+// charts stay compact instead of stretching to fill whatever the card's width is;
+// inside the Expand modal that cap is lifted on purpose, since growing bigger is the
+// point there.
 function baseSvg(width, height) {
-  return el('svg', { viewBox: `0 0 ${width} ${height}`, xmlns: SVG_NS, class: 'analysis-svg' });
+  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, xmlns: SVG_NS, class: 'analysis-svg' });
+  svg.style.setProperty('--native-w', `${width}px`);
+  return svg;
 }
 
 function titleBlock(svg, title, subtitle, width) {
-  if (title) svg.appendChild(text(16, 24, title, { 'font-size': 15, 'font-weight': 600, fill: '#1D1D1F' }));
-  if (subtitle) svg.appendChild(text(16, 42, subtitle, { 'font-size': 11, fill: '#6E6E73' }));
-  return subtitle ? 58 : (title ? 40 : 12);
+  if (title) svg.appendChild(text(14, 20, title, { 'font-size': 12.5, 'font-weight': 600, fill: '#1D1D1F' }));
+  if (subtitle) svg.appendChild(text(14, 34, subtitle, { 'font-size': 9, fill: '#6E6E73' }));
+  return subtitle ? 46 : (title ? 32 : 10);
 }
 
 function legendRow(svg, items, x, y, width) {
@@ -74,13 +80,13 @@ function legendRow(svg, items, x, y, width) {
 // ---------------- Vertical bar / stacked / 100% stacked ----------------
 // spec: { title, subtitle, categories:[str], series:[{name,values:[num]}], mode:'grouped'|'stacked'|'percent', valueSuffix }
 export function renderBarChart(container, spec) {
-  const width = 540, height = 300;
+  const width = 460, height = 250;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendH = spec.series.length > 1 ? legendRow(svg, legendItems, 16, height - 10, width - 32) : 0;
 
-  const plotX = 46, plotY = topOffset + 10, plotW = width - plotX - 20, plotH = height - plotY - 30 - legendH;
+  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = height - plotY - 26 - legendH;
   const n = spec.categories.length;
   const percent = spec.mode === 'percent';
   const stacked = spec.mode === 'stacked' || percent;
@@ -150,15 +156,15 @@ export function renderBarChart(container, spec) {
 // ---------------- Horizontal bar (distribution) ----------------
 // spec: { title, subtitle, rows:[{label,value,secondaryValue?}], valueLabel:fn, maxOverride, barColor }
 export function renderHBarChart(container, spec) {
-  const rowH = 20;
-  const width = 560;
-  const height = 70 + spec.rows.length * rowH;
+  const rowH = 18;
+  const width = 460;
+  const height = 62 + spec.rows.length * rowH;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
-  const CHAR_W = 5.6;
-  const labelW = Math.min(170, Math.max(80, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
-  const plotX = 16 + labelW, plotY = topOffset + 6, plotW = width - plotX - 60;
+  const CHAR_W = 5.4;
+  const labelW = Math.min(140, Math.max(70, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
+  const plotX = 14 + labelW, plotY = topOffset + 6, plotW = width - plotX - 50;
   const maxVal = spec.maxOverride || niceMax(Math.max(...spec.rows.map(r => r.value), 1));
   const maxChars = Math.max(3, Math.floor((labelW - 4) / CHAR_W));
 
@@ -169,7 +175,7 @@ export function renderHBarChart(container, spec) {
     // ellipsis rather than left to overflow past the SVG's left edge and get
     // silently clipped — the full text is still on hover and in View Data/export.
     const shown = fullLabel.length > maxChars ? `${fullLabel.slice(0, maxChars - 1)}…` : fullLabel;
-    const labelEl = text(plotX - 10, y + rowH * 0.62, shown, { 'font-size': 11, fill: '#1D1D1F', 'text-anchor': 'end' });
+    const labelEl = text(plotX - 8, y + rowH * 0.65, shown, { 'font-size': 10, fill: '#1D1D1F', 'text-anchor': 'end' });
     if (shown !== fullLabel) {
       const titleEl = document.createElementNS(SVG_NS, 'title');
       titleEl.textContent = fullLabel;
@@ -178,11 +184,11 @@ export function renderHBarChart(container, spec) {
     svg.appendChild(labelEl);
     const bw = maxVal ? (r.value / maxVal) * plotW : 0;
     svg.appendChild(el('rect', {
-      x: plotX, y: y + 4, width: Math.max(bw, 1), height: rowH - 10, rx: 3, fill: spec.barColor || colorAt(0),
+      x: plotX, y: y + 3, width: Math.max(bw, 1), height: rowH - 7, rx: 3, fill: spec.barColor || colorAt(0),
       class: spec.onSelect ? 'hbar-rect hbar-rect-clickable' : 'hbar-rect', 'data-value': r.label
     }));
     const labelStr = spec.valueLabel ? spec.valueLabel(r) : fmtNum(r.value);
-    svg.appendChild(text(plotX + bw + 8, y + rowH * 0.62, labelStr, { 'font-size': 10.5, fill: '#6E6E73' }));
+    svg.appendChild(text(plotX + bw + 6, y + rowH * 0.65, labelStr, { 'font-size': 9.5, fill: '#6E6E73' }));
   });
 
   if (spec.onSelect) {
@@ -197,13 +203,13 @@ export function renderHBarChart(container, spec) {
 // ---------------- Line / Area / Stacked Area ----------------
 // spec: { title, subtitle, categories:[year], series:[{name,values}], mode:'line'|'area'|'stackedArea', percent }
 export function renderLineChart(container, spec) {
-  const width = 540, height = 300;
+  const width = 460, height = 250;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendH = spec.series.length > 1 ? legendRow(svg, legendItems, 16, height - 10, width - 32) : 0;
 
-  const plotX = 46, plotY = topOffset + 10, plotW = width - plotX - 20, plotH = height - plotY - 30 - legendH;
+  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = height - plotY - 26 - legendH;
   const n = spec.categories.length;
   const stacked = spec.mode === 'stackedArea';
   const percent = !!spec.percent;
@@ -283,10 +289,10 @@ export function renderLineChart(container, spec) {
 // ---------------- Donut ----------------
 // spec: { title, subtitle, data:[{label,value}] }
 export function renderDonutChart(container, spec) {
-  const width = 440, height = 280;
+  const width = 380, height = 230;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
-  const cx = 112, cy = topOffset + (height - topOffset - 16) / 2 + 6, r = 72, r0 = 42;
+  const cx = 96, cy = topOffset + (height - topOffset - 14) / 2 + 6, r = 60, r0 = 35;
   const total = spec.data.reduce((s, d) => s + d.value, 0) || 1;
 
   let angle = -Math.PI / 2;
@@ -304,15 +310,15 @@ export function renderDonutChart(container, spec) {
     svg.appendChild(arcPath);
   });
 
-  svg.appendChild(text(cx, cy - 4, fmtNum(total), { 'font-size': 20, 'font-weight': 600, fill: '#1D1D1F', 'text-anchor': 'middle' }));
-  svg.appendChild(text(cx, cy + 14, 'programmes', { 'font-size': 9.5, fill: '#6E6E73', 'text-anchor': 'middle' }));
+  svg.appendChild(text(cx, cy - 3, fmtNum(total), { 'font-size': 17, 'font-weight': 600, fill: '#1D1D1F', 'text-anchor': 'middle' }));
+  svg.appendChild(text(cx, cy + 12, 'programmes', { 'font-size': 8.5, fill: '#6E6E73', 'text-anchor': 'middle' }));
 
-  let ly = topOffset + 12;
+  let ly = topOffset + 10;
   spec.data.forEach((d, i) => {
     const pct = total ? (d.value / total) * 100 : 0;
-    svg.appendChild(el('rect', { x: 214, y: ly - 8, width: 9, height: 9, rx: 2, fill: colorAt(i) }));
-    svg.appendChild(text(228, ly, `${d.label} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 10, fill: '#1D1D1F' }));
-    ly += 17;
+    svg.appendChild(el('rect', { x: 182, y: ly - 7, width: 8, height: 8, rx: 2, fill: colorAt(i) }));
+    svg.appendChild(text(194, ly, `${d.label} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 9, fill: '#1D1D1F' }));
+    ly += 15;
   });
 
   if (spec.onSelect) {
@@ -327,30 +333,30 @@ export function renderDonutChart(container, spec) {
 // ---------------- Heatmap ----------------
 // spec: { title, subtitle, rows:[str], cols:[str], matrix:[[num]], cellText:fn(v,r,c), colorMax, rowTotalLabel, colTotalLabel }
 export function renderHeatmap(container, spec) {
-  const ROW_CHAR_W = 5.8;
-  const rowLabelW = Math.min(170, Math.max(80, ...spec.rows.map(r => String(r).length * ROW_CHAR_W)));
+  const ROW_CHAR_W = 5.2;
+  const rowLabelW = Math.min(130, Math.max(64, ...spec.rows.map(r => String(r).length * ROW_CHAR_W)));
   const rowMaxChars = Math.max(3, Math.floor((rowLabelW - 4) / ROW_CHAR_W));
-  const cellW = Math.max(44, Math.min(64, 480 / Math.max(spec.cols.length, 1)));
-  const cellH = 24;
-  const width = rowLabelW + cellW * spec.cols.length + 24;
-  const colHeaderH = 46;
-  const height = 48 + colHeaderH + cellH * spec.rows.length + 16;
+  const cellW = Math.max(32, Math.min(46, 400 / Math.max(spec.cols.length, 1)));
+  const cellH = 19;
+  const width = rowLabelW + cellW * spec.cols.length + 18;
+  const colHeaderH = 40;
+  const height = 42 + colHeaderH + cellH * spec.rows.length + 12;
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
-  const plotX = rowLabelW + 10, plotY = topOffset + colHeaderH;
+  const plotX = rowLabelW + 8, plotY = topOffset + colHeaderH;
   const maxV = spec.colorMax ?? Math.max(...spec.matrix.flat(), 1);
 
   spec.cols.forEach((c, ci) => {
-    const g = el('g', { transform: `translate(${plotX + ci * cellW + cellW / 2}, ${plotY - 8}) rotate(-28)` });
-    g.appendChild(text(0, 0, String(c), { 'font-size': 10, fill: '#1D1D1F', 'text-anchor': 'start' }));
+    const g = el('g', { transform: `translate(${plotX + ci * cellW + cellW / 2}, ${plotY - 6}) rotate(-32)` });
+    g.appendChild(text(0, 0, String(c), { 'font-size': 8.5, fill: '#1D1D1F', 'text-anchor': 'start' }));
     svg.appendChild(g);
   });
 
   spec.rows.forEach((r, ri) => {
     const fullLabel = String(r);
     const shown = fullLabel.length > rowMaxChars ? `${fullLabel.slice(0, rowMaxChars - 1)}…` : fullLabel;
-    const labelEl = text(plotX - 10, plotY + ri * cellH + cellH / 2 + 4, shown, { 'font-size': 10.5, fill: '#1D1D1F', 'text-anchor': 'end' });
+    const labelEl = text(plotX - 8, plotY + ri * cellH + cellH / 2 + 3, shown, { 'font-size': 9, fill: '#1D1D1F', 'text-anchor': 'end' });
     if (shown !== fullLabel) {
       const titleEl = document.createElementNS(SVG_NS, 'title');
       titleEl.textContent = fullLabel;
@@ -362,11 +368,11 @@ export function renderHeatmap(container, spec) {
       const intensity = maxV ? Math.min(v / maxV, 1) : 0;
       const fill = mixColor('#F5EFE1', '#93753A', intensity);
       svg.appendChild(el('rect', {
-        x: plotX + ci * cellW, y: plotY + ri * cellH, width: cellW - 2, height: cellH - 2, rx: 3, fill,
+        x: plotX + ci * cellW, y: plotY + ri * cellH, width: cellW - 1.5, height: cellH - 1.5, rx: 2, fill,
         class: spec.onSelect ? 'heatmap-cell-clickable' : null, 'data-row': String(r), 'data-col': String(c)
       }));
       const cellStr = spec.cellText ? spec.cellText(v, ri, ci) : fmtNum(v);
-      svg.appendChild(text(plotX + ci * cellW + (cellW - 2) / 2, plotY + ri * cellH + cellH / 2 + 4, cellStr, { 'font-size': 9.5, fill: intensity > 0.55 ? '#FFFFFF' : '#1D1D1F', 'text-anchor': 'middle' }));
+      svg.appendChild(text(plotX + ci * cellW + (cellW - 1.5) / 2, plotY + ri * cellH + cellH / 2 + 3, cellStr, { 'font-size': 8, fill: intensity > 0.55 ? '#FFFFFF' : '#1D1D1F', 'text-anchor': 'middle' }));
     });
   });
 
