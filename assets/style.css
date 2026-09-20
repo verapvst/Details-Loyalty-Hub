@@ -804,3 +804,149 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   .identity-grid { grid-template-columns: 1fr 1fr; }
   .kpi-row { grid-template-columns: 1fr; }
 }
+
+/* ================= Analysis: Loyalty Research Laboratory ================= */
+
+.analysis-hero { padding: 44px 40px 8px; max-width: 1280px; margin: 0 auto; }
+.analysis-hero h1 { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 42px); font-weight: 500; letter-spacing: -0.01em; margin-bottom: 6px; }
+.analysis-hero p { color: var(--muted); font-size: 13px; max-width: 560px; }
+
+.lab-jump-nav-wrap { position: static; box-shadow: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.lab-jump-nav { gap: 20px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; }
+.lab-jump-nav a { white-space: nowrap; }
+
+/* Global filter bar — reuses .filter-bar/.filter-select; multi-selects reuse the
+   Data & Insights Scope-filter pattern (.scope-filter/.scope-filter-panel). */
+.year-range { display: flex; align-items: center; gap: 6px; }
+.year-range input {
+  width: 62px; padding: 7px 10px; border: none; border-radius: 20px; background: var(--surface-alt);
+  font-size: 12px; text-align: center; color: var(--dark); outline: none;
+}
+.year-range span { font-size: 11px; color: var(--muted-light); }
+.multi-filter-btn { min-width: 64px; text-align: left; }
+
+.lab-section { padding: 8px 40px 56px; max-width: 1280px; margin: 0 auto; scroll-margin-top: calc(var(--nav-h) + 90px); }
+.lab-section-head { margin-bottom: 6px; }
+.lab-section-title { font-family: var(--font-display); font-size: 26px; font-weight: 500; letter-spacing: -0.01em; color: var(--dark); }
+.lab-section-subtitle { font-size: 12.5px; color: var(--muted); margin-top: 4px; max-width: 620px; }
+
+.lab-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 26px 28px; margin-top: 18px; }
+.lab-card h3 { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--accent); margin-bottom: 14px; }
+.lab-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; align-items: start; }
+
+.kpi-context-line { font-size: 12px; color: var(--muted); margin-top: 14px; }
+.kpi-context-line b { color: var(--dark); font-weight: 600; }
+
+/* ---------- Chart-builder controls ---------- */
+.control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 18px; }
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group label { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.control-select {
+  padding: 7px 30px 7px 12px; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+  color: var(--dark); background: var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%236E6E73" stroke-width="1.4" fill="none"/></svg>') no-repeat right 10px center;
+  appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 150px;
+}
+.control-toggle-group { display: flex; background: var(--surface-alt); border-radius: 8px; padding: 3px; gap: 2px; }
+.control-toggle { padding: 6px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.control-toggle.active { background: var(--white); color: var(--dark); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* ---------- Chart card (title + toolbar + body), used by every Lab ---------- */
+.chart-card { margin-top: 4px; }
+.chart-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+.chart-card-title { font-size: 14px; font-weight: 600; color: var(--dark); }
+.chart-card-subtitle { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.chart-toolbar { display: flex; gap: 4px; flex-shrink: 0; }
+.chart-tb-btn {
+  width: 28px; height: 28px; border-radius: 7px; background: var(--surface-alt); color: var(--muted);
+  font-size: 13px; display: flex; align-items: center; justify-content: center; transition: background var(--transition), color var(--transition);
+}
+.chart-tb-btn:hover { background: var(--accent-light); color: var(--accent-mid); }
+.chart-tb-save:hover { background: var(--accent-light); color: var(--accent); }
+.chart-card-body { overflow-x: auto; }
+.chart-card-body svg, .chart-modal-body svg { width: 100%; height: auto; display: block; }
+.hbar-rect-clickable, .donut-arc-clickable, .heatmap-cell-clickable { cursor: pointer; }
+.hbar-rect-clickable:hover, .donut-arc-clickable:hover { opacity: 0.82; }
+.chart-card-note { font-size: 11px; color: var(--muted-light); margin-top: 10px; font-style: italic; }
+.chart-empty-state { padding: 40px 20px; }
+
+/* ---------- Data / Expand / Save modals ---------- */
+.data-modal, .chart-modal, .save-modal {
+  background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
+  width: 100%; max-height: 86vh; display: flex; flex-direction: column;
+}
+.data-modal { max-width: 760px; }
+.chart-modal { max-width: 980px; }
+.save-modal { max-width: 440px; padding: 28px 30px; gap: 14px; display: flex; flex-direction: column; }
+.save-modal h2 { font-family: var(--font-display); font-size: 20px; font-weight: 500; }
+.save-modal p { font-size: 12.5px; color: var(--muted); }
+.save-modal input {
+  padding: 10px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt);
+  font-size: 13px; outline: none;
+}
+.save-modal input:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.save-modal-foot { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
+
+.data-modal-head, .chart-modal-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 28px; flex-shrink: 0; }
+.data-modal-head h2 { font-family: var(--font-display); font-size: 18px; font-weight: 500; }
+.chart-modal-title { font-family: var(--font-display); font-size: 19px; font-weight: 500; }
+.chart-modal-subtitle { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.data-modal-body { padding: 0 28px 20px; overflow: auto; }
+.chart-modal-body { padding: 8px 32px 32px; overflow: auto; }
+.data-modal-foot { display: flex; align-items: center; gap: 14px; padding: 16px 28px; background: var(--surface-alt); border-radius: 0 0 var(--radius-lg) var(--radius-lg); flex-shrink: 0; }
+.data-modal-hint { font-size: 11px; color: var(--muted-light); margin-right: auto; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.data-table th, .data-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table th { position: sticky; top: 0; background: var(--white); font-weight: 600; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; }
+.data-table th:hover { color: var(--dark); }
+.data-table tbody tr:hover { background: var(--surface-alt); }
+
+/* ---------- Data quality ---------- */
+.data-quality-toggle { font-size: 12px; font-weight: 500; color: var(--accent); }
+.data-quality-row { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-top: 10px; }
+.data-quality-row .dq-label { width: 150px; flex-shrink: 0; color: var(--muted); }
+.data-quality-row .dq-bar-track { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-alt); overflow: hidden; }
+.data-quality-row .dq-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.data-quality-row .dq-pct { width: 84px; text-align: right; color: var(--dark); font-weight: 500; flex-shrink: 0; }
+
+/* ---------- Category drill-down ---------- */
+.drilldown-panel { background: var(--surface-alt); border-radius: var(--radius); padding: 18px 20px; }
+.drilldown-empty { color: var(--muted); font-size: 12.5px; }
+.drilldown-title { font-size: 15px; font-weight: 600; color: var(--dark); }
+.drilldown-count { font-size: 11.5px; color: var(--muted); margin-bottom: 14px; }
+.drilldown-block { margin-top: 14px; }
+.drilldown-block-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.drilldown-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-bottom: 5px; }
+.drilldown-bar-row .dbr-label { width: 120px; flex-shrink: 0; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drilldown-bar-row .dbr-track { flex: 1; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.drilldown-bar-row .dbr-fill { height: 100%; background: var(--accent-mid); border-radius: 4px; }
+.drilldown-bar-row .dbr-pct { width: 42px; text-align: right; color: var(--muted); flex-shrink: 0; }
+.distribution-row-clickable { cursor: pointer; }
+
+/* ---------- Saved analyses / notes ---------- */
+.saved-analysis-card, .note-card {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  padding: 16px 18px; border-radius: var(--radius); background: var(--surface-alt); margin-bottom: 10px;
+}
+.saved-analysis-name { font-size: 13.5px; font-weight: 600; color: var(--dark); }
+.saved-analysis-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.saved-analysis-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.note-title { font-size: 13.5px; font-weight: 600; color: var(--dark); }
+.note-text { font-size: 12.5px; color: var(--dark); margin-top: 6px; white-space: pre-wrap; }
+.note-meta { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.note-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag-pill { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-light); color: var(--accent-mid); }
+.notes-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.notes-form input[type="text"], .notes-form textarea {
+  padding: 9px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; font-family: inherit;
+}
+.notes-form textarea { resize: vertical; min-height: 64px; }
+.notes-form input:focus, .notes-form textarea:focus { box-shadow: 0 0 0 2px var(--dark); background: var(--white); }
+.setup-note { font-size: 12px; color: var(--muted); background: var(--surface-alt); padding: 12px 16px; border-radius: var(--radius); }
+
+@media (max-width: 860px) {
+  .analysis-hero, .lab-section { padding-left: 20px; padding-right: 20px; }
+  .lab-grid-2 { grid-template-columns: 1fr; }
+  .lab-card { padding: 20px; }
+  .data-modal-body, .chart-modal-body { padding-left: 18px; padding-right: 18px; }
+}

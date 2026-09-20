@@ -10,15 +10,94 @@
 
 <div id="nav-root"></div>
 
-<div class="placeholder-hero">
-  <div class="tag">Coming Soon</div>
+<div class="analysis-hero">
   <h1>Analysis</h1>
-  <p>Cross-programme analysis and visual comparisons (price jumps between tiers, mechanism patterns by industry, and positioning maps) once there's enough data in the database to work with.</p>
+  <p>A research laboratory for the loyalty programme database: snapshot, explore, compare, investigate and save. Every number below is computed live from the current database and the filters active right now.</p>
 </div>
 
-<script type="module">
-  import { initNav } from './assets/app.js';
-  await initNav('analysis');
-</script>
+<div class="filter-bar-wrap">
+  <div class="filter-bar" id="global-filter-bar">
+    <!-- Populated by assets/analysis.js: Industry, Sub-Industry, Positioning, Membership,
+         Country, Geographic Scope, Target Customer, Access/Registration (multi-select
+         dropdowns reusing the Scope-filter pattern) + Launch Year range + Clear All. -->
+  </div>
+</div>
+
+<div class="filter-bar-wrap lab-jump-nav-wrap">
+  <div class="filter-bar lab-jump-nav">
+    <a href="#lab-snapshot">Snapshot</a>
+    <a href="#lab-launch-trends">Launch Trends</a>
+    <a href="#lab-distribution">Distribution</a>
+    <a href="#lab-cross">Cross-Analysis</a>
+    <a href="#lab-mechanics">Mechanics</a>
+    <a href="#lab-tiers">Tier Lab</a>
+    <a href="#lab-saved">Saved &amp; Notes</a>
+  </div>
+</div>
+
+<section class="lab-section" id="lab-snapshot">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Database Snapshot</h2>
+    <p class="lab-section-subtitle">What does our benchmark universe currently look like?</p>
+  </div>
+  <div class="kpi-row" id="snapshot-kpi-row" style="margin-top: 16px;">
+    <div class="loading-state">Loading…</div>
+  </div>
+  <div class="kpi-context-line" id="snapshot-context-line"></div>
+  <div class="lab-card" id="data-quality-card"></div>
+</section>
+
+<section class="lab-section" id="lab-launch-trends">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Launch Trends Lab</h2>
+    <p class="lab-section-subtitle">When were loyalty programmes launched, and has the composition of the landscape changed over time?</p>
+  </div>
+  <div class="lab-card" id="launch-trends-root"></div>
+</section>
+
+<section class="lab-section" id="lab-distribution">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Programme Landscape</h2>
+    <p class="lab-section-subtitle">Distribution of the benchmark universe across any single dimension — click a bar to inspect that category.</p>
+  </div>
+  <div class="lab-card" id="distribution-root"></div>
+</section>
+
+<section class="lab-section" id="lab-cross">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Cross-Analysis Lab</h2>
+    <p class="lab-section-subtitle">Explore relationships between any two dimensions in the database.</p>
+  </div>
+  <div class="lab-card" id="cross-root"></div>
+</section>
+
+<section class="lab-section" id="lab-mechanics">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Mechanics Lab</h2>
+    <p class="lab-section-subtitle">Mechanisms are multi-select: a programme can use several at once, so shares below don't need to sum to 100%.</p>
+  </div>
+  <div id="mechanics-root"></div>
+</section>
+
+<section class="lab-section" id="lab-tiers">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Tier Lab</h2>
+    <p class="lab-section-subtitle">How common is tiering, what do tier structures look like, and how big are the jumps between tiers?</p>
+  </div>
+  <div id="tier-root"></div>
+</section>
+
+<section class="lab-section" id="lab-saved">
+  <div class="lab-section-head">
+    <h2 class="lab-section-title">Saved Analyses &amp; Research Notes</h2>
+    <p class="lab-section-subtitle">Configurations you've saved from any chart above, and observations worth investigating further. The tool records what the data shows — the interpretation is yours to write.</p>
+  </div>
+  <div class="lab-card" id="saved-analyses-root"></div>
+  <div class="lab-card" id="research-notes-root"></div>
+</section>
+
+<div id="analysis-modal-root"></div>
+
+<script type="module" src="assets/analysis.js"></script>
 </body>
 </html>
