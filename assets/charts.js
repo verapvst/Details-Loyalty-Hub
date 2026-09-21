@@ -57,10 +57,55 @@ function baseSvg(width, height) {
   return svg;
 }
 
+// Subtitles are built from live filter/measure state (ctx.filtersSummaryText(), a
+// multi-select note, ...) so their length isn't bounded — SVG <text> never wraps on
+// its own, so a long one used to just run past the chart's right edge and get
+// silently clipped. Wrapping it onto as many lines as it needs (mirroring how
+// legendRows() is measured before drawLegend() below) means it's always fully
+// readable instead of cut off.
+const SUBTITLE_CHAR_W = 5; // rough px per character at the subtitle's 9px font size
+const SUBTITLE_LINE_H = 11;
+
+function wrapSubtitle(subtitle, width) {
+  if (!subtitle) return [];
+  const maxChars = Math.max(20, Math.floor((width - 28) / SUBTITLE_CHAR_W));
+  if (subtitle.length <= maxChars) return [subtitle];
+  const words = subtitle.split(' ');
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length > maxChars && cur) { lines.push(cur); cur = w; }
+    else cur = next;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// Measures the title/subtitle block's height BEFORE a chart's total canvas height is
+// fixed, so callers whose height formula doesn't already self-adjust (anything that
+// isn't derived from topOffset, e.g. a fixed-height legend or row list below it) can
+// grow to fit however many lines the subtitle wrapped into instead of clipping them.
+function titleBlockHeight(title, subtitle, width) {
+  const lines = wrapSubtitle(subtitle, width);
+  if (lines.length) return 34 + (lines.length - 1) * SUBTITLE_LINE_H + 12;
+  if (title) return 32;
+  return 10;
+}
+
 function titleBlock(svg, title, subtitle, width) {
   if (title) svg.appendChild(text(14, 20, title, { 'font-size': 12.5, 'font-weight': 600, fill: '#1D1D1F' }));
-  if (subtitle) svg.appendChild(text(14, 34, subtitle, { 'font-size': 9, fill: '#6E6E73' }));
-  return subtitle ? 46 : (title ? 32 : 10);
+  const lines = wrapSubtitle(subtitle, width);
+  lines.forEach((line, i) => svg.appendChild(text(14, 34 + i * SUBTITLE_LINE_H, line, { 'font-size': 9, fill: '#6E6E73' })));
+  return titleBlockHeight(title, subtitle, width);
+}
+
+// How much taller the title block is than its single-line default (46/32/10) —
+// callers whose height formula assumes a single-line subtitle add this so a wrapped
+// one pushes everything below it down instead of overlapping or clipping.
+function subtitleExtraHeight(title, subtitle, width) {
+  const singleLineDefault = subtitle ? 46 : (title ? 32 : 10);
+  return Math.max(0, titleBlockHeight(title, subtitle, width) - singleLineDefault);
 }
 
 const LEGEND_ROW_GAP = 16;
@@ -94,7 +139,8 @@ function drawLegend(svg, items, x, y, maxWidth) {
 // ---------------- Vertical bar / stacked / 100% stacked ----------------
 // spec: { title, subtitle, categories:[str], series:[{name,values:[num]}], mode:'grouped'|'stacked'|'percent', valueSuffix }
 export function renderBarChart(container, spec) {
-  const width = 460, baseHeight = 250;
+  const width = 520;
+  const baseHeight = 260 + subtitleExtraHeight(spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
   const legendH = legendRowCount * LEGEND_ROW_GAP;
@@ -102,7 +148,7 @@ export function renderBarChart(container, spec) {
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
-  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
+  const plotX = 44, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
   const percent = spec.mode === 'percent';
   const stacked = spec.mode === 'stacked' || percent;
@@ -174,14 +220,14 @@ export function renderBarChart(container, spec) {
 // spec: { title, subtitle, rows:[{label,value,secondaryValue?}], valueLabel:fn, maxOverride, barColor }
 export function renderHBarChart(container, spec) {
   const rowH = 18;
-  const width = 460;
-  const height = 62 + spec.rows.length * rowH;
+  const width = 520;
+  const height = 62 + spec.rows.length * rowH + subtitleExtraHeight(spec.title, spec.subtitle, width);
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
   const CHAR_W = 5.4;
-  const labelW = Math.min(140, Math.max(70, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
-  const plotX = 14 + labelW, plotY = topOffset + 6, plotW = width - plotX - 50;
+  const labelW = Math.min(150, Math.max(70, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
+  const plotX = 14 + labelW, plotY = topOffset + 6, plotW = width - plotX - 55;
   const maxVal = spec.maxOverride || niceMax(Math.max(...spec.rows.map(r => r.value), 1));
   const maxChars = Math.max(3, Math.floor((labelW - 4) / CHAR_W));
 
@@ -220,7 +266,8 @@ export function renderHBarChart(container, spec) {
 // ---------------- Line / Area / Stacked Area ----------------
 // spec: { title, subtitle, categories:[year], series:[{name,values}], mode:'line'|'area'|'stackedArea', percent }
 export function renderLineChart(container, spec) {
-  const width = 460, baseHeight = 250;
+  const width = 520;
+  const baseHeight = 260 + subtitleExtraHeight(spec.title, spec.subtitle, width);
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
   const legendH = legendRowCount * LEGEND_ROW_GAP;
@@ -228,7 +275,7 @@ export function renderLineChart(container, spec) {
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
-  const plotX = 40, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
+  const plotX = 44, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
   const stacked = spec.mode === 'stackedArea';
   const percent = !!spec.percent;
@@ -306,10 +353,18 @@ export function renderLineChart(container, spec) {
 // ---------------- Donut ----------------
 // spec: { title, subtitle, data:[{label,value}] }
 export function renderDonutChart(container, spec) {
-  const width = 380, height = 230;
+  const width = 460;
+  const r = 60, r0 = 35;
+  // Height used to be fixed at 230 regardless of how many legend rows there were, so
+  // a category list longer than ~11 items ran past the bottom edge and got clipped —
+  // it now grows with the data, same principle as legendRows()/drawLegend() below.
+  const topOffsetEstimate = titleBlockHeight(spec.title, spec.subtitle, width);
+  const legendH = spec.data.length * 15 + 10;
+  const circleH = topOffsetEstimate + r * 2 + 40;
+  const height = Math.max(circleH, topOffsetEstimate + legendH + 14);
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
-  const cx = 96, cy = topOffset + (height - topOffset - 14) / 2 + 6, r = 60, r0 = 35;
+  const cx = 96, cy = topOffset + r + 16;
   const total = spec.data.reduce((s, d) => s + d.value, 0) || 1;
 
   let angle = -Math.PI / 2;
@@ -330,11 +385,25 @@ export function renderDonutChart(container, spec) {
   svg.appendChild(text(cx, cy - 3, fmtNum(total), { 'font-size': 17, 'font-weight': 600, fill: '#1D1D1F', 'text-anchor': 'middle' }));
   svg.appendChild(text(cx, cy + 12, 'programmes', { 'font-size': 8.5, fill: '#6E6E73', 'text-anchor': 'middle' }));
 
+  const LEGEND_X = 182, CHAR_W = 5.3;
+  const suffixMaxChars = 20; // " — 1,234 (100.0%)" never exceeds this
+  const maxLabelChars = Math.max(8, Math.floor((width - LEGEND_X - 16) / CHAR_W) - suffixMaxChars);
   let ly = topOffset + 10;
   spec.data.forEach((d, i) => {
     const pct = total ? (d.value / total) * 100 : 0;
-    svg.appendChild(el('rect', { x: 182, y: ly - 7, width: 8, height: 8, rx: 2, fill: colorAt(i) }));
-    svg.appendChild(text(194, ly, `${d.label} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 9, fill: '#1D1D1F' }));
+    const fullLabel = String(d.label);
+    // A long category name (e.g. "Banking & Financial Services (incl. Credit Cards)")
+    // used to just overflow past the SVG's right edge and get silently clipped — it's
+    // truncated with an ellipsis instead, with the full name still on hover.
+    const shownLabel = fullLabel.length > maxLabelChars ? `${fullLabel.slice(0, maxLabelChars - 1)}…` : fullLabel;
+    svg.appendChild(el('rect', { x: LEGEND_X, y: ly - 7, width: 8, height: 8, rx: 2, fill: colorAt(i) }));
+    const labelEl = text(LEGEND_X + 12, ly, `${shownLabel} — ${fmtNum(d.value)} (${fmtPct(pct)})`, { 'font-size': 9, fill: '#1D1D1F' });
+    if (shownLabel !== fullLabel) {
+      const titleEl = document.createElementNS(SVG_NS, 'title');
+      titleEl.textContent = fullLabel;
+      labelEl.appendChild(titleEl);
+    }
+    svg.appendChild(labelEl);
     ly += 15;
   });
 
@@ -353,11 +422,11 @@ export function renderHeatmap(container, spec) {
   const ROW_CHAR_W = 5.2;
   const rowLabelW = Math.min(130, Math.max(64, ...spec.rows.map(r => String(r).length * ROW_CHAR_W)));
   const rowMaxChars = Math.max(3, Math.floor((rowLabelW - 4) / ROW_CHAR_W));
-  const cellW = Math.max(32, Math.min(46, 400 / Math.max(spec.cols.length, 1)));
-  const cellH = 19;
+  const cellW = Math.max(34, Math.min(50, 460 / Math.max(spec.cols.length, 1)));
+  const cellH = 20;
   const width = rowLabelW + cellW * spec.cols.length + 18;
   const colHeaderH = 40;
-  const height = 42 + colHeaderH + cellH * spec.rows.length + 12;
+  const height = 42 + colHeaderH + cellH * spec.rows.length + 12 + subtitleExtraHeight(spec.title, spec.subtitle, width);
   const svg = baseSvg(width, height);
   const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
 
