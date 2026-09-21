@@ -6,7 +6,7 @@ import { DIMENSIONS } from './analysisData.js';
 import { analysisTablesReady, loadSavedAnalyses, getSavedAnalyses, deleteSavedAnalysis, loadNotes, getNotes, onSavedDataChange } from './analysisSaved.js';
 import { showToast } from './app.js';
 
-const WORKSPACE_LABELS = { explore: 'Explore', relate: 'Relate', tiers: 'Tiers' };
+const WORKSPACE_LABELS = { explore: 'Explore', relate: 'Relate', trends: 'Trends', tiers: 'Pricing', mechanisms: 'Mechanisms' };
 
 function fmtDate(iso) {
   try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return ''; }
@@ -28,7 +28,15 @@ function describeConfig(row) {
   }
   if (row.lab === 'tiers') {
     if (c.view === 'jumps') return `Tier Jumps · ${c.jumpsMode === 'fee' ? 'Fee' : 'Qualification'}`;
+    if (c.view === 'fees') return c.feeByDim ? `Fees · Avg Entry by ${dim(c.feeByDim)}` : 'Fees · Entry Fee Distribution';
     return c.byDim ? `Tier Structure · ${dim(c.byDim)}` : 'Tier Structure';
+  }
+  if (row.lab === 'trends') return `${dim(c.yKey)} over Time`;
+  if (row.lab === 'mechanisms') {
+    if (c.view === 'pairs') return 'Strongest Pairings';
+    if (c.view === 'cooccurrence') return 'Mechanism × Mechanism';
+    if (c.view === 'stacking') return 'Mechanisms per Programme';
+    return c.selectedMechanism ? `${c.selectedMechanism} — Trend` : 'Mechanisms';
   }
   return WORKSPACE_LABELS[row.lab] || row.lab;
 }
@@ -60,7 +68,7 @@ export function mount(ctx) {
     }
     const rows = getSavedAnalyses();
     if (!rows.length) {
-      root.innerHTML = `<div class="drilldown-empty">Nothing saved yet — use Save on any analysis in Explore, Relate or Tiers to keep it here.</div>`;
+      root.innerHTML = `<div class="drilldown-empty">Nothing saved yet — use Save on any analysis in Explore, Relate, Trends, Pricing or Mechanisms to keep it here.</div>`;
       return;
     }
     const notes = getNotes();

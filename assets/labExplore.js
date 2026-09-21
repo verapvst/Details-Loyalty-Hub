@@ -3,7 +3,7 @@
 // Distribution card (Mechanism is just one more dimension here, nothing special).
 // Reuses the existing engine verbatim: distribution(), categoryProfile().
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, distribution, categoryProfile } from './analysisData.js';
+import { DIMENSIONS, distribution, categoryProfile, snapshotKpis } from './analysisData.js';
 import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
@@ -40,13 +40,17 @@ function renderDrilldown(el, dimKey, value, programmes, ctx) {
   }
   const profile = categoryProfile(programmes, dimKey, value);
   // Tiering is a mechanism like any other here — but a researcher who lands on it
-  // from Explore is often really asking a tier-structure question, so offer a
-  // natural bridge into the Tiers workspace rather than a special case in Explore.
+  // from Explore is often really asking a pricing-structure question, so offer a
+  // natural bridge into the Pricing workspace rather than a special case in Explore.
   const isTieringBridge = dimKey === 'mechanisms' && value === 'Tiering';
+  // Any mechanism also gets a bridge into the dedicated Mechanisms workspace, which
+  // shows co-occurrence and year trend Explore doesn't (and would duplicate to add).
+  const isMechanismBridge = dimKey === 'mechanisms';
   el.innerHTML = `
     <div class="drilldown-title">${escapeHtml(value)}</div>
     <button type="button" class="drill-count-link" id="drill-count-link">${fmtNum(profile.count)} programme${profile.count === 1 ? '' : 's'} →</button>
-    ${isTieringBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-tiers">→ Explore tier structure for these ${fmtNum(profile.count)} programmes</button>` : ''}
+    ${isTieringBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-tiers">→ Explore pricing structure for these ${fmtNum(profile.count)} programmes</button>` : ''}
+    ${isMechanismBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-mechanisms">→ Analyze ${escapeHtml(value)} in Mechanisms</button>` : ''}
     <div class="drilldown-block"><div class="drilldown-block-label">Positioning</div>${barRow(profile.positioning.rows)}</div>
     <div class="drilldown-block"><div class="drilldown-block-label">Membership</div>${barRow(profile.membership.rows)}</div>
     <div class="drilldown-block"><div class="drilldown-block-label">Geographic Scope</div>${barRow(profile.geography.rows)}</div>
@@ -55,8 +59,27 @@ function renderDrilldown(el, dimKey, value, programmes, ctx) {
   el.querySelector('#drill-count-link').addEventListener('click', () => {
     openProgrammeListModal({ title: value, subtitle: `${DIMENSIONS[dimKey].label} · ${fmtNum(profile.count)} programme(s)`, programmes: profile.subset });
   });
-  const bridgeBtn = el.querySelector('#drill-bridge-tiers');
-  if (bridgeBtn) bridgeBtn.addEventListener('click', () => ctx.switchTab('tiers'));
+  const tiersBridgeBtn = el.querySelector('#drill-bridge-tiers');
+  if (tiersBridgeBtn) tiersBridgeBtn.addEventListener('click', () => ctx.switchTab('tiers'));
+  const mechanismsBridgeBtn = el.querySelector('#drill-bridge-mechanisms');
+  if (mechanismsBridgeBtn) mechanismsBridgeBtn.addEventListener('click', () => ctx.switchToMechanism(value));
+}
+
+function kpiRowHTML(programmes) {
+  const k = snapshotKpis(programmes);
+  const cards = [
+    ['Programmes', fmtNum(k.total)],
+    ['Companies', fmtNum(k.companies)],
+    ['Industries', fmtNum(k.industries)],
+    ['Geographic Markets', fmtNum(k.geoMarkets)],
+    ['Paid', fmtPct(k.paidPct)],
+    ['Tiered', fmtPct(k.tieredPct)]
+  ];
+  return `
+    <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); margin-bottom: 24px;">
+      ${cards.map(([label, value]) => `<div class="kpi-item"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div></div>`).join('')}
+    </div>
+  `;
 }
 
 export function mount(container, ctx) {
@@ -65,6 +88,7 @@ export function mount(container, ctx) {
   let selectedValue = null;
 
   container.innerHTML = `
+    <div id="ex-kpis"></div>
     <div class="workspace-prompt">
       <div class="workspace-prompt-label">What would you like to explore?</div>
       <select class="control-select control-select-lg" id="ex-dim">
@@ -75,6 +99,7 @@ export function mount(container, ctx) {
     <div id="ex-result"></div>
   `;
 
+  const kpisEl = container.querySelector('#ex-kpis');
   const dimSel = container.querySelector('#ex-dim');
   const resultEl = container.querySelector('#ex-result');
 
@@ -85,6 +110,7 @@ export function mount(container, ctx) {
 
   function render(programmes) {
     lastProgrammes = programmes;
+    kpisEl.innerHTML = kpiRowHTML(programmes);
     if (!state.dimKey) {
       resultEl.innerHTML = '';
       return;

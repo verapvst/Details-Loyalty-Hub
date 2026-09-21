@@ -10,7 +10,9 @@ import { fmtNum } from './charts.js';
 
 import { mount as mountExplore } from './labExplore.js';
 import { mount as mountRelate } from './labRelate.js';
-import { mount as mountTiers } from './labTiers.js';
+import { mount as mountTrends } from './labTrends.js';
+import { mount as mountTiers } from './labPricing.js';
+import { mount as mountMechanisms } from './labMechanisms.js';
 import { mount as mountSaved } from './labSaved.js';
 
 await initNav('analysis');
@@ -141,7 +143,7 @@ function renderOrientationLine(programmes) {
 
 // ---------------- Workspace tabs ----------------
 
-const WORKSPACES = ['explore', 'relate', 'tiers', 'saved'];
+const WORKSPACES = ['explore', 'relate', 'trends', 'tiers', 'mechanisms', 'saved'];
 const workspaces = {};
 let activeTab = loadPersisted('activeTab') || 'explore';
 if (!WORKSPACES.includes(activeTab)) activeTab = 'explore';
@@ -181,10 +183,16 @@ function makeCtx(workspaceKey) {
     getGlobalFilters: () => JSON.parse(JSON.stringify(globalFilters)),
     reopenAnalysis,
     persist: (state) => savePersisted(workspaceKey, state),
-    // Used by Explore's Mechanism → Tiering drill-down to bridge into the Tiers
+    // Used by Explore's Mechanism → Tiering drill-down to bridge into the Pricing
     // workspace as a natural continuation — the same global filters already apply
     // there, so no extra scoping plumbing is needed.
-    switchTab: (tab) => showTab(tab)
+    switchTab: (tab) => showTab(tab),
+    // Used by Explore's Mechanism drill-down to bridge into the Mechanisms workspace
+    // with that exact mechanism already selected, instead of landing on it empty.
+    switchToMechanism: (mechanism) => {
+      workspaces.mechanisms.applyConfig({ selectedMechanism: mechanism });
+      showTab('mechanisms');
+    }
   };
 }
 
@@ -195,10 +203,13 @@ showTab(activeTab);
 
 workspaces.explore = mountExplore(document.getElementById('workspace-explore'), makeCtx('explore'));
 workspaces.relate = mountRelate(document.getElementById('workspace-relate'), makeCtx('relate'));
+workspaces.trends = mountTrends(document.getElementById('workspace-trends'), makeCtx('trends'));
 workspaces.tiers = mountTiers(document.getElementById('workspace-tiers'), makeCtx('tiers'));
+workspaces.mechanisms = mountMechanisms(document.getElementById('workspace-mechanisms'), makeCtx('mechanisms'));
 workspaces.saved = mountSaved(makeCtx('saved'));
 
-['explore', 'relate', 'tiers'].forEach(key => {
+const DATA_DRIVEN_WORKSPACES = ['explore', 'relate', 'trends', 'tiers', 'mechanisms'];
+DATA_DRIVEN_WORKSPACES.forEach(key => {
   const persisted = loadPersisted(key);
   if (persisted) workspaces[key].applyConfig(persisted);
 });
@@ -208,9 +219,7 @@ let allProgrammes = [];
 function rerenderAll() {
   const filtered = applyGlobalFilters(allProgrammes, globalFilters);
   renderOrientationLine(filtered);
-  workspaces.explore.render(filtered);
-  workspaces.relate.render(filtered);
-  workspaces.tiers.render(filtered);
+  DATA_DRIVEN_WORKSPACES.forEach(key => workspaces[key].render(filtered));
 }
 
 try {

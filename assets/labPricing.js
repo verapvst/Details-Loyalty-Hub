@@ -1,11 +1,17 @@
-// My Laboratory — Tiers workspace. Kept as its own workspace deliberately: tier
-// structure is a first-class research question here, and programme_tiers is a
-// genuinely different (nested, ordered) data shape than the flat dimension registry
-// Explore/Relate work with — forcing it into an X/Y grid would need a fake
-// "dimension" and would complicate Relate to save one section. One workspace, two
-// views (Structure / Jumps) instead of three permanently-stacked cards.
+// My Laboratory — Pricing workspace (formerly "Tiers"). Kept as its own workspace
+// deliberately: tier/fee structure is a first-class research question here, and
+// programme_tiers is a genuinely different (nested, ordered, currency-bearing) data
+// shape than the flat dimension registry Explore/Relate work with — forcing it into an
+// X/Y grid would need a fake "dimension" and would complicate Relate to save one
+// section. Three views (Structure / Fees / Jumps) instead of permanently-stacked cards.
+// Internal identifiers (lab: 'tiers', state.view: 'structure') deliberately keep their
+// original names so existing Saved Analyses still reopen correctly — only the tab
+// label and framing changed, not the config shape.
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, tierOverview, tieringByDimension, tierJumps, programmesMatching } from './analysisData.js';
+import {
+  DIMENSIONS, tierOverview, tieringByDimension, tierJumps, programmesMatching,
+  feeOverview, entryFeeDistribution, avgEntryFeeByDimension
+} from './analysisData.js';
 import { renderHBarChart, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
@@ -93,6 +99,114 @@ function renderStructure(container, ctx, state, programmes) {
   });
 }
 
+// Re-derives one programme's entry fee for a given currency straight from its own
+// tier rows (public data), rather than exporting analysisData's internal helper — the
+// same "recompute bucket membership locally" approach the Structure view already uses
+// for tier-count buckets above.
+function localEntryFee(p, currency) {
+  if (!Array.isArray(p.programme_tiers) || !p.programme_tiers.length) return null;
+  const rows = [...p.programme_tiers].sort((a, b) => (a.tier_order ?? 0) - (b.tier_order ?? 0)).filter(r => r.tier_price != null && (r.currency || 'EUR') === currency);
+  return rows.length ? rows[0].tier_price : null;
+}
+
+function renderFees(container, ctx, state, programmes) {
+  const overview = feeOverview(programmes);
+  if (!overview.currencies.length) {
+    showEmptyChartState(container, 'No programmes with a recorded tier fee match the current filters.');
+    return;
+  }
+  if (!state.feeCurrency || !overview.currencies.some(c => c.currency === state.feeCurrency)) {
+    state.feeCurrency = overview.currencies[0].currency;
+  }
+  const cur = overview.currencies.find(c => c.currency === state.feeCurrency);
+
+  container.innerHTML = `
+    <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); margin-bottom: 20px;">
+      <div class="kpi-item"><div class="kpi-label">With Fee Data</div><div class="kpi-value">${fmtNum(overview.withFeeCount)} / ${fmtNum(overview.total)}</div></div>
+      <div class="kpi-item"><div class="kpi-label">Avg Entry Fee</div><div class="kpi-value">${cur.currency} ${fmtNum(Math.round(cur.avgEntryFee))}</div></div>
+      <div class="kpi-item"><div class="kpi-label">Median Entry Fee</div><div class="kpi-value">${cur.currency} ${fmtNum(Math.round(cur.medianEntryFee))}</div></div>
+      <div class="kpi-item"><div class="kpi-label">Avg Top-Tier Fee</div><div class="kpi-value">${cur.currency} ${fmtNum(Math.round(cur.avgTopFee))}</div></div>
+    </div>
+    <div class="workspace-secondary-controls">
+      ${overview.currencies.length > 1 ? `
+      <div class="control-group"><label>Currency</label>
+        <select class="control-select" id="fee-currency">${overview.currencies.map(c => `<option value="${c.currency}" ${c.currency === state.feeCurrency ? 'selected' : ''}>${c.currency} (${fmtNum(c.count)})</option>`).join('')}</select>
+      </div>` : ''}
+    </div>
+    <div id="fee-dist-card"></div>
+    <div class="workspace-secondary-controls" style="margin-top: 28px;">
+      <div class="control-group"><label>Avg entry fee by</label>
+        <select class="control-select" id="fee-by-dim">${TIERING_BY_KEYS.map(k => `<option value="${k}" ${k === state.feeByDim ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div id="fee-by-card"></div>
+  `;
+
+  const currencySel = container.querySelector('#fee-currency');
+  if (currencySel) currencySel.addEventListener('change', () => { state.feeCurrency = currencySel.value; ctx.persist(state); renderFees(container, ctx, state, programmes); });
+
+  const distRows = entryFeeDistribution(programmes, state.feeCurrency);
+  const distCard = container.querySelector('#fee-dist-card');
+  const distSubtitle = `${ctx.filtersSummaryText()} · entry fee, ${cur.currency} only (${fmtNum(cur.count)} programme(s))`;
+  const bucketByLabel = new Map(distRows.map(d => [`${cur.currency} ${d.bucket}`, d]));
+  mountChartCard(distCard, {
+    title: 'Entry Fee Distribution', subtitle: distSubtitle,
+    buildChart: (el) => renderHBarChart(el, {
+      title: 'Entry Fee Distribution', subtitle: distSubtitle,
+      rows: distRows.map(d => ({ label: `${cur.currency} ${d.bucket}`, value: d.count })),
+      onSelect: (label) => {
+        const bucket = bucketByLabel.get(label);
+        if (!bucket) return;
+        const [start, end] = bucket.bucket.split('–').map(Number);
+        const subset = programmes.filter(p => {
+          const fee = localEntryFee(p, state.feeCurrency);
+          return fee != null && fee >= start && fee < end;
+        });
+        openProgrammeListModal({ title: label, subtitle: `Entry fee · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
+      }
+    }),
+    getTableData: () => ({ headers: [`Entry Fee (${cur.currency})`, 'Programmes'], rows: distRows.map(d => [d.bucket, d.count]) }),
+    filename: `entry-fee-distribution-${state.feeCurrency}`,
+    saveTitle: 'Entry Fee Distribution',
+    onSave: async (name, takeaway) => {
+      const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'fees', feeCurrency: state.feeCurrency, globalFilters: ctx.getGlobalFilters() } });
+      if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
+    }
+  });
+
+  const byDimSel = container.querySelector('#fee-by-dim');
+  byDimSel.addEventListener('change', () => { state.feeByDim = byDimSel.value; ctx.persist(state); renderFees(container, ctx, state, programmes); });
+
+  const byRows = avgEntryFeeByDimension(programmes, state.feeByDim, state.feeCurrency);
+  const byCard = container.querySelector('#fee-by-card');
+  if (!byRows.length) {
+    showEmptyChartState(byCard, 'No data for this dimension and currency in the current filters.');
+    return;
+  }
+  const byTitle = `Avg Entry Fee by ${DIMENSIONS[state.feeByDim].label}`;
+  const bySubtitle = `${ctx.filtersSummaryText()} · ${cur.currency} only`;
+  mountChartCard(byCard, {
+    title: byTitle, subtitle: bySubtitle,
+    buildChart: (el) => renderHBarChart(el, {
+      title: byTitle, subtitle: bySubtitle,
+      rows: byRows.map(r => ({ label: r.value, value: r.avgEntryFee })),
+      valueLabel: (r) => `${cur.currency} ${fmtNum(Math.round(r.value))}`,
+      onSelect: (categoryValue) => {
+        const subset = programmesMatching(programmes, [{ dimKey: state.feeByDim, value: categoryValue }])
+          .filter(p => localEntryFee(p, state.feeCurrency) != null);
+        openProgrammeListModal({ title: categoryValue, subtitle: `${DIMENSIONS[state.feeByDim].label} · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
+      }
+    }),
+    getTableData: () => ({ headers: [DIMENSIONS[state.feeByDim].label, 'Programmes', `Avg Entry Fee (${cur.currency})`], rows: byRows.map(r => [r.value, r.count, Math.round(r.avgEntryFee)]) }),
+    filename: `avg-entry-fee-by-${state.feeByDim}`,
+    saveTitle: byTitle,
+    onSave: async (name, takeaway) => {
+      const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'fees', feeCurrency: state.feeCurrency, feeByDim: state.feeByDim, globalFilters: ctx.getGlobalFilters() } });
+      if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
+    }
+  });
+}
+
 function summarizeJumps(map) {
   return [...map.entries()].map(([segment, list]) => {
     const pcts = list.map(j => j.pct).filter(p => p != null);
@@ -164,12 +278,13 @@ function renderJumps(container, ctx, state, programmes) {
 }
 
 export function mount(container, ctx) {
-  const state = { view: 'structure', byDim: 'industry', jumpsMode: 'qualification' };
+  const state = { view: 'structure', byDim: 'industry', jumpsMode: 'qualification', feeCurrency: null, feeByDim: 'industry' };
   let lastProgrammes = [];
 
   container.innerHTML = `
     <div class="control-toggle-group tiers-view-toggle">
       <button type="button" class="control-toggle ${state.view === 'structure' ? 'active' : ''}" data-view="structure">Structure</button>
+      <button type="button" class="control-toggle ${state.view === 'fees' ? 'active' : ''}" data-view="fees">Fees</button>
       <button type="button" class="control-toggle ${state.view === 'jumps' ? 'active' : ''}" data-view="jumps">Jumps</button>
     </div>
     <div id="tiers-view-root"></div>
@@ -186,6 +301,7 @@ export function mount(container, ctx) {
   function render(programmes) {
     lastProgrammes = programmes;
     if (state.view === 'jumps') renderJumps(viewRoot, ctx, state, programmes);
+    else if (state.view === 'fees') renderFees(viewRoot, ctx, state, programmes);
     else renderStructure(viewRoot, ctx, state, programmes);
   }
 
@@ -193,6 +309,8 @@ export function mount(container, ctx) {
     if (config.view) state.view = config.view;
     if (config.byDim) state.byDim = config.byDim;
     if (config.jumpsMode) state.jumpsMode = config.jumpsMode;
+    if (config.feeCurrency) state.feeCurrency = config.feeCurrency;
+    if (config.feeByDim) state.feeByDim = config.feeByDim;
     container.querySelectorAll('.tiers-view-toggle .control-toggle').forEach(b => b.classList.toggle('active', b.dataset.view === state.view));
     render(lastProgrammes);
   }

@@ -269,6 +269,77 @@ export function mechanismCooccurrence(programmes) {
   return { mechanisms: list, matrix, singleCounts, total: programmes.length };
 }
 
+// How many distinct mechanisms a programme carries, bucketed — tells you whether
+// programmes tend to lean on one mechanic or stack several together.
+export function mechanismStackingDistribution(programmes) {
+  const buckets = new Map([['0', 0], ['1', 0], ['2', 0], ['3', 0], ['4+', 0]]);
+  programmes.forEach(p => {
+    const n = new Set(arr(p.mechanisms)).size;
+    const key = n >= 4 ? '4+' : String(n);
+    buckets.set(key, (buckets.get(key) || 0) + 1);
+  });
+  return [...buckets.entries()].map(([bucket, count]) => ({ bucket, count }));
+}
+
+// Headline stats for the Mechanisms workspace: how many distinct mechanisms are in
+// use, how much programmes stack them, and the single strongest pairing (by raw
+// co-occurrence count, excluding a mechanism paired with itself).
+export function mechanismKpis(programmes) {
+  const total = programmes.length;
+  const co = mechanismCooccurrence(programmes);
+  const counts = [...co.singleCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const perProgramme = programmes.map(p => new Set(arr(p.mechanisms)).size);
+  const withAny = perProgramme.filter(n => n > 0).length;
+  const multiCount = perProgramme.filter(n => n >= 2).length;
+
+  let topPair = null;
+  for (let i = 0; i < co.mechanisms.length; i++) {
+    for (let j = i + 1; j < co.mechanisms.length; j++) {
+      const count = co.matrix[i][j];
+      if (count > 0 && (!topPair || count > topPair.count)) topPair = { a: co.mechanisms[i], b: co.mechanisms[j], count };
+    }
+  }
+
+  return {
+    total,
+    distinctMechanisms: counts.length,
+    avgPerProgramme: withAny ? perProgramme.reduce((a, b) => a + b, 0) / withAny : 0,
+    multiMechanismPct: withAny ? (multiCount / withAny) * 100 : 0,
+    topMechanism: counts.length ? { value: counts[0][0], count: counts[0][1], pct: total ? (counts[0][1] / total) * 100 : 0 } : null,
+    topPair
+  };
+}
+
+// Ranked co-occurrence pairs (excluding a mechanism with itself) — the "strongest
+// pairings" list shown next to the full co-occurrence heatmap.
+export function mechanismTopPairs(programmes, limit = 10) {
+  const co = mechanismCooccurrence(programmes);
+  const pairs = [];
+  for (let i = 0; i < co.mechanisms.length; i++) {
+    for (let j = i + 1; j < co.mechanisms.length; j++) {
+      const count = co.matrix[i][j];
+      if (count > 0) pairs.push({ a: co.mechanisms[i], b: co.mechanisms[j], count });
+    }
+  }
+  return pairs.sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
+// One mechanism's own profile — reuses categoryProfile (a mechanism IS just a
+// dimension value) and adds what categoryProfile doesn't cover: which other
+// mechanisms most often appear alongside it, and its own launch-year trend.
+export function mechanismProfile(programmes, mechanism) {
+  const profile = categoryProfile(programmes, 'mechanisms', mechanism);
+  const co = mechanismCooccurrence(programmes);
+  const idx = co.mechanisms.indexOf(mechanism);
+  const coOccurring = idx === -1 ? [] : co.mechanisms
+    .map((m, i) => ({ value: m, count: co.matrix[idx][i] }))
+    .filter(r => r.value !== mechanism && r.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+  const trend = timeSeries(profile.subset, { groupByKey: 'none' });
+  return { ...profile, coOccurring, trend };
+}
+
 // ---------------- Tier Lab ----------------
 
 function hasTierRows(p) { return Array.isArray(p.programme_tiers) && p.programme_tiers.length > 0; }
@@ -353,6 +424,77 @@ export function tierJumps(programmes) {
   });
 
   return { byUnit, byCurrency };
+}
+
+// A programme's cheapest (entry) and priciest (top) recorded tier_price, kept to one
+// currency (the entry tier's) — fees in different currencies can't be pooled, so a
+// programme whose tiers mix currencies just isn't represented past its entry fee.
+function entryAndTopFee(p) {
+  if (!hasTierRows(p)) return null;
+  const rows = [...p.programme_tiers].sort((a, b) => (a.tier_order ?? 0) - (b.tier_order ?? 0)).filter(r => r.tier_price != null);
+  if (!rows.length) return null;
+  const currency = rows[0].currency || 'EUR';
+  const sameCurrency = rows.filter(r => (r.currency || 'EUR') === currency);
+  return { currency, entryFee: sameCurrency[0].tier_price, topFee: sameCurrency[sameCurrency.length - 1].tier_price };
+}
+
+// Per-currency fee KPIs (avg/median entry & top fee) — the Pricing workspace's
+// headline numbers, always segmented by currency so they're never a mix of EUR/USD/etc.
+export function feeOverview(programmes) {
+  const byCurrency = new Map();
+  programmes.forEach(p => {
+    const f = entryAndTopFee(p);
+    if (!f) return;
+    if (!byCurrency.has(f.currency)) byCurrency.set(f.currency, { entry: [], top: [] });
+    byCurrency.get(f.currency).entry.push(f.entryFee);
+    byCurrency.get(f.currency).top.push(f.topFee);
+  });
+  const currencies = [...byCurrency.entries()]
+    .map(([currency, v]) => ({
+      currency, count: v.entry.length,
+      avgEntryFee: v.entry.reduce((a, b) => a + b, 0) / v.entry.length,
+      medianEntryFee: median(v.entry),
+      avgTopFee: v.top.reduce((a, b) => a + b, 0) / v.top.length,
+      medianTopFee: median(v.top)
+    }))
+    .sort((a, b) => b.count - a.count);
+  return { total: programmes.length, withFeeCount: [...byCurrency.values()].reduce((a, v) => a + v.entry.length, 0), currencies };
+}
+
+// Entry-fee distribution for one currency, bucketed into round ranges — "what does it
+// typically cost to join", independent of how fees jump between tiers.
+export function entryFeeDistribution(programmes, currency) {
+  const fees = programmes.map(entryAndTopFee).filter(f => f && f.currency === currency).map(f => f.entryFee);
+  if (!fees.length) return [];
+  const max = Math.max(...fees);
+  const bucketSize = max <= 100 ? 10 : max <= 500 ? 50 : max <= 2000 ? 250 : 1000;
+  const buckets = new Map();
+  fees.forEach(fee => {
+    const start = Math.floor(fee / bucketSize) * bucketSize;
+    const label = `${start}–${start + bucketSize}`;
+    buckets.set(label, (buckets.get(label) || 0) + 1);
+  });
+  return [...buckets.entries()]
+    .map(([bucket, count]) => ({ bucket, count, start: Number(bucket.split('–')[0]) }))
+    .sort((a, b) => a.start - b.start);
+}
+
+// Average entry fee by another dimension (e.g. Industry), scoped to one currency so
+// values stay comparable — same per-category shape as tieringByDimension.
+export function avgEntryFeeByDimension(programmes, dimKey, currency) {
+  const dim = DIMENSIONS[dimKey];
+  const groups = new Map();
+  programmes.forEach(p => {
+    const f = entryAndTopFee(p);
+    if (!f || f.currency !== currency) return;
+    valuesOf(dim, p).forEach(v => {
+      if (!groups.has(v)) groups.set(v, []);
+      groups.get(v).push(f.entryFee);
+    });
+  });
+  return [...groups.entries()]
+    .map(([value, fees]) => ({ value, count: fees.length, avgEntryFee: fees.reduce((a, b) => a + b, 0) / fees.length }))
+    .sort((a, b) => b.avgEntryFee - a.avgEntryFee);
 }
 
 // ---------------- Generic "which programmes is this?" lookup ----------------
