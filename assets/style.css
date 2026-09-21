@@ -84,7 +84,9 @@ ul { list-style: none; }
   width: 26px; height: 26px; border-radius: 50%; background: var(--accent);
   color: var(--white); font-size: 12px;
   display: flex; align-items: center; justify-content: center; font-weight: 700;
+  overflow: hidden;
 }
+.identity-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .identity-name { font-size: 13px; font-weight: 500; color: var(--dark); }
 
 /* ---------- Identity modal ---------- */
@@ -680,6 +682,23 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .chip .chip-action:hover { color: var(--muted); }
 .chip .chip-action-danger:hover { color: var(--red); }
 .settings-chip-note { cursor: help; color: var(--muted-light); font-size: 11px; }
+
+/* ---------- Settings: Members (photo + rename) ---------- */
+.team-member-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
+.team-member-row { display: flex; align-items: center; gap: 14px; padding: 10px 4px; border-bottom: 1px solid var(--surface-alt); }
+.team-member-row:last-child { border-bottom: none; }
+.team-member-row.inactive { opacity: 0.55; }
+.team-member-avatar {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--accent);
+  color: var(--white); font-size: 15px; font-weight: 700; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.team-member-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.team-member-main { flex: 1; min-width: 0; }
+.team-member-name { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 4px; }
+.team-member-actions { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.team-member-actions .btn-text { font-size: 11px; padding: 0; color: var(--muted); }
+.team-member-actions .btn-text:hover { color: var(--dark); }
 
 .settings-nav-row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .settings-nav-row:last-child { border-bottom: none; }

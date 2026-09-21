@@ -1,4 +1,4 @@
-import { loadTeamMembers, getActiveTeamMembers } from './teamMembers.js';
+import { loadTeamMembers, getActiveTeamMembers, getTeamMemberByName, teamAvatarUrl } from './teamMembers.js';
 import { loadAppSettings, getAppSetting } from './appSettings.js';
 import { escapeHtml } from './fields.js';
 
@@ -31,8 +31,28 @@ function setIdentity(name) {
   localStorage.setItem(IDENTITY_KEY, name);
 }
 
+// Settings' rename cascade calls this so a rename of "yourself" is reflected on this
+// same device right away, instead of silently going stale until the picker is reopened
+// (a rename elsewhere on the team can't reach other people's browsers — each of their
+// devices keeps the old name in its own localStorage until they re-pick it there).
+export function renameIdentityIfMatches(oldName, newName) {
+  if (getIdentity() === oldName) {
+    setIdentity(newName);
+    updateIdentityDisplay();
+  }
+}
+
 function initials(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
+}
+
+// Shows the member's uploaded photo when they have one, initials otherwise — used by
+// both the nav identity button and the "Who's this?" picker so a rename/photo change
+// in Settings shows up in both places without further wiring.
+function avatarInnerHTML(name) {
+  const member = name ? getTeamMemberByName(name) : null;
+  const url = member?.avatar_path ? teamAvatarUrl(member.avatar_path) : null;
+  return url ? `<img src="${escapeHtml(url)}" alt="" />` : escapeHtml(initials(name));
 }
 
 const MOBILE_QUERY = '(max-width: 860px)';
@@ -130,9 +150,9 @@ async function renderIdentityModal({ forceChoice }) {
 
   await loadTeamMembers();
   const picks = getActiveTeamMembers().map(name =>
-    `<button class="identity-pick" data-name="${name}" type="button">
-       <span class="identity-avatar">${initials(name)}</span>
-       <span>${name}</span>
+    `<button class="identity-pick" data-name="${escapeHtml(name)}" type="button">
+       <span class="identity-avatar">${avatarInnerHTML(name)}</span>
+       <span>${escapeHtml(name)}</span>
      </button>`
   ).join('');
 
@@ -167,11 +187,11 @@ function updateIdentityDisplay() {
   const nameEl = document.getElementById('identity-name');
   const avatarEl = document.getElementById('identity-avatar');
   if (nameEl) nameEl.textContent = name || 'Select name';
-  if (avatarEl) avatarEl.textContent = name ? initials(name) : '?';
+  if (avatarEl) avatarEl.innerHTML = name ? avatarInnerHTML(name) : '?';
 }
 
 export async function initNav(activeKey) {
-  await loadAppSettings();
+  await Promise.all([loadAppSettings(), loadTeamMembers()]);
   renderNav(activeKey);
   updateIdentityDisplay();
 

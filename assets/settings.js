@@ -1,12 +1,12 @@
 import { supabase } from './supabase.js';
-import { initNav, showToast, getIdentity, navLabel } from './app.js';
+import { initNav, showToast, getIdentity, navLabel, renameIdentityIfMatches } from './app.js';
 import { OPTIONS, INDUSTRY_SUBS, SCOPE_GROUPS, PINNED_COUNTRIES } from './options.js';
 import {
   loadCustomOptions, getOptionList, getCustomRows, getDeactivatedBuiltins, hasUsageCheck, countOptionUsage,
   addOption, setOptionActive, deleteOption, deactivateBuiltin, reactivateBuiltin,
   getAllSubIndustryRows, addSubIndustry, addScopeValue
 } from './customOptions.js';
-import { loadTeamMembers, getAllTeamMembers } from './teamMembers.js';
+import { loadTeamMembers, getAllTeamMembers, teamAvatarUrl } from './teamMembers.js';
 import { loadAppSettings, getAppSetting, setAppSetting } from './appSettings.js';
 import { escapeHtml } from './fields.js';
 
@@ -208,20 +208,43 @@ function renderNavigationCard() {
 
 // ---------------- Team ----------------
 
+const AVATAR_ACCEPT = ['image/png', 'image/jpeg', 'image/webp'];
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
+function memberInitial(name) {
+  return (name || '?').trim().charAt(0).toUpperCase();
+}
+
+function memberRowHTML(m) {
+  const url = m.avatar_path ? teamAvatarUrl(m.avatar_path) : null;
+  return `
+    <div class="team-member-row ${m.active ? '' : 'inactive'}" data-member-row="${m.id}">
+      <div class="team-member-avatar">
+        ${url ? `<img src="${escapeHtml(url)}" alt="" />` : escapeHtml(memberInitial(m.name))}
+      </div>
+      <div class="team-member-main">
+        <div class="team-member-name">${escapeHtml(m.name)}${m.active ? '' : ' <span class="settings-hint" style="display:inline; margin:0;">(inactive)</span>'}</div>
+        <div class="team-member-actions">
+          <button type="button" class="btn-text" data-team-rename="${m.id}">Rename</button>
+          <button type="button" class="btn-text" data-team-avatar-pick="${m.id}">${url ? 'Change photo' : 'Add photo'}</button>
+          ${url ? `<button type="button" class="btn-text" data-team-avatar-remove="${m.id}">Remove photo</button>` : ''}
+          ${m.active
+            ? `<button type="button" class="btn-text" data-team-deactivate="${m.id}">Deactivate</button>`
+            : `<button type="button" class="btn-text" data-team-reactivate="${m.id}">Reactivate</button>`}
+        </div>
+      </div>
+      <input type="file" hidden data-team-avatar-input="${m.id}" accept="${AVATAR_ACCEPT.join(',')}" />
+    </div>
+  `;
+}
+
 function renderTeamCard() {
   const container = document.getElementById('team-settings-card');
   const rows = getAllTeamMembers();
-  const rowsHTML = rows.length ? rows.map(m => `
-    <span class="chip settings-chip ${m.active ? '' : 'inactive'}">
-      <span>${escapeHtml(m.name)}</span>
-      ${m.active
-        ? `<button type="button" class="chip-action" data-team-deactivate="${m.id}">Deactivate</button>`
-        : `<button type="button" class="chip-action" data-team-reactivate="${m.id}">Reactivate</button>`}
-    </span>
-  `).join('') : '<span class="settings-hint" style="margin:0;">No team members yet.</span>';
+  const rowsHTML = rows.length ? rows.map(memberRowHTML).join('') : '<span class="settings-hint" style="margin:0;">No team members yet.</span>';
 
-  container.innerHTML = cardShellHTML('Members', 'Add / Deactivate only for now. Renaming a member safely needs a cascade tool (Phase 2), see the Settings proposal.', `
-    <div class="chip-row">${rowsHTML}</div>
+  container.innerHTML = cardShellHTML('Members', 'Renaming updates every programme, insight, like, task and note this person is attached to, so history keeps showing their current name.', `
+    <div class="team-member-list">${rowsHTML}</div>
     <div class="settings-add-row" style="margin-top: 14px;">
       <input type="text" id="add-team-member" placeholder="Add a team member…" />
       <button type="button" class="btn-primary" id="btn-add-team-member">Add</button>
@@ -241,6 +264,7 @@ function renderTeamCard() {
     showToast('Team member added.');
     renderTeamCard();
   });
+
   container.querySelectorAll('[data-team-deactivate]').forEach(btn => {
     btn.addEventListener('click', async () => {
       await supabase.from('app_team_members').update({ active: false }).eq('id', btn.dataset.teamDeactivate);
@@ -257,6 +281,75 @@ function renderTeamCard() {
       renderTeamCard();
     });
   });
+
+  container.querySelectorAll('[data-team-rename]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.teamRename;
+      const member = getAllTeamMembers().find(r => r.id === id);
+      if (!member) return;
+      const newName = prompt('New name:', member.name)?.trim();
+      if (!newName || newName === member.name) return;
+      const { error } = await supabase.rpc('rename_team_member', { p_id: id, p_new_name: newName });
+      if (error) {
+        showToast(error.code === '23505' ? 'That name already exists.' : `Couldn't rename: ${error.message}`, true);
+        return;
+      }
+      renameIdentityIfMatches(member.name, newName);
+      await loadTeamMembers();
+      showToast(`Renamed to ${newName}. Updated everywhere this name is used.`);
+      renderTeamCard();
+    });
+  });
+
+  container.querySelectorAll('[data-team-avatar-pick]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelector(`[data-team-avatar-input="${btn.dataset.teamAvatarPick}"]`).click();
+    });
+  });
+  container.querySelectorAll('[data-team-avatar-input]').forEach(input => {
+    input.addEventListener('change', () => uploadMemberAvatar(input.dataset.teamAvatarInput, input.files[0]));
+  });
+  container.querySelectorAll('[data-team-avatar-remove]').forEach(btn => {
+    btn.addEventListener('click', () => removeMemberAvatar(btn.dataset.teamAvatarRemove));
+  });
+}
+
+async function uploadMemberAvatar(id, file) {
+  if (!file) return;
+  if (!AVATAR_ACCEPT.includes(file.type)) {
+    showToast('Please choose a PNG, JPG or WebP image.', true);
+    return;
+  }
+  if (file.size > AVATAR_MAX_BYTES) {
+    showToast("That image is larger than 5MB. Please use a smaller file.", true);
+    return;
+  }
+  const member = getAllTeamMembers().find(r => r.id === id);
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${crypto.randomUUID()}-${safeName}`;
+  const { error: uploadError } = await supabase.storage.from('team-avatars').upload(path, file);
+  if (uploadError) {
+    showToast(`Couldn't upload photo: ${uploadError.message}`, true);
+    return;
+  }
+  const { error } = await supabase.from('app_team_members').update({ avatar_path: path }).eq('id', id);
+  if (error) {
+    showToast(`Couldn't save photo: ${error.message}`, true);
+    return;
+  }
+  if (member?.avatar_path) supabase.storage.from('team-avatars').remove([member.avatar_path]); // best-effort cleanup of the replaced file
+  await loadTeamMembers();
+  showToast('Photo updated.');
+  renderTeamCard();
+}
+
+async function removeMemberAvatar(id) {
+  const member = getAllTeamMembers().find(r => r.id === id);
+  if (!member?.avatar_path) return;
+  await supabase.from('app_team_members').update({ avatar_path: null }).eq('id', id);
+  supabase.storage.from('team-avatars').remove([member.avatar_path]); // best-effort
+  await loadTeamMembers();
+  renderTeamCard();
 }
 
 // ---------------- Pinned Countries ----------------

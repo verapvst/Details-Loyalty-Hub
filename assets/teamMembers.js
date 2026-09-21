@@ -9,8 +9,17 @@
 import { supabase } from './supabase.js';
 import { escapeHtml } from './fields.js';
 
+// One Storage bucket, public-read — see supabase/025_team_avatar_and_rename.sql, same
+// pattern as figures.image_path / insight-images (021).
+const AVATAR_BUCKET = 'team-avatars';
+
 let allRows = [];
 let loaded = false;
+
+export function teamAvatarUrl(path) {
+  if (!path) return null;
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
+}
 
 export async function loadTeamMembers() {
   const { data } = await supabase.from('app_team_members').select('*').order('created_at');
@@ -27,6 +36,12 @@ export function getActiveTeamMembers() {
 // inactive and reactivate them.
 export function getAllTeamMembers() {
   return allRows;
+}
+
+// For the nav identity avatar / picker — looks up a member's row by name so their
+// photo (if any) can be shown instead of plain initials.
+export function getTeamMemberByName(name) {
+  return allRows.find(r => r.name === name) || null;
 }
 
 export function teamMembersLoaded() {
