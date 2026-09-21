@@ -6,6 +6,7 @@ import { openSourceModal } from './sourceModal.js';
 import { definitionFor } from './insightModal.js';
 import { fieldPlainText } from './richText.js';
 import { loadTeamMembers } from './teamMembers.js';
+import { wireBackLink } from './backLink.js';
 
 await initNav('sources');
 await loadCustomOptions();
@@ -112,6 +113,8 @@ function render() {
       </div>
     </div>
   `;
+
+  wireBackLink(root.querySelector('.record-back'), 'sources.html');
 
   root.querySelectorAll('[data-copy]').forEach(btn => {
     btn.addEventListener('click', async () => {

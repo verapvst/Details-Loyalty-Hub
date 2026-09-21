@@ -3,6 +3,7 @@ import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
 import { heartHTML, likeSummary, targetTypeLabel, openLikeModal, openTargetPickerModal } from './likes.js';
 import { loadTeamMembers } from './teamMembers.js';
+import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
 await initNav('favorites');
 await loadTeamMembers();
@@ -16,6 +17,15 @@ const searchInput = document.getElementById('search-input');
 
 let allLikes = [];
 let groups = [];
+
+// A favourite's detail modal links out to programme.html — pressing Back would
+// otherwise reload this page with every filter reset. See filterUrlSync.js.
+const URL_FILTER_FIELDS = [
+  { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
+  { key: 'programme', get: () => filterProgramme.value, set: v => { filterProgramme.value = v; } },
+  { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
+  { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
+];
 
 function groupKey(g) {
   return `${g.programme_id}|${g.target_type}|${g.target_label}`;
@@ -212,6 +222,7 @@ function wireRowClicks() {
 }
 
 function applyFiltersAndRender() {
+  syncFiltersToURL(URL_FILTER_FIELDS);
   const type = filterType.value;
   const prog = filterProgramme.value;
   const addedBy = filterAddedBy.value;
@@ -258,6 +269,7 @@ async function loadAllLikes() {
   allLikes = data || [];
   buildGroups();
   populateFilters();
+  restoreFiltersFromURL(URL_FILTER_FIELDS);
   applyFiltersAndRender();
 }
 

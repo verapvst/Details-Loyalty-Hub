@@ -5,6 +5,7 @@ import { loadCustomOptions } from './customOptions.js';
 import { openSourceModal } from './sourceModal.js';
 import { loadSourceUsage, sortSourcesByRecency } from './insightModal.js';
 import { loadTeamMembers } from './teamMembers.js';
+import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
 await initNav('sources');
 await loadCustomOptions();
@@ -22,6 +23,23 @@ const scopeFilterPanel = document.getElementById('scope-filter-panel');
 let allSources = [];
 let usage = new Map(); // source_id -> most recent figures.created_at, from insightModal.js
 let scopeFilterSelected = [];
+
+// Clicking a source is a real navigation to source.html — pressing Back would
+// otherwise reload this page with every filter reset. See filterUrlSync.js.
+const URL_FILTER_FIELDS = [
+  { key: 'sort', get: () => sortSelect.value, set: v => { sortSelect.value = v; } },
+  { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
+  { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
+  {
+    key: 'scope', multi: true, get: () => scopeFilterSelected,
+    set: v => {
+      scopeFilterSelected = v;
+      scopeFilterPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = scopeFilterSelected.includes(cb.value); });
+      updateScopeFilterButtonLabel();
+    }
+  },
+  { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
+];
 
 // Legacy rows added before this restructure may not have source_name/short_citation
 // yet (only the migration's one-time backfill from the old citation_tag) — fall back
@@ -80,6 +98,7 @@ function sortForDisplay(list) {
 }
 
 function applyFiltersAndRender() {
+  syncFiltersToURL(URL_FILTER_FIELDS);
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allSources.filter(s => {
@@ -146,6 +165,7 @@ async function loadSources() {
   allSources = data || [];
   usage = await loadSourceUsage();
   populateFilterOptions();
+  restoreFiltersFromURL(URL_FILTER_FIELDS);
   applyFiltersAndRender();
 }
 

@@ -8,6 +8,7 @@ import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fiel
 import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
 import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
 import { loadTeamMembers, teamMemberSelectHTML } from './teamMembers.js';
+import { wireBackLink } from './backLink.js';
 
 await initNav('database');
 await loadCustomOptions();
@@ -364,6 +365,8 @@ function render() {
       </div>
     </form>
   `;
+
+  wireBackLink(root.querySelector('.record-back'), 'index.html');
 
   if (editing) {
     const form = document.getElementById('record-form');

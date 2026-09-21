@@ -5,6 +5,7 @@ import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor, typeLegendHTML, insightImageUrl } from './insightModal.js';
 import { fieldPlainText } from './richText.js';
 import { loadTeamMembers } from './teamMembers.js';
+import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
 await initNav('figures');
 await loadCustomOptions();
@@ -25,6 +26,24 @@ const scopeFilterPanel = document.getElementById('scope-filter-panel');
 let sources = [];
 let allInsights = [];
 let scopeFilterSelected = [];
+
+// Clicking an insight is a real navigation to insight.html — pressing Back would
+// otherwise reload this page with every filter reset. See filterUrlSync.js.
+const URL_FILTER_FIELDS = [
+  { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
+  { key: 'visual', get: () => filterVisual.value, set: v => { filterVisual.value = v; } },
+  { key: 'source', get: () => filterSource.value, set: v => { filterSource.value = v; } },
+  { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
+  {
+    key: 'scope', multi: true, get: () => scopeFilterSelected,
+    set: v => {
+      scopeFilterSelected = v;
+      scopeFilterPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = scopeFilterSelected.includes(cb.value); });
+      updateScopeFilterButtonLabel();
+    }
+  },
+  { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
+];
 
 document.getElementById('type-legend').innerHTML = typeLegendHTML();
 
@@ -84,6 +103,7 @@ function renderRow(f) {
 }
 
 function applyFiltersAndRender() {
+  syncFiltersToURL(URL_FILTER_FIELDS);
   const type = filterType.value;
   const visual = filterVisual.value;
   const sourceName = filterSource.value;
@@ -170,6 +190,7 @@ async function loadInsights() {
 
   allInsights = data || [];
   populateFilterOptions();
+  restoreFiltersFromURL(URL_FILTER_FIELDS);
   applyFiltersAndRender();
 }
 

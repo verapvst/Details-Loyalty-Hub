@@ -5,6 +5,7 @@ import { loadCustomOptions } from './customOptions.js';
 import { openInsightModal, definitionFor, insightImageUrl } from './insightModal.js';
 import { toEditableHtml, fieldPlainText } from './richText.js';
 import { loadTeamMembers } from './teamMembers.js';
+import { wireBackLink } from './backLink.js';
 
 await initNav('figures');
 await loadCustomOptions();
@@ -154,6 +155,8 @@ function render() {
       </div>
     </div>
   `;
+
+  wireBackLink(root.querySelector('.record-back'), 'figures.html');
 
   root.querySelectorAll('[data-copy]').forEach(btn => {
     btn.addEventListener('click', async () => {

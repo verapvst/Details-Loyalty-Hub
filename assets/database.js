@@ -6,6 +6,7 @@ import {
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
+import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
 await initNav('database');
 await loadCustomOptions();
@@ -19,6 +20,14 @@ const filterGeography = document.getElementById('filter-geography');
 const filterType = document.getElementById('filter-type');
 const filterAddedBy = document.getElementById('filter-added-by');
 const searchInput = document.getElementById('search-input');
+
+const URL_FILTER_FIELDS = [
+  { key: 'industry', get: () => filterIndustry.value, set: v => { filterIndustry.value = v; } },
+  { key: 'geography', get: () => filterGeography.value, set: v => { filterGeography.value = v; } },
+  { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
+  { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
+  { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
+];
 
 function distinctSorted(list, key) {
   return [...new Set(list.map(p => p[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -79,6 +88,7 @@ function renderCard(p) {
 }
 
 function applyFiltersAndRender() {
+  syncFiltersToURL(URL_FILTER_FIELDS);
   const industry = filterIndustry.value;
   const geography = filterGeography.value;
   const type = filterType.value;
@@ -130,6 +140,7 @@ async function loadProgrammes() {
   allProgrammes = data || [];
   updateKPIs(allProgrammes);
   populateFilterOptions();
+  restoreFiltersFromURL(URL_FILTER_FIELDS);
   applyFiltersAndRender();
 }
 
