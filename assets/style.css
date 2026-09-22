@@ -112,8 +112,21 @@ ul { list-style: none; }
 .identity-pick .identity-avatar { width: 36px; height: 36px; font-size: 15px; }
 .identity-pick span { font-size: 13px; font-weight: 500; }
 
+/* ---------- Cross-page navigation smoothing ---------- */
+/* Same-origin link clicks get a soft cross-fade instead of the default hard white
+   flash — a pure progressive enhancement (unsupported browsers just keep the normal
+   instant navigation, nothing to feature-detect). The hero additionally gets its own
+   transition-name below so, across the three Loyalty Programs pages that all share it,
+   the browser treats it as the SAME element continuing across the navigation (its size/
+   position animate) rather than cross-fading the whole hero away and back in — that's
+   what actually makes switching between Database/Analysis/Favorites feel seamless
+   rather than just softened. */
+@view-transition {
+  navigation: auto;
+}
+
 /* ---------- Hero ---------- */
-.hero { position: relative; height: 62vh; min-height: 420px; max-height: 620px; overflow: hidden; }
+.hero { position: relative; height: 62vh; min-height: 420px; max-height: 620px; overflow: hidden; view-transition-name: page-hero; }
 .hero img { width: 100%; height: 100%; object-fit: cover; }
 .hero::after {
   content: ''; position: absolute; inset: 0;
@@ -837,8 +850,6 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
    interaction, never as decoration. */
 
 .lab-header { padding: 28px 40px 0; max-width: 1280px; margin: 0 auto; }
-.lab-header h1 { font-family: var(--font-display); font-size: clamp(28px, 4.2vw, 40px); font-weight: 500; letter-spacing: -0.01em; margin-bottom: 6px; }
-.lab-subtitle { color: var(--muted); font-size: 13px; max-width: 560px; }
 .lab-orientation { color: var(--muted-light); font-size: 12px; margin-top: 14px; }
 
 /* ---------- Compact filter row: active filters only, everything else behind one button ---------- */
@@ -882,10 +893,14 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
    scrollbar-width/::-webkit-scrollbar hide it since the row's own edge fade/gesture
    already signals "more this way" without needing a visible track. */
 .lab-tabs {
-  display: flex; gap: 4px; max-width: 1280px; margin: 0 auto; padding: 0 40px;
+  display: flex; align-items: center; gap: 4px; max-width: 1280px; margin: 0 auto; padding: 0 40px;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
 .lab-tabs::-webkit-scrollbar { display: none; }
+/* A page-level action (e.g. "+ Add Favourite") living in the same row as a group's tab
+   links, pushed to the row's own right edge — one row of chrome instead of a whole
+   extra header bar just to hold one button. */
+.lab-tabs-action { margin-left: auto; flex-shrink: 0; }
 .lab-tab {
   padding: 14px 4px; margin-right: 26px; font-size: 14px; font-weight: 500; color: var(--muted);
   border-bottom: 2px solid transparent; transition: color var(--transition), border-color var(--transition);
@@ -893,6 +908,15 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 }
 .lab-tab:hover { color: var(--dark); }
 .lab-tab.active { color: var(--dark); border-bottom-color: var(--accent); font-weight: 600; }
+/* Sub-sub-tabs (e.g. Analysis's Explore/Relate/... row beneath the Database/Analysis/
+   Favorites group row): only the deepest tab row's active tab gets the underline — an
+   outer group row followed by another tab row stays bold-only, so the underline always
+   points at exactly one, most-specific "you are here". `~` (not `+`) since Analysis has
+   its own header content sitting between the two tab rows, not direct adjacency.
+   Self-adjusting: a page whose group row has no further tab row after it anywhere
+   (Favorites, Sources, ...) keeps the underline on its own active tab, since there it
+   IS the deepest row. */
+.lab-tabs-wrap.group-tabs:has(~ .lab-tabs-wrap) .lab-tab.active { border-bottom-color: transparent; }
 
 .lab-main { max-width: 1280px; margin: 0 auto; padding: 24px 40px 64px; }
 .workspace[hidden] { display: none; }
