@@ -1422,7 +1422,10 @@ function showTab(tab) {
   TABS.forEach(t => { document.getElementById(`workspace-${t}`).hidden = t !== tab; });
 }
 
-document.querySelectorAll('.lab-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+// [data-tab]: the in-page Calendar/Tasks/Polls buttons only — Weekly Reports is a
+// plain link to its own page (also styled .lab-tab, to sit in the same row) and
+// needs no click handling of its own.
+document.querySelectorAll('.lab-tab[data-tab]').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
 
 // ---------------- Init ----------------
 
