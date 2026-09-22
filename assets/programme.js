@@ -2,10 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
-  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
-import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
+import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
 import { loadTeamMembers, teamMemberSelectHTML } from './teamMembers.js';
 import { wireBackLink } from './backLink.js';
@@ -83,10 +83,6 @@ function identityBlockHTML() {
 function classificationBlockHTML() {
   const industryField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'industry');
   const positioningField = PROGRAMME_CLASSIFICATION_FIELDS.find(f => f.key === 'programme_positioning');
-  const subOptions = editing
-    ? '<option value=""></option>' + getSubIndustryOptions(programme.industry, INDUSTRY_SUBS).map(s =>
-        `<option value="${escapeHtml(s)}" ${s === programme.sub_industry ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')
-    : '';
 
   return `
     <div class="record-block">
@@ -95,10 +91,6 @@ function classificationBlockHTML() {
         <div class="record-field ${editing ? 'editing' : ''}">
           <label>Industry</label>
           ${editing ? inputHTML(industryField, programme.industry) : valueOrEmpty(programme.industry)}
-        </div>
-        <div class="record-field ${editing ? 'editing' : ''}">
-          <label>Sub-Industry</label>
-          ${editing ? `<select name="sub_industry" id="record-sub-industry" required>${subOptions}</select>` : valueOrEmpty(programme.sub_industry)}
         </div>
         <div class="record-field ${editing ? 'editing' : ''}">
           <label>Programme Positioning</label>
@@ -370,12 +362,6 @@ function render() {
 
   if (editing) {
     const form = document.getElementById('record-form');
-    const industrySel = form.elements['industry'];
-    industrySel.addEventListener('change', () => {
-      const subSel = document.getElementById('record-sub-industry');
-      subSel.innerHTML = '<option value=""></option>' + getSubIndustryOptions(industrySel.value, INDUSTRY_SUBS).map(s => `<option>${escapeHtml(s)}</option>`).join('');
-    });
-
     wireMechanismToggle(form);
 
     const tierRows = document.getElementById('tier-rows');
@@ -429,7 +415,6 @@ async function saveChanges() {
     ...readFormValues(form, PROGRAMME_GEOGRAPHY_FIELDS),
     ...readFormValues(form, PROGRAMME_MEMBERSHIP_FIELDS),
     ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
-    sub_industry: document.getElementById('record-sub-industry').value || null,
     created_by: form.elements['created_by'].value || null,
     target_customer: readCheckboxGroup(form, 'target_customer'),
     geographic_scope: readCheckboxGroup(form, 'geographic_scope'),

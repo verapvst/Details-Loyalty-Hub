@@ -14,7 +14,6 @@ import { supabase } from './supabase.js';
 // or 'time' (numeric, sorted by value not frequency).
 export const DIMENSIONS = {
   industry: { label: 'Industry', kind: 'single', get: p => nonEmpty(p.industry) },
-  sub_industry: { label: 'Sub-Industry', kind: 'single', get: p => nonEmpty(p.sub_industry) },
   programme_positioning: { label: 'Programme Positioning', kind: 'single', get: p => nonEmpty(p.programme_positioning) },
   membership_type: { label: 'Membership Type', kind: 'single', get: p => nonEmpty(p.membership_type) },
   access_registration: { label: 'Access / Registration', kind: 'single', get: p => nonEmpty(p.access_registration) },
@@ -50,12 +49,12 @@ export function getCachedDataset() {
 }
 
 // ---------------- Global filters ----------------
-// filters: { industry:[], sub_industry:[], programme_positioning:[], membership_type:[],
+// filters: { industry:[], programme_positioning:[], membership_type:[],
 //   country:[], geographic_scope:[], target_customer:[], access_registration:[],
 //   yearMin:number|null, yearMax:number|null }
 export function applyGlobalFilters(programmes, filters = {}) {
   return programmes.filter(p => {
-    for (const key of ['industry', 'sub_industry', 'programme_positioning', 'membership_type', 'country', 'access_registration']) {
+    for (const key of ['industry', 'programme_positioning', 'membership_type', 'country', 'access_registration']) {
       const selected = filters[key];
       if (selected && selected.length && !selected.includes(p[key])) return false;
     }
@@ -78,7 +77,7 @@ export function applyGlobalFilters(programmes, filters = {}) {
 }
 
 export function isFilterActive(filters = {}) {
-  return ['industry', 'sub_industry', 'programme_positioning', 'membership_type', 'country', 'access_registration', 'geographic_scope', 'target_customer']
+  return ['industry', 'programme_positioning', 'membership_type', 'country', 'access_registration', 'geographic_scope', 'target_customer']
     .some(k => filters[k] && filters[k].length) || filters.yearMin != null || filters.yearMax != null;
 }
 
@@ -546,7 +545,6 @@ export function snapshotKpis(programmes) {
 
 const DATA_QUALITY_FIELDS = [
   { key: 'launch_year', label: 'Launch Year', has: p => typeof p.launch_year === 'number' },
-  { key: 'sub_industry', label: 'Sub-Industry', has: p => !!p.sub_industry },
   { key: 'programme_positioning', label: 'Programme Positioning', has: p => !!p.programme_positioning },
   { key: 'membership_type', label: 'Membership Type', has: p => !!p.membership_type },
   { key: 'geographic_scope', label: 'Geographic Scope', has: p => arr(p.geographic_scope).length > 0 },

@@ -1,10 +1,10 @@
 import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity, navLabel, renameIdentityIfMatches } from './app.js';
-import { OPTIONS, INDUSTRY_SUBS, SCOPE_GROUPS, PINNED_COUNTRIES } from './options.js';
+import { OPTIONS, SCOPE_GROUPS, PINNED_COUNTRIES } from './options.js';
 import {
   loadCustomOptions, getOptionList, getCustomRows, getDeactivatedBuiltins, hasUsageCheck, countOptionUsage,
   addOption, setOptionActive, deleteOption, deactivateBuiltin, reactivateBuiltin,
-  getAllSubIndustryRows, addSubIndustry, addScopeValue
+  addScopeValue
 } from './customOptions.js';
 import { loadTeamMembers, getAllTeamMembers, teamAvatarUrl } from './teamMembers.js';
 import { loadAppSettings, getAppSetting, setAppSetting } from './appSettings.js';
@@ -416,67 +416,6 @@ function renderPinnedCountriesCard() {
   });
 }
 
-// ---------------- Sub-Industry (dependent on Industry) ----------------
-
-function renderSubIndustryCard() {
-  const container = document.getElementById('sub-industry-card');
-  const industries = Object.keys(INDUSTRY_SUBS);
-  const current = container.dataset.currentIndustry || industries[0];
-  container.dataset.currentIndustry = current;
-
-  const key = `sub_industry:${current}`;
-  const builtIn = INDUSTRY_SUBS[current] || [];
-  const deactivatedBuiltins = getDeactivatedBuiltins(key);
-  const customRows = getAllSubIndustryRows(current);
-
-  const builtInChips = builtIn.map(value => {
-    const active = !deactivatedBuiltins.includes(value);
-    const actionBtn = active
-      ? `<button type="button" class="chip-action" data-deactivate-builtin="${escapeHtml(value)}">Deactivate</button>`
-      : `<button type="button" class="chip-action" data-reactivate-builtin="${escapeHtml(value)}">Reactivate</button>`;
-    return chipHTML({ value, active, actions: actionBtn });
-  }).join('');
-  const customChips = customRows.map(row => {
-    const active = row.active !== false;
-    const actions = active
-      ? `<button type="button" class="chip-action" data-deactivate-custom="${row.id}">Deactivate</button>`
-      : `<button type="button" class="chip-action" data-reactivate-custom="${row.id}">Reactivate</button>
-         <button type="button" class="chip-action chip-action-danger" data-delete-custom="${row.id}" data-delete-value="${escapeHtml(row.value)}" data-delete-list="sub_industry">Delete</button>`;
-    return chipHTML({ value: row.value, active, actions });
-  }).join('');
-
-  const industryOptionsHTML = industries.map(i => `<option value="${escapeHtml(i)}" ${i === current ? 'selected' : ''}>${escapeHtml(i)}</option>`).join('');
-
-  container.innerHTML = cardShellHTML('Sub-Industries', 'Pick an Industry, then manage its sub-industry list.', `
-    <div class="form-field" style="max-width: 320px; margin-bottom: 14px;">
-      <select id="sub-industry-parent">${industryOptionsHTML}</select>
-    </div>
-    <div class="chip-row">${builtInChips}${customChips}</div>
-    <div class="settings-add-row" style="margin-top: 14px;">
-      <input type="text" id="add-sub-industry" placeholder="Add a sub-industry to ${escapeHtml(current)}…" />
-      <button type="button" class="btn-primary" id="btn-add-sub-industry">Add</button>
-    </div>
-  `);
-
-  document.getElementById('sub-industry-parent').addEventListener('change', (e) => {
-    container.dataset.currentIndustry = e.target.value;
-    renderSubIndustryCard();
-  });
-  document.getElementById('btn-add-sub-industry').addEventListener('click', async () => {
-    const input = document.getElementById('add-sub-industry');
-    const value = input.value.trim();
-    if (!value) return;
-    const { error } = await addSubIndustry(current, value);
-    if (error) {
-      showToast(error.code === '23505' ? 'That value already exists.' : `Couldn't add value: ${error.message}`, true);
-      return;
-    }
-    await loadCustomOptions();
-    showToast('Sub-industry added.');
-    renderSubIndustryCard();
-  });
-  wireCardActions(container, key, renderSubIndustryCard);
-}
 
 // ---------------- Scope (shared by Sources + Data & Insights) ----------------
 
@@ -542,11 +481,6 @@ renderTeamCard();
 
 const programmesContainer = document.getElementById('programmes-settings-cards');
 renderFlatListCard(programmesContainer, 'industry', 'Industries');
-const subIndustryHolder = document.createElement('div');
-subIndustryHolder.id = 'sub-industry-card';
-subIndustryHolder.className = 'settings-block';
-programmesContainer.appendChild(subIndustryHolder);
-renderSubIndustryCard();
 renderFlatListCard(programmesContainer, 'programme_positioning', 'Programme Positioning');
 renderFlatListCard(programmesContainer, 'target_customer', 'Target Customer');
 renderFlatListCard(programmesContainer, 'geographic_scope', 'Geographic Scope');

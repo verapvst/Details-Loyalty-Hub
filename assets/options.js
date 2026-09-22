@@ -39,26 +39,6 @@ export const INSIGHT_TYPE_DEFINITIONS = {
   'Other': 'Information that does not clearly fit any of the categories above.'
 };
 
-// Industry -> Sub-Industry. Matches the staging workbook exactly.
-export const INDUSTRY_SUBS = {
-  'Hotels & Hospitality': ['Hotels & Resorts', 'Serviced Apartments', 'Hostels', 'Vacation Rentals', 'Hospitality Groups', 'Other'],
-  'Golf': ['Golf Clubs & Resorts', 'Golf Coaching / Academies', 'Golf Equipment & Retail', 'Other'],
-  'Tourism & Leisure': ['Attractions & Theme Parks', 'Tourism Experiences & Tours', 'Cultural Institutions', 'Events & Festivals', 'Recreation Clubs', 'Other'],
-  'Airlines & Travel': ['Airlines', 'Rail', 'Car Rental', 'Cruises', 'Travel Agencies & Platforms', 'Other'],
-  'Luxury': ['Luxury Goods & Fashion', 'Luxury Hospitality', 'Luxury Automotive', 'Other'],
-  'Retail': ['General Retail', 'Fashion & Apparel', 'Beauty & Cosmetics', 'Sportswear & Outdoor', 'Grocery & Supermarkets', 'Home & Furniture', 'Electronics', 'Other'],
-  'Banking & Financial Services (incl. Credit Cards)': ['Banking', 'Credit Cards', 'Payments & Fintech', 'Insurance', 'Investment & Wealth Management', 'Other'],
-  'Fitness & Wellness': ['Gyms & Fitness Clubs', 'Fitness Apps', 'Spas & Wellness', 'Wearables & Health Tech', 'Other'],
-  'Restaurants & F&B': ['Restaurants', 'Cafes & Coffee', 'QSR / Fast Food', 'Food Delivery', 'Bars & Nightlife', 'Other'],
-  'Automotive': ['Automotive Manufacturers', 'Dealerships', 'Mobility & Ride-hailing', 'EV & Charging', 'Other'],
-  'Entertainment & Media': ['Streaming', 'Music', 'Gaming', 'Publishing & News', 'Cinema', 'Other'],
-  "Private Members' Clubs": ['Social Clubs', 'Business Clubs', 'Other'],
-  'Education': ['Higher Education', 'Online Learning Platforms', 'Professional Training', 'Other'],
-  'Telecommunications': ['Mobile Operators', 'Broadband / Internet', 'Cable', 'Other'],
-  'Healthcare': ['Hospitals & Clinics', 'Pharmacies', 'Health Insurance', 'Digital Health Platforms', 'Other'],
-  'Other': ['Other']
-};
-
 export const OPTIONS = {
   country: [
     'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina',
@@ -88,7 +68,12 @@ export const OPTIONS = {
     'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
-  industry: Object.keys(INDUSTRY_SUBS),
+  industry: [
+    'Hotels & Hospitality', 'Golf', 'Tourism & Leisure', 'Airlines & Travel', 'Luxury', 'Retail',
+    'Banking & Financial Services (incl. Credit Cards)', 'Fitness & Wellness', 'Restaurants & F&B',
+    'Automotive', 'Entertainment & Media', "Private Members' Clubs", 'Education',
+    'Telecommunications', 'Healthcare', 'Other'
+  ],
   // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
   // below for the shared team definitions) — orthogonal to Scope, which is what it's about.
   insight_type: [
@@ -201,8 +186,6 @@ export const PROGRAMME_IDENTITY_FIELDS = [
   { key: 'launch_year', label: 'Launch Year', type: 'number' }
 ];
 
-// Note: sub_industry is deliberately NOT here — it's rendered separately with a
-// change-listener on Industry so its options stay dependent (see database.js / programme.js).
 export const PROGRAMME_CLASSIFICATION_FIELDS = [
   { key: 'industry', label: 'Industry', type: 'select', options: 'industry', required: true },
   { key: 'programme_positioning', label: 'Programme Positioning', type: 'select', options: 'programme_positioning' }

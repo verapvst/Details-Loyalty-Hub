@@ -8,13 +8,12 @@ const IDENTITY_KEY = 'dlh_identity';
 // the route (never changes either) — only `label` can be overridden from Settings
 // (Navigation), via app_settings key `nav_label:<key>`. See navLabel() below.
 //
-// A group with `children` collapses related pages under one top-level nav item —
-// Analysis is a view over the Database, Favorites is a personal cut of it; Sources
-// backs Data & Insights — so the main bar stays short while the pages themselves are
-// one click away via a secondary tab row (see renderSubNav()) that appears once
-// you're on any page in that group. Every leaf keeps its own stable `key`/`href` —
-// Settings' "Tab display names" editor and every page's own `initNav(activeKey)` call
-// are unaffected by how pages are grouped at the top level.
+// A group with `children` collapses related pages under one nav item — Analysis is a
+// view over the Database, Favorites is a personal cut of it; Sources backs Data &
+// Insights — so the list stays short while the pages themselves are one click away,
+// shown indented right under their parent (see navLinksListHTML() below). Every leaf
+// keeps its own stable `key`/`href` — Settings' "Tab display names" editor and every
+// page's own `initNav(activeKey)` call are unaffected by how pages are grouped.
 const NAV_GROUPS = [
   { key: 'database', label: 'Database', href: 'index.html', children: [
       { key: 'database', label: 'Database', href: 'index.html' },
@@ -38,11 +37,18 @@ export function navLabel(key) {
   return getAppSetting(`nav_label:${key}`, link ? link.label : key);
 }
 
-// The group whose top-level tab should be highlighted, and whose children (if any)
-// populate the secondary tab row — found by matching either the group's own key or
-// one of its children's, so it works whether activeKey is a flat page or a leaf.
-function groupFor(activeKey) {
-  return NAV_GROUPS.find(g => g.key === activeKey || (g.children && g.children.some(c => c.key === activeKey))) || NAV_GROUPS[0];
+// One flattened, vertical link list — a group's own link immediately followed by its
+// (indented) children — used for both the always-visible desktop sidebar and the
+// mobile drawer, so the two stay identical by construction rather than by convention.
+function navLinksListHTML(activeKey) {
+  return NAV_GROUPS.map(g => {
+    const headerHTML = `<a href="${g.href}" class="${!g.children && g.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`;
+    if (!g.children) return headerHTML;
+    const childrenHTML = g.children.map(c =>
+      `<a href="${c.href}" class="nav-link-child ${c.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(c.key))}</a>`
+    ).join('');
+    return headerHTML + childrenHTML;
+  }).join('');
 }
 
 export function getIdentity() {
@@ -78,30 +84,23 @@ function avatarInnerHTML(name) {
 }
 
 const MOBILE_QUERY = '(max-width: 860px)';
-const NAV_H = 56, SUBNAV_H = 44;
+
+// The identity button appears twice in the DOM (compact mobile top bar, foot of the
+// desktop sidebar) — only one is ever visible at a time (CSS), so both are wired and
+// updated together rather than picking "the" one by id.
+function identityButtonHTML() {
+  return `
+    <button class="identity-btn" type="button">
+      <span class="identity-avatar">?</span>
+      <span class="identity-name">Select name</span>
+    </button>
+  `;
+}
 
 function renderNav(activeKey) {
   const root = document.getElementById('nav-root');
   if (!root) return;
-  const activeGroup = groupFor(activeKey);
-
-  const links = NAV_GROUPS.map(g =>
-    `<a href="${g.href}" class="${g === activeGroup ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`
-  ).join('');
-
-  const subNavHTML = activeGroup.children ? `
-    <div class="sub-nav">
-      <div class="sub-nav-inner">
-        ${activeGroup.children.map(c => `<a href="${c.href}" class="${c.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(c.key))}</a>`).join('')}
-      </div>
-    </div>
-  ` : '';
-
-  // Content below the fixed header (body padding, every page's own sticky filter/tab
-  // bar) needs to know the header's real total height, which now varies by page — see
-  // the matching `!important` overrides in style.css that pin this back to NAV_H alone
-  // once the sub-nav bar itself is hidden at the mobile breakpoint.
-  document.documentElement.style.setProperty('--nav-h', `${activeGroup.children ? NAV_H + SUBNAV_H : NAV_H}px`);
+  const linksHTML = navLinksListHTML(activeKey);
 
   root.innerHTML = `
     <nav class="nav">
@@ -110,16 +109,14 @@ function renderNav(activeKey) {
           Details <span>Loyalty Hub</span>
           <span class="nav-logo-icon" aria-hidden="true"><i></i><i></i><i></i></span>
         </a>
-        <div class="nav-links">${links}</div>
-        <div class="nav-right">
-          <button class="identity-btn" id="identity-btn" type="button">
-            <span class="identity-avatar" id="identity-avatar">?</span>
-            <span class="identity-name" id="identity-name">Select name</span>
-          </button>
-        </div>
+        <div class="nav-right">${identityButtonHTML()}</div>
       </div>
     </nav>
-    ${subNavHTML}
+    <aside class="sidebar-nav">
+      <a href="index.html" class="nav-logo">Details <span>Loyalty Hub</span></a>
+      <nav class="sidebar-links">${linksHTML}</nav>
+      <div class="sidebar-foot">${identityButtonHTML()}</div>
+    </aside>
   `;
 
   renderMobileDrawer(activeKey);
@@ -140,18 +137,6 @@ function renderMobileDrawer(activeKey) {
     document.body.appendChild(root);
   }
 
-  // Flattened, not nested — a group's own link is followed immediately by its
-  // (indented) children, so the drawer stays a single scannable list instead of
-  // needing an accordion for what's still a short list either way.
-  const links = NAV_GROUPS.map(g => {
-    const headerHTML = `<a href="${g.href}" class="${!g.children && g.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`;
-    if (!g.children) return headerHTML;
-    const childrenHTML = g.children.map(c =>
-      `<a href="${c.href}" class="mobile-drawer-child ${c.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(c.key))}</a>`
-    ).join('');
-    return headerHTML + childrenHTML;
-  }).join('');
-
   root.innerHTML = `
     <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" hidden>
       <div class="mobile-drawer">
@@ -159,7 +144,7 @@ function renderMobileDrawer(activeKey) {
           <span class="nav-logo">Details <span>Loyalty Hub</span></span>
           <button class="mobile-drawer-close" id="mobile-drawer-close" type="button" aria-label="Close menu">&times;</button>
         </div>
-        <nav class="mobile-drawer-links">${links}</nav>
+        <nav class="mobile-drawer-links">${navLinksListHTML(activeKey)}</nav>
       </div>
     </div>
   `;
@@ -231,10 +216,8 @@ async function renderIdentityModal({ forceChoice }) {
 
 function updateIdentityDisplay() {
   const name = getIdentity();
-  const nameEl = document.getElementById('identity-name');
-  const avatarEl = document.getElementById('identity-avatar');
-  if (nameEl) nameEl.textContent = name || 'Select name';
-  if (avatarEl) avatarEl.innerHTML = name ? avatarInnerHTML(name) : '?';
+  document.querySelectorAll('.identity-name').forEach(el => { el.textContent = name || 'Select name'; });
+  document.querySelectorAll('.identity-avatar').forEach(el => { el.innerHTML = name ? avatarInnerHTML(name) : '?'; });
 }
 
 export async function initNav(activeKey) {
@@ -242,8 +225,8 @@ export async function initNav(activeKey) {
   renderNav(activeKey);
   updateIdentityDisplay();
 
-  document.getElementById('identity-btn').addEventListener('click', () => {
-    renderIdentityModal({ forceChoice: false });
+  document.querySelectorAll('.identity-btn').forEach(btn => {
+    btn.addEventListener('click', () => renderIdentityModal({ forceChoice: false }));
   });
 
   if (!getIdentity()) {

@@ -31,8 +31,6 @@ export const LIST_LABELS = {
   // task_status is deliberately not editable here: tasks.status has a pre-existing
   // database CHECK constraint (todo / in_progress / done only), so a custom addition
   // would just fail to save.
-  // sub_industry is handled separately (see getSubIndustryOptions) — it's dependent
-  // on Industry, keyed as 'sub_industry:<industry>' rather than a flat list.
   // scope (Sources / Data & Insights) is handled separately too (see
   // mergedScopeGroups) — it's organised into 3 fixed visual groups, not a flat list.
 };
@@ -43,7 +41,6 @@ export const LIST_LABELS = {
 // reuse to run its UPDATE ... WHERE = 'old value' statements.
 const LIST_USAGE = {
   industry: [{ table: 'programmes', column: 'industry' }],
-  sub_industry: [{ table: 'programmes', column: 'sub_industry' }],
   programme_positioning: [{ table: 'programmes', column: 'programme_positioning' }],
   target_customer: [{ table: 'programmes', column: 'target_customer', array: true }],
   geographic_scope: [{ table: 'programmes', column: 'geographic_scope', array: true }],
@@ -113,30 +110,6 @@ export function getDeactivatedBuiltins(key) {
 
 export function listKeys() {
   return Object.keys(LIST_LABELS);
-}
-
-// ---------------- Sub-Industry (dependent on Industry, not a flat list) ----------------
-
-function subIndustryKey(industry) { return `sub_industry:${industry}`; }
-
-export function getSubIndustryOptions(industry, industrySubs) {
-  const key = subIndustryKey(industry);
-  const deactivated = deactivatedBuiltins[key];
-  const base = (industrySubs[industry] || []).filter(v => !deactivated || !deactivated.has(v));
-  const custom = (cache[key] || []).filter(r => r.active !== false).map(r => r.value);
-  if (!custom.length) return base;
-
-  const trailingIdx = base.findIndex(v => v === 'Other');
-  if (trailingIdx === -1) return [...base, ...custom];
-  return [...base.slice(0, trailingIdx), ...custom, ...base.slice(trailingIdx)];
-}
-
-export function getAllSubIndustryRows(industry) {
-  return getCustomRows(subIndustryKey(industry));
-}
-
-export async function addSubIndustry(industry, value) {
-  return addOption(subIndustryKey(industry), value);
 }
 
 // ---------------- Scope (shared by Sources + Data & Insights, 3 fixed groups) ----------------

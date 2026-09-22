@@ -2,10 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
-  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS, INDUSTRY_SUBS
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
-import { loadCustomOptions, getOptionList, getSubIndustryOptions } from './customOptions.js';
+import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
 await initNav('database');
@@ -166,22 +166,6 @@ function fieldsGridHTML(fields, values = {}) {
   `).join('');
 }
 
-function subIndustryOptionsHTML(industry, selected) {
-  const subs = getSubIndustryOptions(industry, INDUSTRY_SUBS);
-  return '<option value=""></option>' + subs.map(s =>
-    `<option value="${escapeHtml(s)}" ${s === selected ? 'selected' : ''}>${escapeHtml(s)}</option>`
-  ).join('');
-}
-
-function wireSubIndustryCascade(form, initialSubIndustry) {
-  const industrySel = form.elements['industry'];
-  const subSel = form.elements['sub_industry'];
-  industrySel.addEventListener('change', () => {
-    subSel.innerHTML = subIndustryOptionsHTML(industrySel.value, null);
-  });
-  subSel.innerHTML = subIndustryOptionsHTML(industrySel.value, initialSubIndustry);
-}
-
 function tierRowHTML(t = {}) {
   return `
     <div class="tier-row-v2">
@@ -324,11 +308,7 @@ function openAddModal() {
             <div class="form-grid">${fieldsGridHTML(PROGRAMME_IDENTITY_FIELDS)}</div>
 
             <div class="form-section-label" style="margin-top:20px;">Classification</div>
-            <div class="form-grid">
-              ${fieldsGridHTML(PROGRAMME_CLASSIFICATION_FIELDS.filter(f => f.key === 'industry'))}
-              <div class="form-field"><label>Sub-Industry *</label><select name="sub_industry" required></select></div>
-              ${fieldsGridHTML(PROGRAMME_CLASSIFICATION_FIELDS.filter(f => f.key !== 'industry'))}
-            </div>
+            <div class="form-grid">${fieldsGridHTML(PROGRAMME_CLASSIFICATION_FIELDS)}</div>
             <div class="form-field full" style="margin-top:10px;"><label>Target Customer</label>${inputHTML({ key: 'target_customer', type: 'multiselect', options: 'target_customer' }, [])}</div>
 
             <div class="form-section-label" style="margin-top:20px;">Geography</div>
@@ -360,7 +340,6 @@ function openAddModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 
   const form = document.getElementById('add-form');
-  wireSubIndustryCascade(form, null);
   wireMechanismToggle(form);
 
   const tierRows = document.getElementById('tier-rows');
@@ -379,7 +358,6 @@ function openAddModal() {
       ...readFormValues(form, PROGRAMME_GEOGRAPHY_FIELDS),
       ...readFormValues(form, PROGRAMME_MEMBERSHIP_FIELDS),
       ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
-      sub_industry: form.elements['sub_industry'].value || null,
       target_customer: readCheckboxGroup(form, 'target_customer'),
       geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
       mechanisms: readCheckboxGroup(form, 'mechanisms'),
