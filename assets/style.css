@@ -872,6 +872,11 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 
 /* ---------- Segmented workspace navigation ---------- */
 .lab-tabs-wrap { border-bottom: 1px solid var(--border); position: sticky; top: var(--nav-h); background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 80; }
+/* A group's own cross-page tab row (e.g. Database/Analysis/Favorites) — orientation
+   chrome, not a page's primary workspace-switcher, so it scrolls away rather than
+   staying pinned; also avoids two sticky bars stacking at the same offset on a page
+   (like Analysis) that has both this and its own inner tab row. */
+.lab-tabs-wrap.group-tabs { position: static; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 /* overflow-x lets a tab row wider than the viewport (this page has grown from 4 to 6
    tabs) scroll horizontally within itself instead of forcing the whole page wider —
    scrollbar-width/::-webkit-scrollbar hide it since the row's own edge fade/gesture
@@ -1105,7 +1110,8 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 }
 .idea-card:hover { transform: translateY(-1px); }
 .idea-card-title { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 6px; }
-.idea-card-theme { font-size: 9.5px; padding: 2px 8px; margin-bottom: 8px; display: inline-block; }
+.idea-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.idea-card-tags .badge { font-size: 9.5px; padding: 2px 8px; }
 .idea-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10.5px; color: var(--muted); }
 .idea-priority { font-weight: 600; }
 .idea-priority-high { color: var(--red); }
@@ -1164,6 +1170,18 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .idea-score-cell.score-4 .idea-score-select { color: #5B8F2A; }
 .idea-score-cell.score-5 { background: var(--green-light); }
 .idea-score-cell.score-5 .idea-score-select { color: var(--green); }
+
+/* Overall Score: one pass, four fixed dimensions, no per-segment grid — a simple row
+   of label+select pairs rather than the Scorecard's table, since there's nothing to
+   line up against a column header here. */
+.overall-score-row { display: flex; flex-wrap: wrap; gap: 14px; }
+.overall-score-item { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.overall-score-item label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.idea-overall-select {
+  padding: 7px 30px 7px 12px; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+  color: var(--dark); background: var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%236E6E73" stroke-width="1.4" fill="none"/></svg>') no-repeat right 10px center;
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+}
 
 @media (max-width: 860px) {
   .idea-board { grid-template-columns: 1fr; }

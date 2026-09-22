@@ -15,16 +15,21 @@ import {
   nodeDetailHTML, wireNodeDetail, openEvidencePickerModal
 } from './issueTree.js';
 
-await initNav('brainstorm');
-
 // ---------------- Tabs ----------------
+// Which tab to open — the nav drawer's Brainstorms children link here with ?tab=, so a
+// fresh load honours that over whatever was last active; switching tabs in-page
+// (showTab, below) doesn't touch the URL. Same pattern as tasks.js.
 
 const TABS = ['ideas', 'issue-tree', 'questions', 'next-steps'];
 const TAB_STORAGE_KEY = 'brainstorm_active_tab';
 let activeTab = (() => {
+  const fromURL = new URLSearchParams(window.location.search).get('tab');
+  if (TABS.includes(fromURL)) return fromURL;
   try { const saved = localStorage.getItem(TAB_STORAGE_KEY); return TABS.includes(saved) ? saved : TABS[0]; }
   catch { return TABS[0]; }
 })();
+
+await initNav(`brainstorm-${activeTab}`);
 
 function showTab(tab) {
   activeTab = tab;

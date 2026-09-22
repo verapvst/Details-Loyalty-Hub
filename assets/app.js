@@ -14,8 +14,13 @@ const IDENTITY_KEY = 'dlh_identity';
 // shown indented right under their parent (see navLinksListHTML() below). Every leaf
 // keeps its own stable `key`/`href` — Settings' "Tab display names" editor and every
 // page's own `initNav(activeKey)` call are unaffected by how pages are grouped.
+// Every group's own key is deliberately distinct from all of its children's keys (even
+// when one child is the group's "default" page) — navLabel() resolves a key to exactly
+// one label, so a group sharing a key with a child would mean renaming one always
+// silently renamed the other too. Pages call initNav() with a CHILD's key (e.g. index.html
+// calls initNav('database')); the group's own key only ever labels the group header/tab.
 const NAV_GROUPS = [
-  { key: 'database', label: 'Database', href: 'index.html', children: [
+  { key: 'loyalty-programs', label: 'Loyalty Programs', href: 'index.html', children: [
       { key: 'database', label: 'Database', href: 'index.html' },
       { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
       { key: 'favorites', label: 'Favorites', href: 'favorites.html' }
@@ -26,9 +31,14 @@ const NAV_GROUPS = [
       { key: 'tasks-polls', label: 'Polls', href: 'tasks.html?tab=polls' },
       { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' }
     ] },
-  { key: 'brainstorm', label: 'Brainstorm', href: 'brainstorm.html' },
-  { key: 'figures', label: 'Data & Insights', href: 'figures.html', children: [
-      { key: 'figures', label: 'Insights', href: 'figures.html' },
+  { key: 'brainstorm', label: 'Brainstorms', href: 'brainstorm.html', children: [
+      { key: 'brainstorm-ideas', label: 'Ideas', href: 'brainstorm.html?tab=ideas' },
+      { key: 'brainstorm-issue-tree', label: 'Issue Tree', href: 'brainstorm.html?tab=issue-tree' },
+      { key: 'brainstorm-questions', label: 'Questions', href: 'brainstorm.html?tab=questions' },
+      { key: 'brainstorm-next-steps', label: 'Next Steps', href: 'brainstorm.html?tab=next-steps' }
+    ] },
+  { key: 'research', label: 'Research', href: 'figures.html', children: [
+      { key: 'figures', label: 'Data Insights', href: 'figures.html' },
       { key: 'sources', label: 'Sources', href: 'sources.html' }
     ] },
   { key: 'settings', label: 'Settings', href: 'settings.html' }

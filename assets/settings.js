@@ -171,6 +171,7 @@ function wireCardActions(container, listKey, rerender) {
 // ---------------- Navigation (tab display labels) ----------------
 
 const NAV_ITEMS = [
+  { key: 'loyalty-programs', label: 'Loyalty Programs' },
   { key: 'database', label: 'Database' },
   { key: 'analysis', label: 'Analysis' },
   { key: 'favorites', label: 'Favorites' },
@@ -179,8 +180,13 @@ const NAV_ITEMS = [
   { key: 'tasks-tasks', label: 'Tasks' },
   { key: 'tasks-polls', label: 'Polls' },
   { key: 'reports', label: 'Weekly Reports' },
-  { key: 'brainstorm', label: 'Brainstorm' },
-  { key: 'figures', label: 'Data & Insights' },
+  { key: 'brainstorm', label: 'Brainstorms' },
+  { key: 'brainstorm-ideas', label: 'Ideas' },
+  { key: 'brainstorm-issue-tree', label: 'Issue Tree' },
+  { key: 'brainstorm-questions', label: 'Questions' },
+  { key: 'brainstorm-next-steps', label: 'Next Steps' },
+  { key: 'research', label: 'Research' },
+  { key: 'figures', label: 'Data Insights' },
   { key: 'sources', label: 'Sources' },
   { key: 'settings', label: 'Settings' }
 ];
@@ -510,9 +516,11 @@ renderFlatListCard(sourcesInsightsContainer, 'insight_type', 'Information Type',
 const calendarContainer = document.getElementById('calendar-settings-cards');
 renderFlatListCard(calendarContainer, 'meeting_type', 'Meeting Type');
 renderFlatListCard(calendarContainer, 'task_type', 'Task Type');
+renderFlatListCard(calendarContainer, 'brainstorm_type', 'Idea Types (Brainstorm)');
 renderFlatListCard(calendarContainer, 'brainstorm_category', 'Idea Categories (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Idea Scorecard Columns — Vertical (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Idea Scorecard Columns — Audience (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_objective', 'Idea Customer Objectives (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Idea Vertical / Scorecard Columns (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Idea Audience / Scorecard Columns (Brainstorm)');
 renderFlatListCard(calendarContainer, 'brainstorm_dimension', 'Idea Scorecard Dimensions (Brainstorm)');
 
 // ---------------- Locked by default ----------------

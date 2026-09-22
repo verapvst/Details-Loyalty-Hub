@@ -14,6 +14,26 @@ const STATUSES = ['idea', 'exploring', 'validated', 'archived'];
 const PRIORITIES = ['low', 'medium', 'high'];
 export const PRIORITY_LABEL = { low: 'Low', medium: 'Medium', high: 'High' };
 
+// One color per Type value, purely so the board is scannable at a glance — the 6
+// built-in badge colors map 1:1 onto the 6 built-in Types. A custom Type added later
+// just falls back to the neutral badge rather than needing a 7th color invented.
+export const TYPE_BADGE_CLASS = {
+  'Strategic Choice': 'badge-dark',
+  'Mechanism': 'badge-green',
+  'Design Parameter': 'badge-muted',
+  'Positioning / Value Proposition': 'badge-meeting',
+  'Enabling Technology': 'badge-yellow',
+  'Concept': 'badge-red'
+};
+export const RELATION_LABEL_FORWARD = {
+  combines_with: 'Combines with', alternative_to: 'Alternative to',
+  depends_on: 'Depends on', built_from: 'Built from'
+};
+export const RELATION_LABEL_REVERSE = {
+  combines_with: 'Combines with', alternative_to: 'Alternative to',
+  depends_on: 'Required by', built_from: 'Used in'
+};
+
 let missingTable = false;
 export function ideasTableReady() { return !missingTable; }
 function isMissingTableError(error) { return error && (error.code === '42P01' || error.code === 'PGRST205'); }
@@ -68,12 +88,14 @@ export async function deleteIdea(ideaId) {
   await supabase.from('brainstorm_ideas').delete().eq('id', ideaId);
 }
 
-// ---------------- Reusable pickers (Category / Mechanisms) ----------------
+// ---------------- Reusable pickers (Type / Category / Mechanisms / Vertical / Audience / Objective) ----------------
 // Each one can grow itself: the "+ Add" prompt writes straight into custom_options —
 // the same table and the same list Settings manages — so a value typed here shows up
 // in Settings too, and vice versa. No separate "quick add" list to keep in sync.
-// Vertical/Audience are no longer per-idea tag pickers — they're reused as the
-// Scorecard's column headers instead (see idea.js).
+// Type and Category are orthogonal tags (altitude vs content area), never a hierarchy
+// — see options.js for the full reasoning. Vertical/Audience are dual-purpose: an
+// optional per-idea tag here, and (via the same option lists) the Scorecard's column
+// headers on the idea page.
 
 export async function addCustomOptionInline(listKey) {
   const value = prompt('New value:')?.trim();
@@ -87,19 +109,19 @@ export async function addCustomOptionInline(listKey) {
   return value;
 }
 
-// Every picker (the Category select, the Vertical/Audience chip groups) is wrapped in
-// one `.idea-picker` container carrying its own list key and kind — so one delegated
-// wiring function (wireInlineAdds, below) can handle "+ Add" for any of them, on both
-// the Add Idea modal and the idea page, without field-specific branching.
-function categoryPickerHTML(selected) {
-  const options = getOptionList('brainstorm_category');
+// Every picker (a select or a chip group) is wrapped in one `.idea-picker` container
+// carrying its own list key and kind — so one delegated wiring function (wireInlineAdds,
+// below) can handle "+ Add" for any of them, on both the Add Idea modal and the idea
+// page, without field-specific branching.
+function selectPickerHTML(listKey, wrapperId, selected, addLabel) {
+  const options = getOptionList(listKey);
   return `
-    <div class="idea-picker" id="idea-category-picker" data-picker-kind="select" data-picker-key="brainstorm_category">
-      <select id="idea-category-select">
+    <div class="idea-picker" id="${wrapperId}" data-picker-kind="select" data-picker-key="${listKey}">
+      <select>
         <option value="">—</option>
         ${options.map(c => `<option value="${escapeHtml(c)}" ${selected === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
       </select>
-      <button type="button" class="btn-text idea-picker-add" style="margin-top:6px;">+ Add category</button>
+      <button type="button" class="btn-text idea-picker-add" style="margin-top:6px;">${addLabel}</button>
     </div>
   `;
 }
@@ -116,10 +138,18 @@ function chipsPickerHTML(listKey, wrapperId, selected, addLabel) {
   `;
 }
 
-export function categorySelectHTML(selected) { return categoryPickerHTML(selected); }
-// Only relevant (and only shown) when Category = "Mechanism" — reuses the same
-// Mechanisms taxonomy as Loyalty Programmes, rather than a Brainstorm-specific list.
+// Tag 1 — altitude: what kind of decision/idea this is.
+export function typeSelectHTML(selected) { return selectPickerHTML('brainstorm_type', 'idea-type-picker', selected, '+ Add type'); }
+// Tag 2 — content area: what part of the loyalty system this concerns.
+export function categorySelectHTML(selected) { return selectPickerHTML('brainstorm_category', 'idea-category-picker', selected, '+ Add category'); }
+// Only relevant (and only shown) when Type = "Mechanism" — reuses the same Mechanisms
+// taxonomy as Loyalty Programmes, rather than a Brainstorm-specific list.
 export function mechanismsChipsHTML(selected = []) { return chipsPickerHTML('mechanisms', 'idea-mechanisms-picker', selected, '+ Add mechanism'); }
+// Optional per-idea tags — same vocabulary as the Scorecard's column headers.
+export function verticalChipsHTML(selected = []) { return chipsPickerHTML('brainstorm_vertical', 'idea-vertical-picker', selected, '+ Add vertical'); }
+export function audienceChipsHTML(selected = []) { return chipsPickerHTML('brainstorm_audience', 'idea-audience-picker', selected, '+ Add audience'); }
+// Optional, multi-select: what customer behaviour this idea targets.
+export function objectiveChipsHTML(selected = []) { return chipsPickerHTML('brainstorm_objective', 'idea-objective-picker', selected, '+ Add objective'); }
 
 // Reads a picker's current value regardless of kind — a single select's value, or the
 // checked values of a chip group.
@@ -145,7 +175,7 @@ function wirePicker(root, picker, onChanged) {
     const value = await addCustomOptionInline(listKey);
     if (!value) return;
     const nextSelected = kind === 'select' ? value : [...current, value];
-    const html = kind === 'select' ? categoryPickerHTML(nextSelected) : chipsPickerHTML(listKey, picker.id, nextSelected, addLabel);
+    const html = kind === 'select' ? selectPickerHTML(listKey, picker.id, nextSelected, addLabel) : chipsPickerHTML(listKey, picker.id, nextSelected, addLabel);
     picker.outerHTML = html;
     const fresh = root.querySelector(`#${picker.id}`);
     wirePicker(root, fresh, onChanged);
@@ -163,10 +193,12 @@ export function wireInlineAdds(root, onChanged) {
 function ideaCardHTML(idea) {
   const names = interestNames(idea);
   const inTree = (idea.issue_node_ideas || []).length > 0;
+  const typeBadge = idea.type ? `<span class="badge ${TYPE_BADGE_CLASS[idea.type] || 'badge-muted'}">${escapeHtml(idea.type)}</span>` : '';
+  const categoryBadge = idea.category ? `<span class="badge badge-muted">${escapeHtml(idea.category)}</span>` : '';
   return `
     <a href="idea.html?id=${idea.id}" class="idea-card">
       <div class="idea-card-title">${escapeHtml(idea.title)}</div>
-      ${idea.category ? `<span class="badge badge-muted idea-card-theme">${escapeHtml(idea.category)}</span>` : ''}
+      ${typeBadge || categoryBadge ? `<div class="idea-card-tags">${typeBadge}${categoryBadge}</div>` : ''}
       <div class="idea-card-meta">
         <span class="idea-priority idea-priority-${idea.priority}">${PRIORITY_LABEL[idea.priority] || 'Medium'}</span>
         <span class="idea-interest-count">${names.length}/${getActiveTeamMembers().length} interested</span>
@@ -210,20 +242,22 @@ export function renderIdeaBoard(container, ideas, ctx) {
   if (addBtn) addBtn.addEventListener('click', openAddIdeaModal);
 }
 
-// ---------------- Category <-> Mechanisms visibility ----------------
-// The Mechanisms multi-pick only makes sense (and is only shown) when Category is
-// "Mechanism". Re-run after any change to the category picker, including after its
-// own "+ Add" swaps in a fresh <select>.
+// ---------------- Type <-> Mechanisms visibility ----------------
+// The Mechanisms multi-pick only makes sense (and is only shown) when Type is
+// "Mechanism". Re-run after any change to the type picker, including after its own
+// "+ Add" swaps in a fresh <select>.
 function syncMechanismsVisibility(root) {
-  const select = root.querySelector('#idea-category-picker select');
+  const select = root.querySelector('#idea-type-picker select');
   const wrap = root.querySelector('#idea-mechanisms-field');
   if (!select || !wrap) return;
   wrap.hidden = select.value !== 'Mechanism';
 }
 
-// ---------------- Add modal (Title/Description/Category(+Mechanisms)/Priority) ----------------
-// Deliberately minimal — evidence (Insights/Favourites), SWOT, the Scorecard, validation
-// and comments all live on the idea's own page, opened immediately after creating it here.
+// ---------------- Add modal (Title/Description/Type(+Mechanisms)/Category/Priority) ----------------
+// The four mandatory fields from the reviewed architecture, plus Priority (already
+// defaults sensibly) — nothing else, so this stays inside the ~20-30s capture target.
+// Vertical/Audience/Objective/evidence/SWOT/etc. all live on the idea's own page,
+// opened immediately after creating it here, revealed progressively as it matures.
 
 export function openAddIdeaModal() {
   let root = document.getElementById('idea-modal-root');
@@ -246,16 +280,20 @@ export function openAddIdeaModal() {
                 <input type="text" name="title" required />
               </div>
               <div class="form-field full">
-                <label>Description <span style="font-weight:400; color: var(--muted);">(optional)</span></label>
-                <textarea name="description" rows="3"></textarea>
+                <label>Description</label>
+                <textarea name="description" rows="3" required></textarea>
               </div>
               <div class="form-field full">
-                <label>Category</label>
-                ${categorySelectHTML(null)}
+                <label>Type <span style="font-weight:400; color: var(--muted);">— what kind of decision is this?</span></label>
+                ${typeSelectHTML(null)}
               </div>
               <div class="form-field full" id="idea-mechanisms-field" hidden>
                 <label>Mechanisms</label>
                 ${mechanismsChipsHTML([])}
+              </div>
+              <div class="form-field full">
+                <label>Category <span style="font-weight:400; color: var(--muted);">— what part of the system?</span></label>
+                ${categorySelectHTML(null)}
               </div>
               <div class="form-field full">
                 <label>Priority</label>
@@ -279,24 +317,25 @@ export function openAddIdeaModal() {
   document.getElementById('idea-modal-close').addEventListener('click', close);
   document.getElementById('idea-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  function wireCategoryChange() {
-    root.querySelector('#idea-category-picker select').addEventListener('change', () => syncMechanismsVisibility(root));
+  function wireTypeChange() {
+    root.querySelector('#idea-type-picker select').addEventListener('change', () => syncMechanismsVisibility(root));
     syncMechanismsVisibility(root);
   }
-  wireInlineAdds(root, (freshPicker) => { if (freshPicker.id === 'idea-category-picker') wireCategoryChange(); });
-  wireCategoryChange();
+  wireInlineAdds(root, (freshPicker) => { if (freshPicker.id === 'idea-type-picker') wireTypeChange(); });
+  wireTypeChange();
 
   document.getElementById('idea-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const title = form.elements['title'].value.trim();
     if (!title) return;
-    const category = readPickerValue(root.querySelector('#idea-category-picker'));
+    const type = readPickerValue(root.querySelector('#idea-type-picker'));
     const data = {
       title,
       description: form.elements['description'].value.trim() || null,
-      category,
-      mechanisms: category === 'Mechanism' ? readPickerValue(root.querySelector('#idea-mechanisms-picker')) : null,
+      type,
+      category: readPickerValue(root.querySelector('#idea-category-picker')),
+      mechanisms: type === 'Mechanism' ? readPickerValue(root.querySelector('#idea-mechanisms-picker')) : null,
       priority: form.elements['priority'].value,
       status: 'idea',
       created_by: getIdentity()
@@ -310,4 +349,29 @@ export function openAddIdeaModal() {
     }
     window.location.href = `idea.html?id=${inserted.id}`;
   });
+}
+
+// ---------------- Relationships ----------------
+// One small graph, not a taxonomy: combines_with/alternative_to are symmetric
+// (direction is just an artifact of who clicked "+ Add" first), depends_on/built_from
+// are directional. A Concept is simply an idea whose Type is "Concept" and which has
+// one or more built_from relationships pointing at its ingredient ideas — no separate
+// Concepts table, no copying: the ingredient ideas stay exactly as first written.
+
+export async function loadIdeaRelationships(ideaId) {
+  const { data, error } = await supabase
+    .from('idea_relationships')
+    .select('*, from_idea:brainstorm_ideas!from_idea_id(id,title), to_idea:brainstorm_ideas!to_idea_id(id,title)')
+    .or(`from_idea_id.eq.${ideaId},to_idea_id.eq.${ideaId}`)
+    .order('created_at', { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+export async function addRelationship(fromIdeaId, toIdeaId, relationType) {
+  return supabase.from('idea_relationships').insert({ from_idea_id: fromIdeaId, to_idea_id: toIdeaId, relation_type: relationType });
+}
+
+export async function removeRelationship(id) {
+  return supabase.from('idea_relationships').delete().eq('id', id);
 }

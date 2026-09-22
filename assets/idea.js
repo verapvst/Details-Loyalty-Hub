@@ -10,9 +10,11 @@ import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { loadTeamMembers, getActiveTeamMembers } from './teamMembers.js';
 import { wireBackLink } from './backLink.js';
 import {
-  loadIdea, interestNames, toggleInterest, updateIdea, deleteIdea,
-  STATUS_LABEL, PRIORITY_LABEL, categorySelectHTML, mechanismsChipsHTML,
-  readPickerValue, wireInlineAdds, addCustomOptionInline
+  loadIdea, loadIdeas, interestNames, toggleInterest, updateIdea, deleteIdea,
+  STATUS_LABEL, PRIORITY_LABEL, TYPE_BADGE_CLASS, RELATION_LABEL_FORWARD, RELATION_LABEL_REVERSE,
+  typeSelectHTML, categorySelectHTML, mechanismsChipsHTML, verticalChipsHTML, audienceChipsHTML, objectiveChipsHTML,
+  readPickerValue, wireInlineAdds, addCustomOptionInline,
+  loadIdeaRelationships, addRelationship, removeRelationship
 } from './brainstormIdeas.js';
 import { loadCurrentTree, loadNodes, openPromoteIdeaModal } from './issueTree.js';
 
@@ -34,13 +36,24 @@ const COMMENT_CATEGORY_LABEL = { team: 'Team', details: 'Details', professor: 'P
 // Scorecard: every number means the same thing everywhere, so a "3" on Feasibility and
 // a "3" on Market Fit are directly comparable.
 const SCORE_LABEL = { 1: 'Poor', 2: 'Weak', 3: 'Moderate', 4: 'Strong', 5: 'Excellent' };
+// Evaluation-stage ranking: a fixed, small set (not the extensible Concept Scorecard
+// dimensions) — one pass across the whole pool, stored in the same idea_scores table
+// under a non-vertical "Overall" pseudo-column, never mixed into the per-segment grid.
+const OVERALL_DIMENSIONS = ['Strategic Fit', 'Customer Value', 'Feasibility', 'Differentiation'];
+const OVERALL_COLUMN = 'Overall';
+const RELATION_TYPES = ['combines_with', 'alternative_to', 'depends_on', 'built_from'];
 
 let idea = null;
 let allInsights = [];
 let allFavourites = [];
+let allIdeas = [];
 let comments = [];
 let scores = [];
+let relationships = [];
 let activeCommentTab = 'team';
+// "Show more" while status is still Idea — a session-only UI toggle, not persisted, so
+// re-renders after that point don't collapse it back on the user mid-edit.
+let midTierExpanded = false;
 
 // Scorecard columns = every Vertical value, then every Audience value — both still
 // managed in Settings, just reused here as column headers instead of per-idea tags.
@@ -79,6 +92,10 @@ async function loadScores() {
   scores = data || [];
 }
 
+async function loadRelationshipsForIdea() {
+  relationships = await loadIdeaRelationships(ideaId);
+}
+
 function favouriteLabel(f) {
   return `${f.target_label || 'Untitled'} (${f.target_type || 'feature'})`;
 }
@@ -91,6 +108,10 @@ function headBlockHTML() {
       <div class="record-head-inner">
         <a href="brainstorm.html" class="record-back">&larr; Back to Brainstorm</a>
         <div class="record-title" style="font-size: 26px;">${escapeHtml(idea.title)}</div>
+        <div class="idea-card-tags" style="margin-top: 10px;">
+          ${idea.type ? `<span class="badge ${TYPE_BADGE_CLASS[idea.type] || 'badge-muted'}">${escapeHtml(idea.type)}</span>` : ''}
+          ${idea.category ? `<span class="badge badge-muted">${escapeHtml(idea.category)}</span>` : ''}
+        </div>
         <div class="record-actions" style="margin-top: 14px; flex-wrap: wrap; gap: 10px;">
           <select id="idea-status-select" class="control-select">
             ${STATUSES.map(s => `<option value="${s}" ${idea.status === s ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`).join('')}
@@ -106,22 +127,53 @@ function headBlockHTML() {
   `;
 }
 
+// The four mandatory fields (Title is in the head block) — always visible regardless
+// of status, per the reviewed architecture: Type (altitude) and Category (content
+// area) are orthogonal tags, never a hierarchy.
 function classificationBlockHTML() {
   return `
     <div class="record-block">
       <h3>Description &amp; Classification</h3>
       <div class="form-field full" style="margin-bottom: 16px;">
         <label>Description</label>
-        <textarea id="idea-description" rows="3" placeholder="Optional…">${escapeHtml(idea.description || '')}</textarea>
+        <textarea id="idea-description" rows="3" placeholder="…">${escapeHtml(idea.description || '')}</textarea>
       </div>
       <div class="form-grid">
         <div class="form-field full">
-          <label>Category</label>
-          ${categorySelectHTML(idea.category)}
+          <label>Type <span style="font-weight:400; color: var(--muted);">— what kind of decision is this?</span></label>
+          ${typeSelectHTML(idea.type)}
         </div>
-        <div class="form-field full" id="idea-mechanisms-field" ${idea.category === 'Mechanism' ? '' : 'hidden'}>
+        <div class="form-field full" id="idea-mechanisms-field" ${idea.type === 'Mechanism' ? '' : 'hidden'}>
           <label>Mechanisms</label>
           ${mechanismsChipsHTML(idea.mechanisms || [])}
+        </div>
+        <div class="form-field full">
+          <label>Category <span style="font-weight:400; color: var(--muted);">— what part of the system?</span></label>
+          ${categorySelectHTML(idea.category)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Vertical/Audience/Objective — optional, revealed once the idea leaves the raw stage
+// (see the mid-tier "show more" wrapper in render()).
+function scopeObjectiveBlockHTML() {
+  return `
+    <div class="record-block">
+      <h3>Scope &amp; Objective</h3>
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Vertical</label>
+          ${verticalChipsHTML(idea.vertical || [])}
+        </div>
+        <div class="form-field full">
+          <label>Audience</label>
+          ${audienceChipsHTML(idea.audience || [])}
+        </div>
+        <div class="form-field full">
+          <label>Customer Objective <span style="font-weight:400; color: var(--muted);">— what behaviour is this trying to change?</span></label>
+          ${objectiveChipsHTML(idea.objective || [])}
         </div>
       </div>
     </div>
@@ -136,6 +188,31 @@ function interestBlockHTML() {
       <h3>Team Interest</h3>
       <button type="button" class="btn-outline btn-sm" id="idea-interest-toggle">${names.includes(me) ? '✓ Interested' : "+ I'm interested"}</button>
       <div class="settings-hint" style="margin: 10px 0 0;">${names.length ? escapeHtml(names.join(', ')) : 'No one yet.'} (${names.length}/${getActiveTeamMembers().length})</div>
+    </div>
+  `;
+}
+
+function relationshipLabelFor(rel) {
+  const isForward = rel.from_idea_id === idea.id;
+  const other = isForward ? rel.to_idea : rel.from_idea;
+  const label = isForward ? RELATION_LABEL_FORWARD[rel.relation_type] : RELATION_LABEL_REVERSE[rel.relation_type];
+  return { label, other };
+}
+
+function relationshipsBlockHTML() {
+  return `
+    <div class="record-block">
+      <h3>Relationships <button type="button" class="btn-text" id="idea-add-relationship" style="float:right;">+ Add</button></h3>
+      ${!relationships.length ? '<div class="drilldown-empty">None yet.</div>' : relationships.map(rel => {
+        const { label, other } = relationshipLabelFor(rel);
+        if (!other) return '';
+        return `
+          <div class="issue-evidence-item">
+            <span>${escapeHtml(label)}: <a href="idea.html?id=${other.id}">${escapeHtml(other.title)}</a></span>
+            <button type="button" class="btn-text" data-remove-relationship="${rel.id}">Remove</button>
+          </div>
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -160,6 +237,34 @@ function swotBlockHTML() {
   `;
 }
 
+// Evaluation-stage: one pass, four fixed dimensions, no per-segment breakdown — a
+// ranking tool for the whole pool. Reuses idea_scores under the non-vertical "Overall"
+// pseudo-column rather than a new table; the rich per-segment Scorecard below is a
+// separate, deliberately Concept-only use of the same table.
+function overallScoreBlockHTML() {
+  const scoreFor = (dimension) => scores.find(s => s.dimension === dimension && s.column_key === OVERALL_COLUMN)?.score || '';
+  return `
+    <div class="record-block">
+      <h3>Overall Score</h3>
+      <div class="settings-hint" style="margin-bottom: 12px;">A quick ranking pass for shortlisting — not per-segment. That's the Scorecard below, reserved for Concepts.</div>
+      <div class="overall-score-row">
+        ${OVERALL_DIMENSIONS.map(dim => {
+          const val = scoreFor(dim);
+          return `
+            <div class="overall-score-item">
+              <label>${escapeHtml(dim)}</label>
+              <select class="idea-overall-select" data-dimension="${escapeHtml(dim)}">
+                <option value="">—</option>
+                ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${String(val) === String(n) ? 'selected' : ''}>${n} · ${SCORE_LABEL[n]}</option>`).join('')}
+              </select>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function scorecardBlockHTML() {
   const dimensions = getOptionList('brainstorm_dimension');
   const columns = scorecardColumns();
@@ -174,7 +279,7 @@ function scorecardBlockHTML() {
   }
   return `
     <div class="record-block">
-      <h3>Scorecard</h3>
+      <h3>Scorecard <span class="settings-hint" style="font-weight:400;">— Concept only</span></h3>
       <div class="settings-hint" style="margin-bottom: 12px;">How effective this idea could be per segment. 1 = Poor, 5 = Excellent — the same scale on every dimension.</div>
       <div style="overflow-x: auto;">
         <table class="idea-scorecard">
@@ -268,16 +373,30 @@ function commentsBlockHTML() {
 
 async function render() {
   const evidence = await loadIdeaEvidence();
+  // Mid-tier (Vertical/Audience/Objective, Team Interest, Relationships, Evidence,
+  // Comments): present in the DOM always, just visually collapsed behind "Show more"
+  // while status is still Idea — not re-fetched or re-built on expand, purely a
+  // `hidden` toggle. Evaluation (Validation Level, Overall Score, SWOT) and the Concept
+  // Scorecard are driven by Status/Type directly (their own selects already trigger a
+  // full reload), so they don't exist in the DOM at all until the idea has earned them.
+  const midTierOpen = idea.status !== 'idea' || midTierExpanded;
+  const showEvaluation = idea.status === 'validated' || idea.status === 'archived';
+  const showConceptScorecard = idea.type === 'Concept';
+
   root.innerHTML = `
     ${headBlockHTML()}
     <div class="record-body">
       ${classificationBlockHTML()}
-      ${interestBlockHTML()}
-      ${swotBlockHTML()}
-      ${scorecardBlockHTML()}
-      ${validationBlockHTML()}
-      ${evidenceBlockHTML(evidence)}
-      ${commentsBlockHTML()}
+      ${!midTierOpen ? '<button type="button" class="btn-text" id="idea-showmore-btn">Show more — Vertical, Audience, Objective, Team Interest, Relationships, Evidence, Comments</button>' : ''}
+      <div id="idea-midtier" ${midTierOpen ? '' : 'hidden'}>
+        ${scopeObjectiveBlockHTML()}
+        ${interestBlockHTML()}
+        ${relationshipsBlockHTML()}
+        ${evidenceBlockHTML(evidence)}
+        ${commentsBlockHTML()}
+      </div>
+      ${showEvaluation ? validationBlockHTML() + overallScoreBlockHTML() + swotBlockHTML() : ''}
+      ${showConceptScorecard ? scorecardBlockHTML() : ''}
       <div class="record-block">
         <button type="button" class="btn-danger-text" id="idea-delete-btn">Delete Idea</button>
       </div>
@@ -285,6 +404,11 @@ async function render() {
   `;
 
   wireBackLink(root.querySelector('.record-back'), 'brainstorm.html');
+
+  root.querySelector('#idea-showmore-btn')?.addEventListener('click', () => {
+    midTierExpanded = true;
+    render();
+  });
 
   // Attaches the listener that saves a picker's value under `field` on every change.
   // Re-called whenever "+ Add" swaps a picker for a fresh one (see wireInlineAdds
@@ -296,25 +420,46 @@ async function render() {
     else picker.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', save));
     return save;
   }
-  // The Mechanisms picker is only relevant (and only shown) once Category = "Mechanism".
+  // The Mechanisms picker is only relevant (and only shown) once Type = "Mechanism".
   function syncMechanismsField() {
-    const select = root.querySelector('#idea-category-picker select');
+    const select = root.querySelector('#idea-type-picker select');
     const wrap = root.querySelector('#idea-mechanisms-field');
     if (select && wrap) wrap.hidden = select.value !== 'Mechanism';
   }
-  wirePickerSave(root.querySelector('#idea-category-picker'), 'category');
-  root.querySelector('#idea-category-picker select')?.addEventListener('change', syncMechanismsField);
-  wirePickerSave(root.querySelector('#idea-mechanisms-picker'), 'mechanisms');
-  const PICKER_FIELD = { 'idea-category-picker': 'category', 'idea-mechanisms-picker': 'mechanisms' };
+  const PICKER_FIELD = {
+    'idea-type-picker': 'type', 'idea-category-picker': 'category', 'idea-mechanisms-picker': 'mechanisms',
+    'idea-vertical-picker': 'vertical', 'idea-audience-picker': 'audience', 'idea-objective-picker': 'objective'
+  };
+  // Type is the one picker that also gates the Concept Scorecard (see render()), so —
+  // unlike every other picker, which just saves in place with no reload — its own save
+  // has to finish before reload() re-fetches, or the Scorecard would appear/disappear a
+  // beat late (or not at all). Re-wired after "+ Add type" too, on the fresh <select>.
+  function wireTypePicker(picker) {
+    if (!picker) return;
+    const select = picker.querySelector('select');
+    select.addEventListener('change', async () => {
+      syncMechanismsField();
+      await updateIdea(idea.id, { type: select.value || null });
+      await reload();
+    });
+    syncMechanismsField();
+  }
+  Object.entries(PICKER_FIELD).forEach(([id, field]) => {
+    if (id === 'idea-type-picker') return;
+    wirePickerSave(root.querySelector(`#${id}`), field);
+  });
+  wireTypePicker(root.querySelector('#idea-type-picker'));
   wireInlineAdds(root, (freshPicker) => {
+    if (freshPicker.id === 'idea-type-picker') {
+      // "+ Add" already pre-selected the new value in the DOM but nothing has saved it
+      // yet — save once right away (reload() picks it up), then re-wire for next time.
+      updateIdea(idea.id, { type: readPickerValue(freshPicker) }).then(reload);
+      return;
+    }
     // "+ Add" already pre-selected the new value in the DOM but nothing has saved it
     // yet, so save once right away in addition to (re)wiring future changes.
     const save = wirePickerSave(freshPicker, PICKER_FIELD[freshPicker.id]);
     if (save) save();
-    if (freshPicker.id === 'idea-category-picker') {
-      freshPicker.querySelector('select').addEventListener('change', syncMechanismsField);
-      syncMechanismsField();
-    }
   });
 
   root.querySelectorAll('.idea-score-select').forEach(sel => {
@@ -338,6 +483,28 @@ async function render() {
     if (!value) return;
     render();
   });
+
+  root.querySelectorAll('.idea-overall-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const dimension = sel.dataset.dimension;
+      const value = sel.value;
+      scores = scores.filter(s => !(s.dimension === dimension && s.column_key === OVERALL_COLUMN));
+      if (!value) {
+        await supabase.from('idea_scores').delete().eq('idea_id', idea.id).eq('dimension', dimension).eq('column_key', OVERALL_COLUMN);
+      } else {
+        const score = Number(value);
+        await supabase.from('idea_scores').upsert({ idea_id: idea.id, dimension, column_key: OVERALL_COLUMN, score }, { onConflict: 'idea_id,dimension,column_key' });
+        scores.push({ idea_id: idea.id, dimension, column_key: OVERALL_COLUMN, score });
+      }
+    });
+  });
+
+  root.querySelector('#idea-add-relationship')?.addEventListener('click', openRelationshipPicker);
+  root.querySelectorAll('[data-remove-relationship]').forEach(btn => btn.addEventListener('click', async () => {
+    await removeRelationship(btn.dataset.removeRelationship);
+    await loadRelationshipsForIdea();
+    render();
+  }));
 
   root.querySelector('#idea-rename-btn').addEventListener('click', async () => {
     const next = prompt('Title:', idea.title)?.trim();
@@ -375,7 +542,7 @@ async function render() {
     });
   });
 
-  root.querySelector('#idea-validation-group').querySelectorAll('[data-validation]').forEach(btn => {
+  root.querySelector('#idea-validation-group')?.querySelectorAll('[data-validation]').forEach(btn => {
     btn.addEventListener('click', async () => {
       await updateIdea(idea.id, { validation_level: btn.dataset.validation });
       await reload();
@@ -471,9 +638,69 @@ function openEvidencePicker(kind) {
   renderList('');
 }
 
+// ---------------- Relationship picker ----------------
+
+function openRelationshipPicker() {
+  let modalRoot = document.getElementById('idea-relationship-picker-root');
+  if (!modalRoot) {
+    modalRoot = document.createElement('div');
+    modalRoot.id = 'idea-relationship-picker-root';
+    document.body.appendChild(modalRoot);
+  }
+  const items = allIdeas.filter(i => i.id !== idea.id).map(i => ({ id: i.id, label: i.title }));
+  let relationType = RELATION_TYPES[0];
+
+  function renderList(filter) {
+    const q = filter.trim().toLowerCase();
+    const matches = items.filter(i => !q || i.label.toLowerCase().includes(q)).slice(0, 40);
+    modalRoot.querySelector('#idea-relationship-results').innerHTML = matches.map(m =>
+      `<button type="button" class="prog-list-row" data-pick="${m.id}">${escapeHtml(m.label)}</button>`
+    ).join('') || '<div class="drilldown-empty">No matches.</div>';
+    modalRoot.querySelectorAll('[data-pick]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const { error } = await addRelationship(idea.id, btn.dataset.pick, relationType);
+        if (error) {
+          showToast(error.code === '23505' ? 'That relationship already exists.' : `Couldn't add: ${error.message}`, true);
+          return;
+        }
+        close();
+        await loadRelationshipsForIdea();
+        render();
+      });
+    });
+  }
+
+  modalRoot.innerHTML = `
+    <div class="modal-overlay form-overlay" id="idea-relationship-modal">
+      <div class="form-modal" style="max-width: 480px;">
+        <div class="form-modal-head"><h2>Add Relationship</h2><button type="button" class="form-modal-close" id="idea-relationship-close">&times;</button></div>
+        <div class="form-modal-body">
+          <div class="form-field full" style="margin-bottom:12px;">
+            <label>Relationship</label>
+            <select id="idea-relationship-type">
+              ${RELATION_TYPES.map(t => `<option value="${t}">${escapeHtml(RELATION_LABEL_FORWARD[t])}</option>`).join('')}
+            </select>
+          </div>
+          <input type="text" id="idea-relationship-search" placeholder="Search ideas…" style="width:100%; padding: 10px 14px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; margin-bottom: 12px;" />
+          <div id="idea-relationship-results" style="max-height: 320px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  const overlay = document.getElementById('idea-relationship-modal');
+  const close = () => modalRoot.innerHTML = '';
+  document.getElementById('idea-relationship-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  modalRoot.querySelector('#idea-relationship-type').addEventListener('change', (e) => { relationType = e.target.value; });
+  modalRoot.querySelector('#idea-relationship-search').addEventListener('input', (e) => renderList(e.target.value));
+  renderList('');
+}
+
 // ---------------- Boot ----------------
 
 await loadEvidenceRefs();
+allIdeas = await loadIdeas();
 await loadComments();
 await loadScores();
+await loadRelationshipsForIdea();
 await reload();
