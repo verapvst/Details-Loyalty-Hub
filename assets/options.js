@@ -100,38 +100,11 @@ export const OPTIONS = {
     'Open registration', 'Application required', 'Request membership',
     'Invitation only', 'Referral required'
   ],
-  // Brainstorm Ideas: two ORTHOGONAL tags, not one taxonomy tree — an idea has exactly
-  // one Type (what altitude/kind of decision this is) and one Category (what part of
-  // the loyalty system it concerns), never a parent-child chain between them. This is
-  // what lets "annual requalification" (Design Parameter x Membership & Tiers) and
-  // "bring a friend" (Mechanism x Cross-Vertical Ecosystem) both have an honest home
-  // without inventing hierarchy debates mid-brainstorm. See the reviewed architecture
-  // doc for the full reasoning. SWOT is its own framework on the idea's page (four real
-  // fields), not a value here. When Type is "Mechanism", the idea also gets a
-  // Mechanisms multi-pick (reuses the `mechanisms` list below) instead of a value here.
-  brainstorm_type: [
-    'Strategic Choice', 'Mechanism', 'Design Parameter', 'Positioning / Value Proposition',
-    'Enabling Technology', 'Concept'
-  ],
-  brainstorm_category: [
-    'Membership & Tiers', 'Packs & Bundles', 'Points & Rewards', 'Experiences & Positioning',
-    'Cross-Vertical Ecosystem', 'Transferability & Ownership', 'Commercial Model', 'Technology & Infrastructure'
-  ],
-  // Optional per-idea tags (not mandatory, not exclusive) — reused as the Scorecard's
-  // column headers too, so the same vocabulary describes "this idea concerns Golf" and
-  // "score this concept for Golf". A short, Brainstorm-specific list rather than the
-  // full Industry taxonomy above (that one's for the Database's 144 real programmes;
-  // this is for a handful of ideas).
-  brainstorm_vertical: ['Hospitality', 'Golf', 'Sports & Leisure', 'Food & Beverages', 'Other'],
-  brainstorm_audience: ['B2B', 'B2C'],
-  // Optional, multi-select: what customer behaviour this idea is actually trying to
-  // change. Deliberately not a third structural axis (not required, not exclusive) —
-  // just a tag answering a different question than Type/Category do.
-  brainstorm_objective: ['Acquisition', 'Retention', 'Frequency', 'Cross-Sell', 'Advocacy', 'Differentiation'],
-  // Rows scored on the idea Scorecard, 1-5, against every Vertical/Audience column —
-  // reserved for Type = "Concept" ideas. Extensible via Settings, same pattern as every
-  // other picklist here.
-  brainstorm_dimension: ['Market Fit', 'Feasibility', 'Revenue Potential', 'Differentiation'],
+  // Issue Tree: Vertical/Audience relevance tags on an Issue node — attributes of the
+  // strategic question, not a branching structure (an Issue can touch several, or
+  // none). Ideas themselves carry no classification at all — see brainstormIdeas.js.
+  brainstorm_vertical: ['Hospitality', 'Golf', 'Sports & Leisure', 'Food & Beverages'],
+  brainstorm_audience: ['B2C', 'B2B', 'B2B2C'],
   // Mechanisms: the concrete ways a programme creates, delivers or activates value for
   // members. Formerly split across two overlapping fields (Mechanisms + Benefits) —
   // consolidated into one taxonomy (2026-09) since the same concept (e.g. "Discounts",

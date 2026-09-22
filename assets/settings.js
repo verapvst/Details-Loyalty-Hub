@@ -516,12 +516,8 @@ renderFlatListCard(sourcesInsightsContainer, 'insight_type', 'Information Type',
 const calendarContainer = document.getElementById('calendar-settings-cards');
 renderFlatListCard(calendarContainer, 'meeting_type', 'Meeting Type');
 renderFlatListCard(calendarContainer, 'task_type', 'Task Type');
-renderFlatListCard(calendarContainer, 'brainstorm_type', 'Idea Types (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_category', 'Idea Categories (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_objective', 'Idea Customer Objectives (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Idea Vertical / Scorecard Columns (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Idea Audience / Scorecard Columns (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_dimension', 'Idea Scorecard Dimensions (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Issue Vertical Relevance (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Issue Audience Relevance (Brainstorm)');
 
 // ---------------- Locked by default ----------------
 // Every field above saves itself immediately on interaction (no single form/Save

@@ -23,7 +23,7 @@ export function questionDisplayTitle(q) {
 
 // One modal for both Add (question=null) and Edit (question=existing row) — Title
 // and Details are optional; only the main Text is required.
-export function openQuestionModal({ question, onChange }) {
+export function openQuestionModal({ question, onChange, prefill }) {
   let root = document.getElementById('question-modal-root');
   if (!root) {
     root = document.createElement('div');
@@ -95,6 +95,7 @@ export function openQuestionModal({ question, onChange }) {
       payload.asked_by = getIdentity();
       payload.status = 'open';
       payload.created_at = new Date().toISOString();
+      if (prefill?.related_node_id) payload.related_node_id = prefill.related_node_id;
       ({ error } = await supabase.from('questions').insert(payload));
     }
     if (error) {

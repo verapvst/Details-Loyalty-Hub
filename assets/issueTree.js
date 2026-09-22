@@ -1,23 +1,36 @@
 // Brainstorm — Issue Tree. Convergent thinking: the team's central strategic
-// hypothesis, broken down the Minto/MECE way into WHY (deductive factors) and HOW
-// (inductive strategic pillars) — the exact shape the Details project's own
-// deliverables use. A node's evidence is a reference to an existing Insight,
-// Programme or Idea (never copied text), and a HOW node can be promoted straight
-// into a Next Step, which is how a validated branch becomes project direction.
+// hypothesis, broken down the Minto/MECE way into WHY (deductive: external
+// opportunity x internal capability) and HOW (inductive: Areas of Action -> Main
+// Issues -> Sub-Issues) — the exact shape your Strategy Consulting course's own
+// "Issue Analysis" deliverables use (Groups 02/03/04/05/08/09, Indie Campers 2022).
 //
-// One active tree at a time (like Saved Analyses, starting over archives the old one
-// instead of destroying it) — kept in its own table so hypotheses can change across
-// project phases without losing the history of what was tried before.
+// A node's evidence is a reference to an existing Insight, Programme or Idea (never
+// copied), and a HOW node can be promoted straight into a Next Step, which is how a
+// validated branch becomes project direction. This is where the platform's real
+// analytical weight lives — Ideas (brainstormIdeas.js) stay a lightweight inbox;
+// everything past "here's a raw thought" (hypothesis, evidence, prioritisation,
+// recommendation) happens here, on the Issue a promoted idea becomes part of.
 import { supabase } from './supabase.js';
 import { getIdentity, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
+import { getOptionList, addOption, loadCustomOptions } from './customOptions.js';
 import { openNextStepModal } from './next-steps.js';
 
 const BRANCH_LABEL = { why: 'WHY', how: 'HOW' };
 const EVIDENCE_LABEL = { none: 'No evidence', indicative: 'Indicative', supported: 'Supported', strongly_supported: 'Strongly supported' };
 const EVIDENCE_DOT = { none: '○', indicative: '◐', supported: '●', strongly_supported: '●' };
-const STATUS_LABEL = { draft: 'Draft', supported: 'Supported', final: 'Final' };
+export const STATUS_LABEL = { draft: 'Draft', supported: 'Supported', final: 'Final' };
 const HYPOTHESIS_LABEL = { open: 'Open', supported: 'Supported', not_supported: 'Not supported' };
+// A small, defensible set — never one generic "Fit" score (see the architecture
+// proposal, Section 6). Same 1-5 scale, same meaning, on every dimension.
+const SCORE_LABEL = { 1: 'Poor', 2: 'Weak', 3: 'Moderate', 4: 'Strong', 5: 'Excellent' };
+export const PRIORITISATION_DIMENSIONS = [
+  { key: 'customer_value_impact', label: 'Customer Value Impact' },
+  { key: 'business_impact', label: 'Business Impact' },
+  { key: 'strategic_differentiation', label: 'Strategic Differentiation' },
+  { key: 'implementation_complexity', label: 'Implementation Complexity' }
+];
+export const COMPLEXITY_DRIVERS = ['Technology', 'Operations', 'Organisation', 'Partnerships', 'Data', 'Cost', 'Time'];
 
 let missingTable = false;
 export function issueTreeTableReady() { return !missingTable; }
@@ -49,6 +62,10 @@ export async function setHypothesisStatus(treeId, status) {
   await supabase.from('issue_trees').update({ hypothesis_status: status }).eq('id', treeId);
 }
 
+export async function updateTree(treeId, patch) {
+  await supabase.from('issue_trees').update(patch).eq('id', treeId);
+}
+
 export async function archiveTree(treeId) {
   await supabase.from('issue_trees').update({ archived: true }).eq('id', treeId);
 }
@@ -63,6 +80,16 @@ export async function loadNodes(treeId) {
   return data || [];
 }
 
+export async function loadNode(nodeId) {
+  const { data, error } = await supabase
+    .from('issue_nodes')
+    .select('*, issue_node_insights(figure_id), issue_node_programmes(programme_id), issue_node_ideas(idea_id)')
+    .eq('id', nodeId)
+    .single();
+  if (error) return null;
+  return data;
+}
+
 // parentId null = counting top-level siblings within one branch column; parentId set
 // = counting children of that node (which all share its branch already, but matching
 // on branch too costs nothing and keeps this correct even if that ever weren't true).
@@ -72,10 +99,11 @@ function siblingsOf(nodes, parentId, branch) {
 
 export async function addNode({ treeId, parentId, branch, title }, nodes) {
   const order_index = siblingsOf(nodes, parentId, branch).length;
-  const { error } = await supabase.from('issue_nodes').insert({
+  const { data, error } = await supabase.from('issue_nodes').insert({
     tree_id: treeId, parent_id: parentId, branch, title, order_index, created_by: getIdentity()
-  });
-  if (error) showToast(`Couldn't add: ${error.message}`, true);
+  }).select().single();
+  if (error) { showToast(`Couldn't add: ${error.message}`, true); return null; }
+  return data;
 }
 
 export async function updateNode(nodeId, patch) {
@@ -114,7 +142,13 @@ export async function promoteNodeToNextStep(node, onChange) {
   });
 }
 
-// ---------------- Tree layout (nested by parent_id, columns by branch) ----------------
+// ---------------- Tree layout ----------------
+// WHY renders as one generic nested column (External Analysis / Internal Analysis
+// are just top-level WHY nodes the team creates themselves — no special-casing
+// needed, the deductive two-pillar shape is a convention, not a schema constraint).
+// HOW renders as a grid of columns, one per top-level node — each top-level HOW node
+// is an "Area of Action" in your course's own vocabulary; its children are Main
+// Issues, and theirs are Sub-Issues, phrased as questions.
 
 function buildTree(nodes, branch) {
   const top = nodes.filter(n => n.parent_id === null && n.branch === branch).sort((a, b) => a.order_index - b.order_index);
@@ -132,7 +166,7 @@ function nodeRowHTML(node, depth) {
       <div class="issue-node-row">
         ${hasChildren ? `<button type="button" class="issue-node-toggle" data-node-toggle="${node.id}">▾</button>` : '<span class="issue-node-toggle-spacer"></span>'}
         <span class="issue-evidence-dot issue-evidence-${node.evidence_strength}" title="${EVIDENCE_LABEL[node.evidence_strength]}">${EVIDENCE_DOT[node.evidence_strength]}</span>
-        <button type="button" class="issue-node-title" data-node-open="${node.id}">${escapeHtml(node.title)}</button>
+        <a href="issue-node.html?id=${node.id}" class="issue-node-title">${escapeHtml(node.title)}</a>
       </div>
       <div class="issue-node-children" data-node-children="${node.id}">
         ${(node.children || []).map(c => nodeRowHTML(c, depth + 1)).join('')}
@@ -142,15 +176,41 @@ function nodeRowHTML(node, depth) {
   `;
 }
 
-function branchColumnHTML(branch, topNodes) {
-  const addLabel = branch === 'why' ? '+ Add factor' : '+ Add strategic pillar';
+function whyColumnHTML(topNodes) {
   return `
-    <div class="issue-branch-column" data-branch="${branch}">
-      <div class="issue-branch-head">${BRANCH_LABEL[branch]}</div>
+    <div class="issue-branch-column" data-branch="why">
+      <div class="issue-branch-head">WHY <span class="issue-branch-subhead">— deductive, external × internal</span></div>
       <div class="issue-branch-body">
-        ${topNodes.map(n => nodeRowHTML(n, 0)).join('') || '<div class="drilldown-empty">Nothing yet.</div>'}
+        ${topNodes.map(n => nodeRowHTML(n, 0)).join('') || '<div class="drilldown-empty">Nothing yet. Start with an "External Analysis" and an "Internal Analysis" node.</div>'}
       </div>
-      <button type="button" class="btn-text issue-add-top" data-branch-add="${branch}">${addLabel}</button>
+      <button type="button" class="btn-text issue-add-top" data-branch-add="why">+ Add factor</button>
+    </div>
+  `;
+}
+
+function howAreaColumnHTML(areaNode) {
+  return `
+    <div class="issue-area-column" data-node-id="${areaNode.id}">
+      <div class="issue-area-head">
+        <a href="issue-node.html?id=${areaNode.id}" class="issue-area-title">${escapeHtml(areaNode.title)}</a>
+        <span class="issue-evidence-dot issue-evidence-${areaNode.evidence_strength}" title="${EVIDENCE_LABEL[areaNode.evidence_strength]}">${EVIDENCE_DOT[areaNode.evidence_strength]}</span>
+      </div>
+      <div class="issue-branch-body">
+        ${(areaNode.children || []).map(n => nodeRowHTML(n, 0)).join('') || '<div class="drilldown-empty">No Main Issues yet.</div>'}
+        <button type="button" class="btn-text issue-add-child" data-node-add-child="${areaNode.id}">+ Add Main Issue</button>
+      </div>
+    </div>
+  `;
+}
+
+function howSectionHTML(topNodes) {
+  return `
+    <div style="margin-top: 8px;">
+      <div class="issue-branch-head" style="margin-bottom: 14px;">HOW <span class="issue-branch-subhead">— inductive, Areas of Action &rarr; Main Issues &rarr; Sub-Issues</span></div>
+      <div class="issue-how-grid">
+        ${topNodes.map(howAreaColumnHTML).join('')}
+      </div>
+      <button type="button" class="btn-text issue-add-top" data-branch-add="how" style="margin-top: 14px;">+ Add Area of Action</button>
     </div>
   `;
 }
@@ -167,10 +227,14 @@ export function renderIssueTree(container, tree, nodes, ctx) {
       </div>
       <button type="button" class="btn-text" id="issue-hypothesis-edit">Edit question</button>
     </div>
-    <div class="issue-branches">
-      ${branchColumnHTML('why', whyTop)}
-      ${branchColumnHTML('how', howTop)}
-    </div>
+    ${tree.hypothesis_status === 'supported' ? `
+      <div class="record-block" style="margin-bottom: 20px;">
+        <h3>Recommendation</h3>
+        <textarea id="issue-tree-recommendation" rows="3" placeholder="Once the WHY and HOW branches support it, write the thesis-level position here.">${escapeHtml(tree.recommendation_text || '')}</textarea>
+      </div>
+    ` : ''}
+    ${whyColumnHTML(whyTop)}
+    ${howSectionHTML(howTop)}
   `;
 
   container.querySelector('#issue-hypothesis-status').querySelectorAll('[data-hyp-status]').forEach(btn => {
@@ -180,10 +244,13 @@ export function renderIssueTree(container, tree, nodes, ctx) {
     });
   });
   container.querySelector('#issue-hypothesis-edit').addEventListener('click', async () => {
-    const next = prompt('Central hypothesis / question:', tree.title)?.trim();
+    const next = prompt('Central question:', tree.title)?.trim();
     if (!next || next === tree.title) return;
     await supabase.from('issue_trees').update({ title: next }).eq('id', tree.id);
     ctx.onChange();
+  });
+  container.querySelector('#issue-tree-recommendation')?.addEventListener('change', async (e) => {
+    await updateTree(tree.id, { recommendation_text: e.target.value.trim() || null });
   });
 
   container.querySelectorAll('[data-node-toggle]').forEach(btn => {
@@ -193,9 +260,6 @@ export function renderIssueTree(container, tree, nodes, ctx) {
       kids.style.display = collapsed ? '' : 'none';
       btn.textContent = collapsed ? '▾' : '▸';
     });
-  });
-  container.querySelectorAll('[data-node-open]').forEach(btn => {
-    btn.addEventListener('click', () => ctx.onOpenNode(btn.dataset.nodeOpen));
   });
   container.querySelectorAll('[data-node-add-child]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -223,7 +287,7 @@ export function renderEmptyTreeState(container, ctx) {
     <div class="workspace-prompt">
       <div class="workspace-prompt-label">What's the central strategic question?</div>
       <div class="settings-add-row" style="max-width: 640px;">
-        <input type="text" id="issue-tree-new-title" placeholder="e.g. Should Details develop an ecosystem-wide loyalty strategy?" />
+        <input type="text" id="issue-tree-new-title" placeholder="e.g. How should Details design a loyalty strategy that creates value for customers and for the business across its ecosystem?" />
         <button type="button" class="btn-primary" id="issue-tree-new-btn">Create Issue Tree</button>
       </div>
     </div>
@@ -237,92 +301,301 @@ export function renderEmptyTreeState(container, ctx) {
   });
 }
 
-// ---------------- Node detail side panel ----------------
+// ---------------- Vertical / Audience relevance chips (Issue-level, not Idea-level) ----------------
+// Binary applicability tags by default — the same "+ Add" inline-growth pattern used
+// everywhere else, writing straight into custom_options so Settings and this page
+// always agree. Deliberately NOT a scored grid by default (see the architecture
+// proposal, Section 6) — that stays available as the opt-in issue_node_relevance_scores
+// table for the rare Issue that needs graded relevance, not built into this pass.
+function relevanceChipsHTML(listKey, wrapperId, selected, addLabel) {
+  const options = getOptionList(listKey);
+  return `
+    <div class="idea-picker" id="${wrapperId}" data-picker-kind="chips" data-picker-key="${listKey}">
+      <div class="chip-row">
+        ${options.map(v => `<label class="checkbox-item"><input type="checkbox" value="${escapeHtml(v)}" ${selected.includes(v) ? 'checked' : ''} /> ${escapeHtml(v)}</label>`).join('')}
+      </div>
+      <button type="button" class="btn-text relevance-picker-add" style="margin-top:6px;">${addLabel}</button>
+    </div>
+  `;
+}
+function readChipValue(pickerEl) {
+  if (!pickerEl) return [];
+  return [...pickerEl.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+}
+function wireRelevancePicker(root, picker, onChanged) {
+  const btn = picker.querySelector('.relevance-picker-add');
+  const addLabel = btn.textContent;
+  btn.addEventListener('click', async () => {
+    const listKey = picker.dataset.pickerKey;
+    const current = readChipValue(picker);
+    const value = prompt('New value:')?.trim();
+    if (!value) return;
+    const { error } = await addOption(listKey, value);
+    if (error) { showToast(error.code === '23505' ? 'That value already exists.' : `Couldn't add: ${error.message}`, true); return; }
+    await loadCustomOptions();
+    const html = relevanceChipsHTML(listKey, picker.id, [...current, value], addLabel);
+    picker.outerHTML = html;
+    const fresh = root.querySelector(`#${picker.id}`);
+    wireRelevancePicker(root, fresh, onChanged);
+    if (onChanged) onChanged(fresh);
+  });
+}
 
-function evidenceListHTML(items, onRemoveAttr) {
-  if (!items.length) return `<div class="drilldown-empty">None yet.</div>`;
+// ---------------- Issue Analysis — full page ----------------
+// Progressive disclosure keyed to node.status, exactly like the idea detail page used
+// to be keyed to idea status: draft shows only the issue statement and why it
+// matters; once analysis starts (status = supported or final is also fine to already
+// show it — the gate is simply "not draft") hypothesis/evidence/notes/relevance/
+// questions appear; key insight, prioritisation and recommendation only appear once
+// the node has reached Supported or Final.
+
+function crumbHTML(node, nodesById) {
+  const chain = [];
+  let cur = node;
+  while (cur) { chain.unshift(cur); cur = cur.parent_id ? nodesById.get(cur.parent_id) : null; }
+  return chain.map((n, i) => i === chain.length - 1
+    ? `<span class="issue-crumb-current">${escapeHtml(n.title)}</span>`
+    : `<a href="issue-node.html?id=${n.id}">${escapeHtml(n.title)}</a>`
+  ).join(' <span class="issue-crumb-sep">/</span> ');
+}
+
+function evidenceListItemsHTML(items, labelFn, removeAttr) {
+  if (!items.length) return '<div class="drilldown-empty">None yet.</div>';
   return items.map(item => `
     <div class="issue-evidence-item">
-      <span>${escapeHtml(item.label)}</span>
-      <button type="button" class="btn-text" data-${onRemoveAttr}="${item.id}">Remove</button>
+      <span>${escapeHtml(labelFn(item))}</span>
+      <button type="button" class="btn-text" data-${removeAttr}="${item.id}">Remove</button>
     </div>
   `).join('');
 }
 
-export function nodeDetailHTML(node, refs) {
+export function issueAnalysisHTML(node, tree, refs) {
   const insights = (node.issue_node_insights || []).map(r => refs.insightsById.get(r.figure_id)).filter(Boolean);
   const programmes = (node.issue_node_programmes || []).map(r => refs.programmesById.get(r.programme_id)).filter(Boolean);
   const ideas = (node.issue_node_ideas || []).map(r => refs.ideasById.get(r.idea_id)).filter(Boolean);
+  const questions = refs.questionsForNode || [];
+  const isDraft = node.status === 'draft';
+  const isMature = node.status === 'supported' || node.status === 'final';
+  const vertical = node.vertical_relevance || [];
+  const audience = node.audience_relevance || [];
+  const complexityDrivers = node.complexity_drivers || [];
 
   return `
-    <div class="side-panel-head">
-      <h2>${escapeHtml(node.title)}</h2>
-      <button type="button" class="side-panel-close" id="node-panel-close">&times;</button>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+      <div style="font-size:12px; color:var(--muted);"><a href="brainstorm.html?tab=issue-tree" style="color:var(--muted-light);">&larr; Issue Tree</a> &nbsp;/&nbsp; ${crumbHTML(node, refs.nodesById)}</div>
+      <span class="badge ${node.status === 'final' ? 'badge-green' : node.status === 'supported' ? 'badge-dark' : 'badge-muted'}">${STATUS_LABEL[node.status]}</span>
     </div>
-    <div class="side-panel-body">
-      <div class="form-field full">
-        <label>Description</label>
-        <textarea id="node-description" rows="3" placeholder="Optional…">${escapeHtml(node.description || '')}</textarea>
-      </div>
-      <div class="form-field">
-        <label>Evidence strength</label>
-        <div class="control-toggle-group" id="node-evidence-strength">
-          ${Object.keys(EVIDENCE_LABEL).map(k => `<button type="button" class="control-toggle ${node.evidence_strength === k ? 'active' : ''}" data-evidence="${k}">${EVIDENCE_LABEL[k]}</button>`).join('')}
+
+    <div style="padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 28px;">
+      <div class="settings-hint" style="margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 10.5px;">${BRANCH_LABEL[node.branch]}${node.is_concept ? ' · Concept' : ''}</div>
+      <div class="record-title" style="font-size: 30px;" id="issue-node-title">${escapeHtml(node.title)}</div>
+    </div>
+
+    <div class="workspace-columns" style="grid-template-columns: 1fr 300px;">
+      <div>
+        <div class="record-block">
+          <h3>Why this matters</h3>
+          <textarea id="issue-description" rows="3" placeholder="Short explanation of why this question matters…">${escapeHtml(node.description || '')}</textarea>
+        </div>
+
+        <div class="record-block">
+          <h3>Ideas linked to this issue <button type="button" class="btn-text" id="issue-add-idea" style="float:right;">+ Add</button></h3>
+          ${evidenceListItemsHTML(ideas, i => i.title, 'remove-idea')}
+        </div>
+
+        ${!isDraft ? `
+          <div class="record-block">
+            <h3>Hypothesis</h3>
+            <textarea id="issue-hypothesis" rows="3" placeholder="What do we currently believe? e.g. &quot;Yes — ...&quot; or &quot;No — ...&quot;">${escapeHtml(node.hypothesis || '')}</textarea>
+            <div class="form-field full" style="margin-top: 14px;">
+              <label>Analysis tool <span style="font-weight:400; color: var(--muted);">— what will test this hypothesis</span></label>
+              <input type="text" id="issue-analysis-tool" value="${escapeHtml(node.analysis_tool || '')}" placeholder="e.g. SWOT Analysis, Competitive Benchmarking, Willingness-to-Pay Survey…" />
+            </div>
+          </div>
+
+          <div class="record-block">
+            <h3>Evidence</h3>
+            <div class="drilldown-block-label">Insights <button type="button" class="btn-text" id="issue-add-insight" style="float:right;">+ Add</button></div>
+            ${evidenceListItemsHTML(insights, i => i.title || i.insight_text || 'Untitled', 'remove-insight')}
+            <div class="drilldown-block-label" style="margin-top:14px;">Programmes <button type="button" class="btn-text" id="issue-add-programme" style="float:right;">+ Add</button></div>
+            ${evidenceListItemsHTML(programmes, p => p.programme_name, 'remove-programme')}
+          </div>
+
+          <div class="record-block">
+            <h3>Analysis notes</h3>
+            <textarea id="issue-analysis-notes" rows="4" placeholder="Develop the thinking here — what the evidence suggests, open trade-offs, what's still missing…">${escapeHtml(node.analysis_notes || '')}</textarea>
+          </div>
+
+          <div class="record-block">
+            <h3>Open questions <button type="button" class="btn-text" id="issue-add-question" style="float:right;">+ Add</button></h3>
+            ${questions.length ? questions.map(q => `
+              <div class="issue-evidence-item">
+                <span>${escapeHtml(q.title || q.question_text)}${q.status === 'answered' ? ' <span class="badge badge-green" style="margin-left:6px;">Resolved</span>' : ''}</span>
+              </div>
+            `).join('') : '<div class="drilldown-empty">None yet.</div>'}
+          </div>
+        ` : `
+          <div class="drilldown-panel" style="margin-bottom: 18px;">
+            <div style="font-size: 13px; color: var(--muted);">Hypothesis, evidence, analysis notes and open questions appear once this issue moves past <strong>Draft</strong>.</div>
+          </div>
+        `}
+
+        ${isMature ? `
+          <div class="record-block">
+            <h3>Key insight</h3>
+            <textarea id="issue-key-insight" rows="2" placeholder="The synthesised conclusion, once the evidence supports one…">${escapeHtml(node.key_insight || '')}</textarea>
+          </div>
+          <div class="record-block">
+            <h3>Recommendation</h3>
+            <textarea id="issue-recommendation" rows="3" placeholder="The implication — what should Details actually do about this?">${escapeHtml(node.recommendation || '')}</textarea>
+          </div>
+        ` : ''}
+
+        <div class="record-block">
+          <button type="button" class="btn-danger-text" id="issue-delete-btn">Delete Issue</button>
         </div>
       </div>
-      <div class="form-field">
-        <label>Status</label>
-        <div class="control-toggle-group" id="node-status">
-          ${Object.keys(STATUS_LABEL).map(k => `<button type="button" class="control-toggle ${node.status === k ? 'active' : ''}" data-status="${k}">${STATUS_LABEL[k]}</button>`).join('')}
+
+      <div>
+        <div class="drilldown-panel" style="margin-bottom: 16px;">
+          <div class="drilldown-block-label">Status</div>
+          <div class="control-toggle-group" id="issue-status-group" style="margin-bottom: 14px;">
+            ${Object.keys(STATUS_LABEL).map(k => `<button type="button" class="control-toggle ${node.status === k ? 'active' : ''}" data-status="${k}">${STATUS_LABEL[k]}</button>`).join('')}
+          </div>
+          <div class="drilldown-block-label">Evidence strength</div>
+          <div class="control-toggle-group" id="issue-evidence-strength" style="margin-bottom: 14px; flex-wrap: wrap;">
+            ${Object.keys(EVIDENCE_LABEL).map(k => `<button type="button" class="control-toggle ${node.evidence_strength === k ? 'active' : ''}" data-evidence="${k}">${EVIDENCE_LABEL[k]}</button>`).join('')}
+          </div>
+          <div class="drilldown-block-label">Vertical relevance</div>
+          ${relevanceChipsHTML('brainstorm_vertical', 'issue-vertical-picker', vertical, '+ Add')}
+          <div class="drilldown-block-label" style="margin-top:14px;">Audience relevance</div>
+          ${relevanceChipsHTML('brainstorm_audience', 'issue-audience-picker', audience, '+ Add')}
+          ${node.branch === 'how' ? `
+            <div style="margin-top:14px;">
+              <label class="checkbox-item"><input type="checkbox" id="issue-is-concept" ${node.is_concept ? 'checked' : ''} /> This is a Concept</label>
+            </div>
+          ` : ''}
         </div>
-      </div>
 
-      <div class="form-field full">
-        <label>Evidence <button type="button" class="btn-text" id="node-add-evidence" style="float:right;">+ Add evidence</button></label>
-        <div class="drilldown-block-label">Insights</div>
-        ${evidenceListHTML(insights.map(i => ({ id: i.id, label: i.title || i.insight_text || 'Untitled' })), 'remove-insight')}
-        <div class="drilldown-block-label" style="margin-top:10px;">Programmes</div>
-        ${evidenceListHTML(programmes.map(p => ({ id: p.id, label: p.programme_name })), 'remove-programme')}
-        <div class="drilldown-block-label" style="margin-top:10px;">Ideas</div>
-        ${evidenceListHTML(ideas.map(i => ({ id: i.id, label: i.title })), 'remove-idea')}
-      </div>
+        ${isMature ? `
+          <div class="drilldown-panel" style="margin-bottom: 16px;">
+            <div class="drilldown-block-label">Prioritisation</div>
+            ${PRIORITISATION_DIMENSIONS.map(d => `
+              <div class="form-field full" style="margin-bottom: 10px;">
+                <label>${d.label}</label>
+                <select class="issue-priority-select" data-field="${d.key}">
+                  <option value="">—</option>
+                  ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${String(node[d.key]) === String(n) ? 'selected' : ''}>${n} · ${SCORE_LABEL[n]}</option>`).join('')}
+                </select>
+              </div>
+            `).join('')}
+            <div class="form-field full" style="margin-bottom: 10px;">
+              <label>P&amp;L logic <span style="font-weight:400; color: var(--muted);">— what the Business Impact score rests on</span></label>
+              <textarea id="issue-business-note" rows="2" placeholder="One line, not a fabricated number…">${escapeHtml(node.business_impact_note || '')}</textarea>
+            </div>
+            <div class="drilldown-block-label">Complexity drivers</div>
+            <div class="chip-row" id="issue-complexity-drivers">
+              ${COMPLEXITY_DRIVERS.map(d => `<label class="checkbox-item"><input type="checkbox" value="${d}" ${complexityDrivers.includes(d) ? 'checked' : ''} /> ${d}</label>`).join('')}
+            </div>
+            <div class="form-field full" style="margin-top: 10px;">
+              <label>Risk / dependencies <span style="font-weight:400; color: var(--muted);">(optional, flagged not scored)</span></label>
+              <textarea id="issue-risk-note" rows="2" placeholder="Regulatory, operational, technological, behavioural…">${escapeHtml(node.risk_note || '')}</textarea>
+            </div>
+          </div>
+        ` : ''}
 
-      ${node.branch === 'how' ? '<button type="button" class="btn-primary" id="node-promote-btn" style="margin-top: 8px;">&rarr; Promote to Next Step</button>' : ''}
-
-      <div class="side-panel-actions">
-        <button type="button" class="btn-danger-text" id="node-delete-btn">Delete</button>
+        ${node.branch === 'how' ? '<button type="button" class="btn-primary" id="issue-promote-btn" style="width:100%;">&rarr; Promote to Next Step</button>' : ''}
       </div>
     </div>
   `;
 }
 
-export function wireNodeDetail(panelEl, node, refs, ctx) {
-  panelEl.querySelector('#node-panel-close').addEventListener('click', ctx.onClose);
-  panelEl.querySelector('#node-description').addEventListener('change', async (e) => {
-    await updateNode(node.id, { description: e.target.value.trim() || null });
+export function wireIssueAnalysis(root, node, refs, ctx) {
+  root.querySelector('#issue-node-title').addEventListener('click', async () => {
+    const next = prompt('Title:', node.title)?.trim();
+    if (!next || next === node.title) return;
+    await updateNode(node.id, { title: next });
     ctx.onChange();
   });
-  panelEl.querySelector('#node-evidence-strength').querySelectorAll('[data-evidence]').forEach(btn => {
-    btn.addEventListener('click', async () => { await updateNode(node.id, { evidence_strength: btn.dataset.evidence }); ctx.onChange(); });
+  root.querySelector('#issue-description').addEventListener('change', async (e) => {
+    await updateNode(node.id, { description: e.target.value.trim() || null });
   });
-  panelEl.querySelector('#node-status').querySelectorAll('[data-status]').forEach(btn => {
+  root.querySelector('#issue-add-idea').addEventListener('click', () => ctx.onAddIdea(node));
+  root.querySelectorAll('[data-remove-idea]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeIdea(node.id, btn.dataset.removeIdea); ctx.onChange(); }));
+
+  root.querySelector('#issue-hypothesis')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { hypothesis: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-analysis-tool')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { analysis_tool: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-analysis-notes')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { analysis_notes: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-add-insight')?.addEventListener('click', () => ctx.onAddEvidence(node, 'insight'));
+  root.querySelector('#issue-add-programme')?.addEventListener('click', () => ctx.onAddEvidence(node, 'programme'));
+  root.querySelectorAll('[data-remove-insight]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeInsight(node.id, btn.dataset.removeInsight); ctx.onChange(); }));
+  root.querySelectorAll('[data-remove-programme]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeProgramme(node.id, btn.dataset.removeProgramme); ctx.onChange(); }));
+  root.querySelector('#issue-add-question')?.addEventListener('click', () => ctx.onAddQuestion(node));
+
+  root.querySelector('#issue-key-insight')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { key_insight: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-recommendation')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { recommendation: e.target.value.trim() || null });
+  });
+
+  root.querySelector('#issue-status-group').querySelectorAll('[data-status]').forEach(btn => {
     btn.addEventListener('click', async () => { await updateNode(node.id, { status: btn.dataset.status }); ctx.onChange(); });
   });
-  panelEl.querySelector('#node-add-evidence').addEventListener('click', () => ctx.onAddEvidence(node));
-  panelEl.querySelectorAll('[data-remove-insight]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeInsight(node.id, btn.dataset.removeInsight); ctx.onChange(); }));
-  panelEl.querySelectorAll('[data-remove-programme]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeProgramme(node.id, btn.dataset.removeProgramme); ctx.onChange(); }));
-  panelEl.querySelectorAll('[data-remove-idea]').forEach(btn => btn.addEventListener('click', async () => { await removeNodeIdea(node.id, btn.dataset.removeIdea); ctx.onChange(); }));
-  const promoteBtn = panelEl.querySelector('#node-promote-btn');
+  root.querySelector('#issue-evidence-strength').querySelectorAll('[data-evidence]').forEach(btn => {
+    btn.addEventListener('click', async () => { await updateNode(node.id, { evidence_strength: btn.dataset.evidence }); ctx.onChange(); });
+  });
+  root.querySelector('#issue-is-concept')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { is_concept: e.target.checked });
+  });
+
+  function wireRelevance(pickerId, field) {
+    const picker = root.querySelector(`#${pickerId}`);
+    if (!picker) return;
+    const save = () => updateNode(node.id, { [field]: readChipValue(picker) });
+    picker.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', save));
+    wireRelevancePicker(root, picker, (fresh) => {
+      updateNode(node.id, { [field]: readChipValue(fresh) });
+      fresh.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', save));
+    });
+  }
+  wireRelevance('issue-vertical-picker', 'vertical_relevance');
+  wireRelevance('issue-audience-picker', 'audience_relevance');
+
+  root.querySelectorAll('.issue-priority-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      await updateNode(node.id, { [sel.dataset.field]: sel.value ? Number(sel.value) : null });
+    });
+  });
+  root.querySelector('#issue-business-note')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { business_impact_note: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-risk-note')?.addEventListener('change', async (e) => {
+    await updateNode(node.id, { risk_note: e.target.value.trim() || null });
+  });
+  root.querySelector('#issue-complexity-drivers')?.addEventListener('change', async () => {
+    const checked = [...root.querySelectorAll('#issue-complexity-drivers input:checked')].map(cb => cb.value);
+    await updateNode(node.id, { complexity_drivers: checked });
+  });
+
+  const promoteBtn = root.querySelector('#issue-promote-btn');
   if (promoteBtn) promoteBtn.addEventListener('click', () => promoteNodeToNextStep(node, ctx.onPromote || ctx.onChange));
-  panelEl.querySelector('#node-delete-btn').addEventListener('click', async () => {
+
+  root.querySelector('#issue-delete-btn').addEventListener('click', async () => {
     const deleted = await deleteNode(node);
-    if (deleted) { ctx.onChange(); ctx.onClose(); }
+    if (deleted) ctx.onDelete();
   });
 }
 
 // ---------------- Evidence picker modal (search Insights / Programmes / Ideas) ----------------
 
-export function openEvidencePickerModal(node, refs, ctx) {
+export function openEvidencePickerModal(node, refs, ctx, kind) {
   let root = document.getElementById('evidence-picker-root');
   if (!root) {
     root = document.createElement('div');
@@ -335,7 +608,7 @@ export function openEvidencePickerModal(node, refs, ctx) {
     { key: 'programme', label: 'Programmes', items: refs.allProgrammes.map(p => ({ id: p.id, label: p.programme_name })) },
     { key: 'idea', label: 'Ideas', items: refs.allIdeas.map(i => ({ id: i.id, label: i.title })) }
   ];
-  let activeTab = 'insight';
+  let activeTab = kind && tabs.some(t => t.key === kind) ? kind : 'insight';
 
   function renderList(filter) {
     const tab = tabs.find(t => t.key === activeTab);
@@ -358,7 +631,7 @@ export function openEvidencePickerModal(node, refs, ctx) {
   root.innerHTML = `
     <div class="modal-overlay form-overlay" id="evidence-picker-modal">
       <div class="form-modal" style="max-width: 520px;">
-        <div class="form-modal-head"><h2>Add evidence to "${escapeHtml(node.title)}"</h2><button type="button" class="form-modal-close" id="evidence-picker-close">&times;</button></div>
+        <div class="form-modal-head"><h2>Add to "${escapeHtml(node.title)}"</h2><button type="button" class="form-modal-close" id="evidence-picker-close">&times;</button></div>
         <div class="form-modal-body">
           <div class="lab-tabs" style="padding: 0; margin-bottom: 14px;">
             ${tabs.map(t => `<button type="button" class="lab-tab ${t.key === activeTab ? 'active' : ''}" data-evidence-tab="${t.key}">${t.label}</button>`).join('')}

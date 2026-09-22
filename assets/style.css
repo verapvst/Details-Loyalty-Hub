@@ -1121,37 +1121,41 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .side-panel-body textarea, .side-panel-body select { width: 100%; padding: 9px 12px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; font-family: inherit; outline: none; }
 .side-panel-actions { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border); }
 
-/* ---------- Brainstorm: Ideas board ---------- */
-.idea-board { display: grid; grid-template-columns: repeat(4, minmax(220px, 1fr)); gap: 16px; align-items: start; overflow-x: auto; }
-.idea-column { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 14px; min-width: 220px; }
+/* ---------- Brainstorm: Ideas inbox ---------- */
+/* Deliberately a flat list of rows, not a board — an idea is a raw thought captured
+   before it's lost, so nothing here competes for attention with "+ Add idea". */
+.idea-inbox { display: flex; flex-direction: column; }
+.idea-row { display: flex; align-items: center; gap: 16px; padding: 14px 4px; border-bottom: 1px solid var(--border); transition: background var(--transition); }
+.idea-row:hover { background: var(--surface-alt); }
+.idea-row-main { flex: 1; min-width: 0; }
+.idea-row-title { font-size: 14px; font-weight: 600; color: var(--dark); }
+.idea-row-desc { font-size: 12.5px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idea-row-meta { font-size: 11px; color: var(--muted-light); white-space: nowrap; }
+.idea-row-promote { font-size: 11.5px; font-weight: 600; color: var(--accent-mid); white-space: nowrap; }
+.idea-row-promoted { font-size: 11px; color: var(--muted-light); white-space: nowrap; }
+.tag-pill { font-size: 10.5px; color: var(--muted); background: var(--surface-alt); border-radius: 14px; padding: 3px 10px; white-space: nowrap; }
+.idea-add-btn { width: 100%; text-align: left; padding: 12px 4px; font-size: 12.5px; border-top: 1px dashed var(--border); margin-top: 4px; }
+.idea-column { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 14px; }
 .idea-column-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 4px 10px; }
 .idea-column-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .idea-column-count { font-size: 11px; color: var(--muted-light); background: var(--white); border-radius: 10px; padding: 1px 8px; }
-.idea-column-body { display: flex; flex-direction: column; gap: 8px; }
-.idea-card {
-  display: block; width: 100%; text-align: left; background: var(--white); border-radius: var(--radius);
-  padding: 12px 14px; box-shadow: var(--shadow); transition: transform var(--transition);
-}
-.idea-card:hover { transform: translateY(-1px); }
-.idea-card-title { font-size: 13px; font-weight: 600; color: var(--dark); margin-bottom: 6px; }
-.idea-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.idea-card-tags .badge { font-size: 9.5px; padding: 2px 8px; }
-.idea-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10.5px; color: var(--muted); }
-.idea-priority { font-weight: 600; }
-.idea-priority-high { color: var(--red); }
-.idea-priority-medium { color: var(--yellow); }
-.idea-priority-low { color: var(--muted-light); }
-.idea-card-tree-link { font-size: 10px; color: var(--accent-mid); margin-top: 8px; font-weight: 500; }
-.idea-add-btn { width: 100%; text-align: center; padding: 8px; font-size: 12px; }
 
 /* ---------- Brainstorm: Issue Tree ---------- */
 .issue-hypothesis { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
 .issue-hypothesis-title { font-family: var(--font-display); font-size: 19px; font-weight: 500; flex: 1; min-width: 240px; }
-.issue-branches { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
-.issue-branch-column { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 18px; }
-.issue-branch-head { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-mid); margin-bottom: 12px; }
+.issue-branch-column { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 28px; }
+.issue-branch-head { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-mid); }
+.issue-branch-subhead { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); }
 .issue-branch-body { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 .issue-add-top { font-size: 12px; }
+/* HOW = a grid of Area of Action columns, one per top-level node — matches the
+   three-level Areas of Action -> Main Issues -> Sub-Issues shape taught in the
+   Issue Analysis course material, rather than one long stacked list. */
+.issue-how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; align-items: start; }
+.issue-area-column { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 16px; }
+.issue-area-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.issue-area-title { font-family: var(--font-display); font-size: 15px; font-weight: 500; color: var(--dark); }
+.issue-area-title:hover { color: var(--accent-mid); }
 .issue-node { padding: 4px 0; }
 .issue-node-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius); }
 .issue-node-row:hover { background: var(--white); }
@@ -1166,51 +1170,14 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .issue-node-children { margin-top: 2px; }
 .issue-add-child { font-size: 11px; padding: 4px 0; }
 .issue-evidence-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.issue-crumb-current { color: var(--dark); font-weight: 500; }
+.issue-crumb-sep { color: var(--border); }
 
-/* ---------- Idea detail page ---------- */
-.swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.swot-grid textarea { width: 100%; padding: 10px 12px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; font-family: inherit; outline: none; resize: vertical; }
-.idea-comment { padding: 10px 0; border-bottom: 1px solid var(--border); }
-.idea-comment:last-child { border-bottom: none; }
-.idea-comment-meta { font-size: 11px; color: var(--muted-light); margin-bottom: 4px; }
-.idea-comment-text { font-size: 13px; color: var(--dark); }
+/* ---------- Idea / Issue picker chips (shared) ---------- */
 .idea-picker select { width: 100%; padding: 9px 12px; border: none; border-radius: var(--radius); background: var(--surface-alt); font-size: 13px; outline: none; }
 
-/* Scorecard: 1-5 effectiveness per dimension x column, colour-coded red -> green so the
-   overall shape of an idea's fit is visible at a glance, not just the raw numbers. */
-.idea-scorecard { border-collapse: collapse; width: 100%; min-width: 480px; }
-.idea-scorecard th, .idea-scorecard td { padding: 4px; text-align: left; }
-.idea-scorecard thead th { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; padding-bottom: 8px; }
-.idea-scorecard tbody th { font-size: 13px; color: var(--dark); font-weight: 500; white-space: nowrap; padding-right: 12px; }
-.idea-score-cell { border-radius: var(--radius); background: var(--surface-alt); transition: background 0.15s; }
-.idea-score-select { width: 100%; padding: 7px 8px; border: none; border-radius: var(--radius); background: transparent; font-size: 12px; outline: none; cursor: pointer; }
-.idea-score-cell.score-1 { background: var(--red-light); }
-.idea-score-cell.score-1 .idea-score-select { color: var(--red); }
-.idea-score-cell.score-2 { background: #FCEEDC; }
-.idea-score-cell.score-2 .idea-score-select { color: #C1631F; }
-.idea-score-cell.score-3 { background: var(--yellow-light); }
-.idea-score-cell.score-3 .idea-score-select { color: var(--yellow); }
-.idea-score-cell.score-4 { background: #EDF6E4; }
-.idea-score-cell.score-4 .idea-score-select { color: #5B8F2A; }
-.idea-score-cell.score-5 { background: var(--green-light); }
-.idea-score-cell.score-5 .idea-score-select { color: var(--green); }
-
-/* Overall Score: one pass, four fixed dimensions, no per-segment grid — a simple row
-   of label+select pairs rather than the Scorecard's table, since there's nothing to
-   line up against a column header here. */
-.overall-score-row { display: flex; flex-wrap: wrap; gap: 14px; }
-.overall-score-item { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
-.overall-score-item label { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-.idea-overall-select {
-  padding: 7px 30px 7px 12px; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 500;
-  color: var(--dark); background: var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M1 1l4 4 4-4" stroke="%236E6E73" stroke-width="1.4" fill="none"/></svg>') no-repeat right 10px center;
-  appearance: none; -webkit-appearance: none; cursor: pointer;
-}
-
 @media (max-width: 860px) {
-  .idea-board { grid-template-columns: 1fr; }
-  .issue-branches { grid-template-columns: 1fr; }
-  .swot-grid { grid-template-columns: 1fr; }
+  .issue-how-grid { grid-template-columns: 1fr; }
   .side-panel { width: 100%; }
 }
 
