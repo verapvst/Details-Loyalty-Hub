@@ -45,7 +45,7 @@ function renderStructure(container, ctx, state, programmes) {
     const bucketByLabel = new Map(distRows.map(d => [`${d.bucket} tier${d.bucket === '1' ? '' : 's'}`, d.bucket]));
     mountChartCard(distCard, {
       title: 'Tier Count Distribution', subtitle,
-      note: `${fmtNum(ov.total - ov.withStructureCount)} programme(s) have no tier structure recorded (they may still use the Tiering mechanism without a documented structure).`,
+      note: `${fmtNum(ov.total - ov.withStructureCount)} programme(s) have no tier structure recorded.`,
       buildChart: (el) => renderHBarChart(el, {
         title: 'Tier Count Distribution', subtitle,
         rows: distRows.map(d => ({ label: `${d.bucket} tier${d.bucket === '1' ? '' : 's'}`, value: d.count })),
@@ -76,7 +76,7 @@ function renderStructure(container, ctx, state, programmes) {
     return;
   }
   const title = `Tiering by ${DIMENSIONS[state.byDim].label}`;
-  const subtitle2 = `${ctx.filtersSummaryText()} · % of each category's own programmes that use the Tiering mechanism`;
+  const subtitle2 = `${ctx.filtersSummaryText()} · % of each category's own programmes with a recorded tier structure`;
   mountChartCard(byCard, {
     title, subtitle: subtitle2,
     buildChart: (el) => renderHBarChart(el, {
@@ -85,7 +85,8 @@ function renderStructure(container, ctx, state, programmes) {
       maxOverride: 100,
       valueLabel: (r) => fmtPct(r.value),
       onSelect: (categoryValue) => {
-        const subset = programmesMatching(programmes, [{ dimKey: state.byDim, value: categoryValue }, { dimKey: 'mechanisms', value: 'Tiering' }]);
+        const subset = programmesMatching(programmes, [{ dimKey: state.byDim, value: categoryValue }])
+          .filter(p => Array.isArray(p.programme_tiers) && p.programme_tiers.length > 0);
         openProgrammeListModal({ title: `${categoryValue} — Tiered`, subtitle: `${DIMENSIONS[state.byDim].label} · ${fmtNum(subset.length)} programme(s)`, programmes: subset });
       }
     }),

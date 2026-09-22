@@ -7,6 +7,7 @@
 // mutually-exclusive buckets — a programme with 3 mechanisms contributes to 3
 // counts, and percentages for these fields are allowed to exceed 100%.
 import { supabase } from './supabase.js';
+import { MECHANISM_ANALYTICAL_ORDER } from './options.js';
 
 // ---------------- Dimension registry ----------------
 // Single place describing every field Analysis can group/filter/cross-tab by.
@@ -252,7 +253,13 @@ export function normaliseCell(value, rowIdx, colIdx, table, mode) {
 export function mechanismCooccurrence(programmes) {
   const singleCounts = new Map();
   programmes.forEach(p => arr(p.mechanisms).forEach(m => singleCounts.set(m, (singleCounts.get(m) || 0) + 1)));
-  const list = [...singleCounts.keys()].sort((a, b) => singleCounts.get(b) - singleCounts.get(a));
+  // Conceptual order (taxonomy due diligence, Section 5), not frequency — a
+  // heatmap should read as a spectrum/family grouping, not a leaderboard. Anything
+  // present in the data but not in the fixed order (legacy values) sorts after it,
+  // by frequency, so nothing silently disappears.
+  const known = MECHANISM_ANALYTICAL_ORDER.filter(m => singleCounts.has(m));
+  const rest = [...singleCounts.keys()].filter(m => !MECHANISM_ANALYTICAL_ORDER.includes(m)).sort((a, b) => singleCounts.get(b) - singleCounts.get(a));
+  const list = [...known, ...rest];
   const idx = new Map(list.map((m, i) => [m, i]));
   const matrix = list.map(() => list.map(() => 0));
 
@@ -341,8 +348,11 @@ export function mechanismProfile(programmes, mechanism) {
 
 // ---------------- Tier Lab ----------------
 
+// Whether a programme is tiered is now answered only by the structured
+// programme_tiers table — the old Mechanisms "Tiering" checkbox was removed
+// (taxonomy due diligence: pure duplication of this, less reliable) so there is
+// exactly one source of truth for this question, not two that could disagree.
 function hasTierRows(p) { return Array.isArray(p.programme_tiers) && p.programme_tiers.length > 0; }
-function isTieredByMechanism(p) { return arr(p.mechanisms).includes('Tiering'); }
 
 function median(nums) {
   if (!nums.length) return null;
@@ -353,7 +363,6 @@ function median(nums) {
 
 export function tierOverview(programmes) {
   const total = programmes.length;
-  const tieredByMechanism = programmes.filter(isTieredByMechanism);
   const withTierRows = programmes.filter(hasTierRows);
   const tierCounts = withTierRows.map(p => p.programme_tiers.length);
   // '1' is included deliberately: some programmes have exactly one tier row recorded
@@ -366,8 +375,9 @@ export function tierOverview(programmes) {
   });
   return {
     total,
-    tieredCount: tieredByMechanism.length,
-    tieredPct: total ? (tieredByMechanism.length / total) * 100 : 0,
+    // A single source of truth now (programme_tiers) — see hasTierRows above.
+    tieredCount: withTierRows.length,
+    tieredPct: total ? (withTierRows.length / total) * 100 : 0,
     withStructureCount: withTierRows.length,
     avgTiers: tierCounts.length ? tierCounts.reduce((a, b) => a + b, 0) / tierCounts.length : null,
     medianTiers: median(tierCounts),
@@ -375,13 +385,13 @@ export function tierOverview(programmes) {
   };
 }
 
-// "Tiering by X": % of programmes within each category of dimKey that use the
-// Tiering mechanism — denominator is that category's own programme count.
+// "Tiering by X": % of programmes within each category of dimKey that have a
+// recorded tier structure — denominator is that category's own programme count.
 export function tieringByDimension(programmes, dimKey) {
   const dim = DIMENSIONS[dimKey];
   const groups = new Map();
   programmes.forEach(p => {
-    const tiered = isTieredByMechanism(p);
+    const tiered = hasTierRows(p);
     valuesOf(dim, p).forEach(v => {
       if (!groups.has(v)) groups.set(v, { total: 0, tiered: 0 });
       const g = groups.get(v);
@@ -533,7 +543,7 @@ export function snapshotKpis(programmes) {
   const freeCount = programmes.filter(p => p.membership_type === 'Free').length;
   const paidCount = programmes.filter(p => p.membership_type === 'Paid').length;
   const subscriptionCount = programmes.filter(p => p.membership_type === 'Subscription').length;
-  const tieredCount = programmes.filter(isTieredByMechanism).length;
+  const tieredCount = programmes.filter(hasTierRows).length;
   return {
     total, companies, industries, countries, geoMarkets,
     freePct: total ? (freeCount / total) * 100 : 0,

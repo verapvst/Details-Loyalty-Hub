@@ -183,10 +183,6 @@ function makeCtx(workspaceKey) {
     getGlobalFilters: () => JSON.parse(JSON.stringify(globalFilters)),
     reopenAnalysis,
     persist: (state) => savePersisted(workspaceKey, state),
-    // Used by Explore's Mechanism → Tiering drill-down to bridge into the Pricing
-    // workspace as a natural continuation — the same global filters already apply
-    // there, so no extra scoping plumbing is needed.
-    switchTab: (tab) => showTab(tab),
     // Used by Explore's Mechanism drill-down to bridge into the Mechanisms workspace
     // with that exact mechanism already selected, instead of landing on it empty.
     switchToMechanism: (mechanism) => {

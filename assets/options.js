@@ -111,11 +111,19 @@ export const OPTIONS = {
   // "Exclusivity"/"Access & Exclusivity", "Experiences"/"Experiences & Events") was
   // being asked and answered twice. See migration/consolidate_mechanisms.py for the
   // one-time data migration and its old-value -> new-value mapping.
+  // Taxonomy due diligence (2026-09): removed Tiering (redundant with the structured
+  // programme_tiers table — see analysisData.js's hasTierRows), merged Coupons /
+  // Vouchers into Discounts and Free Product / Service Credit into Complimentary
+  // Services (same member value, different redemption format — not a distinction
+  // researchers were reliably applying), renamed Partnerships -> Partner Network to
+  // disambiguate from Cross-brand / Ecosystem Access, and added Transferability /
+  // Gifting (a real, previously-uncaptured mechanic). See MECHANISM_ANALYTICAL_ORDER
+  // below for the conceptual (non-alphabetical) ordering used in analysis.
   mechanisms: [
-    'Points', 'Cashback', 'Discounts', 'Coupons / Vouchers', 'Free Product / Service Credit',
-    'Tiering', 'Upgrades', 'Priority Access', 'Early Access', 'Exclusivity',
-    'Complimentary Services', 'Experiences', 'Partnerships', 'Cross-brand / Ecosystem Access',
-    'Personalisation', 'Gamification', 'Community', 'Referral', 'Status Recognition', 'Other'
+    'Cashback', 'Community', 'Complimentary Benefits & Credits', 'Cross-brand / Ecosystem Access',
+    'Discounts & Vouchers', 'Early Access', 'Exclusivity', 'Experiences', 'Gamification', 'Other',
+    'Partner Network', 'Personalisation', 'Points', 'Priority Access', 'Referral',
+    'Status Recognition', 'Transferability / Gifting', 'Upgrades'
   ],
   discount_type: [
     'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',
@@ -161,6 +169,21 @@ export const OPTIONS = {
     { value: 'answered', label: 'Answered' }
   ]
 };
+
+// Analytical ordering for Mechanisms — used ONLY in analysis (heatmaps, co-occurrence,
+// Mechanics Lab), never for data entry or filters (those stay alphabetical, i.e.
+// OPTIONS.mechanisms as-is). Not a strict Transactional -> Experiential spectrum for
+// every item — see the taxonomy due diligence: positions 1-11 are a genuine economic
+// -> relational spectrum for reward-type mechanisms; 12-18 are grouped by conceptual
+// family (modifier / engagement / acquisition / ecosystem / architecture) rather than
+// ranked, since those don't have a stable position on a single line. A value not in
+// this list (legacy data, a future addition) sorts after everything named here.
+export const MECHANISM_ANALYTICAL_ORDER = [
+  'Cashback', 'Discounts & Vouchers', 'Points', 'Upgrades', 'Complimentary Benefits & Credits',
+  'Priority Access', 'Early Access', 'Exclusivity', 'Status Recognition', 'Experiences', 'Community',
+  'Personalisation', 'Gamification', 'Referral', 'Partner Network', 'Cross-brand / Ecosystem Access',
+  'Transferability / Gifting', 'Other'
+];
 
 // ---------------- Programme form structure ----------------
 // Simple fields (no conditional logic) — driven generically like other forms.

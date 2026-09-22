@@ -203,11 +203,13 @@ function wireRepeatingRows(container, addBtn, rowHTML, rowSelector) {
   return wireRemove;
 }
 
+// Tier Structure is deliberately not here — it's driven by the programme_tiers
+// table, not a "Tiering" mechanism (removed from Mechanisms entirely; see
+// options.js), so its block is always visible rather than gated by a checkbox.
 const MECHANISM_BLOCKS = {
   Points: 'block-points',
-  Discounts: 'block-discounts',
-  Partnerships: 'block-partnerships',
-  Tiering: 'block-tiering'
+  'Discounts & Vouchers': 'block-discounts',
+  'Partner Network': 'block-partnerships'
 };
 
 function wireMechanismToggle(form) {
@@ -238,18 +240,18 @@ function mechanismsSectionHTML(p = {}) {
     </div>
 
     <div id="block-discounts" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Discounts</div>
+      <div class="form-section-label" style="margin-top:20px;">Discounts &amp; Vouchers</div>
       ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, p.discount_types)}
     </div>
 
     <div id="block-partnerships" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Partnerships</div>
+      <div class="form-section-label" style="margin-top:20px;">Partner Network</div>
       <div class="form-field full"><label>Partner Companies (separate with ;)</label>
         <input type="text" name="partner_companies" placeholder="Emirates; Uber; Booking.com" value="${escapeHtml((p.partner_companies || []).join('; '))}" />
       </div>
     </div>
 
-    <div id="block-tiering" class="mech-block" hidden>
+    <div id="block-tiering">
       <div class="form-section-label" style="margin-top:20px;">Tier Structure</div>
       <div class="tier-rows" id="tier-rows">${tiers.map(tierRowHTML).join('')}</div>
       <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>

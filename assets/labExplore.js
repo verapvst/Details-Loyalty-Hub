@@ -39,17 +39,12 @@ function renderDrilldown(el, dimKey, value, programmes, ctx) {
     return;
   }
   const profile = categoryProfile(programmes, dimKey, value);
-  // Tiering is a mechanism like any other here — but a researcher who lands on it
-  // from Explore is often really asking a pricing-structure question, so offer a
-  // natural bridge into the Pricing workspace rather than a special case in Explore.
-  const isTieringBridge = dimKey === 'mechanisms' && value === 'Tiering';
-  // Any mechanism also gets a bridge into the dedicated Mechanisms workspace, which
-  // shows co-occurrence and year trend Explore doesn't (and would duplicate to add).
+  // Any mechanism gets a bridge into the dedicated Mechanisms workspace, which shows
+  // co-occurrence and year trend Explore doesn't (and would duplicate to add).
   const isMechanismBridge = dimKey === 'mechanisms';
   el.innerHTML = `
     <div class="drilldown-title">${escapeHtml(value)}</div>
     <button type="button" class="drill-count-link" id="drill-count-link">${fmtNum(profile.count)} programme${profile.count === 1 ? '' : 's'} →</button>
-    ${isTieringBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-tiers">→ Explore pricing structure for these ${fmtNum(profile.count)} programmes</button>` : ''}
     ${isMechanismBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-mechanisms">→ Analyze ${escapeHtml(value)} in Mechanisms</button>` : ''}
     <div class="drilldown-block"><div class="drilldown-block-label">Positioning</div>${barRow(profile.positioning.rows)}</div>
     <div class="drilldown-block"><div class="drilldown-block-label">Membership</div>${barRow(profile.membership.rows)}</div>
@@ -59,8 +54,6 @@ function renderDrilldown(el, dimKey, value, programmes, ctx) {
   el.querySelector('#drill-count-link').addEventListener('click', () => {
     openProgrammeListModal({ title: value, subtitle: `${DIMENSIONS[dimKey].label} · ${fmtNum(profile.count)} programme(s)`, programmes: profile.subset });
   });
-  const tiersBridgeBtn = el.querySelector('#drill-bridge-tiers');
-  if (tiersBridgeBtn) tiersBridgeBtn.addEventListener('click', () => ctx.switchTab('tiers'));
   const mechanismsBridgeBtn = el.querySelector('#drill-bridge-mechanisms');
   if (mechanismsBridgeBtn) mechanismsBridgeBtn.addEventListener('click', () => ctx.switchToMechanism(value));
 }
