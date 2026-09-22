@@ -2,8 +2,8 @@ import { supabase } from './supabase.js';
 import { initNav, showToast, getIdentity } from './app.js';
 import { escapeHtml } from './fields.js';
 import { fieldPlainText } from './richText.js';
-import { loadQuestions, renderQuestionsSection, openQuestionModal, activeQuestions, questionDisplayTitle } from './questions.js';
-import { loadNextSteps, renderNextStepsSection, openNextStepModal, activeNextSteps, nextStepDisplayTitle } from './next-steps.js';
+import { loadQuestions, activeQuestions, questionDisplayTitle } from './questions.js';
+import { loadNextSteps, activeNextSteps, nextStepDisplayTitle } from './next-steps.js';
 
 await initNav('reports');
 
@@ -364,24 +364,4 @@ async function loadSavedReports() {
   });
 }
 
-// ---------------- Questions & Support Needed (manual) ----------------
-
-async function reloadQuestions() {
-  const qs = await loadQuestions();
-  renderQuestionsSection(document.getElementById('question-list'), qs, { onChange: reloadQuestions });
-}
-
-document.getElementById('btn-add-question').addEventListener('click', () => openQuestionModal({ onChange: reloadQuestions }));
-
-// ---------------- Next Steps (manual, not Tasks) ----------------
-
-async function reloadNextSteps() {
-  const steps = await loadNextSteps();
-  renderNextStepsSection(document.getElementById('next-steps-list'), steps, { onChange: reloadNextSteps });
-}
-
-document.getElementById('btn-add-next-step').addEventListener('click', () => openNextStepModal({ onChange: reloadNextSteps }));
-
-reloadQuestions();
-reloadNextSteps();
 loadSavedReports();

@@ -25,40 +25,54 @@
   </div>
 </section>
 
-<section class="section" style="padding-top: 20px; padding-bottom: 24px;">
-  <div class="section-head">
-    <h2 class="section-title">Calendar</h2>
-    <div class="view-toggle" id="calendar-view-toggle">
-      <button type="button" data-view="agenda">Agenda</button>
-      <button type="button" data-view="month" class="active">Month</button>
+<div class="lab-tabs-wrap">
+  <div class="lab-tabs">
+    <button type="button" class="lab-tab" data-tab="calendar">Calendar</button>
+    <button type="button" class="lab-tab" data-tab="tasks">Tasks</button>
+    <button type="button" class="lab-tab" data-tab="polls">Polls</button>
+  </div>
+</div>
+
+<div class="workspace" id="workspace-calendar">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div class="section-head">
+      <h2 class="section-title">Calendar</h2>
+      <div class="view-toggle" id="calendar-view-toggle">
+        <button type="button" data-view="agenda">Agenda</button>
+        <button type="button" data-view="month" class="active">Month</button>
+      </div>
+      <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
     </div>
-    <button class="btn-outline" id="btn-add-meeting" type="button">+ Add Meeting</button>
-  </div>
-  <div id="calendar-agenda" hidden>
-    <div class="loading-state">Loading…</div>
-  </div>
-  <div id="calendar-month"></div>
-</section>
+    <div id="calendar-agenda" hidden>
+      <div class="loading-state">Loading…</div>
+    </div>
+    <div id="calendar-month"></div>
+  </section>
+</div>
 
-<section class="section" style="padding-top: 24px; padding-bottom: 24px;">
-  <div class="section-head">
-    <h2 class="section-title">Tasks</h2>
-    <button class="btn-primary" id="btn-add-task" type="button">+ Add Task</button>
-  </div>
-  <div id="task-list">
-    <div class="loading-state">Loading…</div>
-  </div>
-</section>
+<div class="workspace" id="workspace-tasks">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div class="section-head">
+      <h2 class="section-title">Tasks</h2>
+      <button class="btn-primary" id="btn-add-task" type="button">+ Add Task</button>
+    </div>
+    <div id="task-list">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
 
-<section class="section" style="padding-top: 24px; padding-bottom: 24px;">
-  <div class="section-head">
-    <h2 class="section-title">Meeting Polls</h2>
-    <button class="btn-outline" id="btn-add-poll" type="button">+ New Poll</button>
-  </div>
-  <div id="poll-list">
-    <div class="loading-state">Loading…</div>
-  </div>
-</section>
+<div class="workspace" id="workspace-polls">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div class="section-head">
+      <h2 class="section-title">Meeting Polls</h2>
+      <button class="btn-outline" id="btn-add-poll" type="button">+ New Poll</button>
+    </div>
+    <div id="poll-list">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
 
 <div id="add-meeting-root"></div>
 <div id="edit-meeting-root"></div>

@@ -115,6 +115,22 @@ export const OPTIONS = {
     'Open registration', 'Application required', 'Request membership',
     'Invitation only', 'Referral required'
   ],
+  // Brainstorm Ideas: deliberately few options — a short, single-select classification
+  // of what kind of idea this is, not a general-purpose tag. SWOT is its own framework
+  // on the idea's page now (four real fields), not a value here. When Category is
+  // "Mechanism", the idea also gets a Mechanisms multi-pick (reuses the `mechanisms`
+  // list below) instead of being a value in this list.
+  brainstorm_category: ['Mechanism', 'Positioning / Marketing', 'Technology', 'Partnerships', 'Customer Experience'],
+  // No longer a per-idea tag field — reused as the Scorecard's column headers (an idea
+  // is scored against every value here, plus every brainstorm_audience value below).
+  // A short, Brainstorm-specific list rather than the full Industry taxonomy above (that
+  // one's for the Database's 144 real programmes; this is for a handful of ideas).
+  brainstorm_vertical: ['Hospitality', 'Golf', 'Sports & Leisure', 'Food & Beverages', 'Other'],
+  // No longer a per-idea tag field — reused as extra Scorecard columns alongside Vertical.
+  brainstorm_audience: ['B2B', 'B2C'],
+  // Rows scored on the idea Scorecard, 1-5, against every Vertical/Audience column.
+  // Extensible via Settings, same pattern as every other picklist here.
+  brainstorm_dimension: ['Market Fit', 'Feasibility', 'Revenue Potential', 'Differentiation'],
   // Mechanisms: the concrete ways a programme creates, delivers or activates value for
   // members. Formerly split across two overlapping fields (Mechanisms + Benefits) —
   // consolidated into one taxonomy (2026-09) since the same concept (e.g. "Discounts",

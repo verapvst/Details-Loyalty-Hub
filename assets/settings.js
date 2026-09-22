@@ -176,6 +176,7 @@ const NAV_ITEMS = [
   { key: 'favorites', label: 'Favorites' },
   { key: 'tasks', label: 'Schedules & Tasks' },
   { key: 'reports', label: 'Weekly Reports' },
+  { key: 'brainstorm', label: 'Brainstorm' },
   { key: 'figures', label: 'Data & Insights' },
   { key: 'sources', label: 'Sources' },
   { key: 'settings', label: 'Settings' }
@@ -572,6 +573,10 @@ renderFlatListCard(sourcesInsightsContainer, 'insight_type', 'Information Type',
 const calendarContainer = document.getElementById('calendar-settings-cards');
 renderFlatListCard(calendarContainer, 'meeting_type', 'Meeting Type');
 renderFlatListCard(calendarContainer, 'task_type', 'Task Type');
+renderFlatListCard(calendarContainer, 'brainstorm_category', 'Idea Categories (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Idea Scorecard Columns — Vertical (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Idea Scorecard Columns — Audience (Brainstorm)');
+renderFlatListCard(calendarContainer, 'brainstorm_dimension', 'Idea Scorecard Dimensions (Brainstorm)');
 
 // ---------------- Locked by default ----------------
 // Every field above saves itself immediately on interaction (no single form/Save

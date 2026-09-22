@@ -7,20 +7,42 @@ const IDENTITY_KEY = 'dlh_identity';
 // `key` is the stable technical identifier (never changes, never shown) and `href` is
 // the route (never changes either) — only `label` can be overridden from Settings
 // (Navigation), via app_settings key `nav_label:<key>`. See navLabel() below.
-const NAV_LINKS = [
-  { key: 'database', label: 'Database', href: 'index.html' },
-  { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
-  { key: 'favorites', label: 'Favorites', href: 'favorites.html' },
+//
+// A group with `children` collapses related pages under one top-level nav item —
+// Analysis is a view over the Database, Favorites is a personal cut of it; Sources
+// backs Data & Insights — so the main bar stays short while the pages themselves are
+// one click away via a secondary tab row (see renderSubNav()) that appears once
+// you're on any page in that group. Every leaf keeps its own stable `key`/`href` —
+// Settings' "Tab display names" editor and every page's own `initNav(activeKey)` call
+// are unaffected by how pages are grouped at the top level.
+const NAV_GROUPS = [
+  { key: 'database', label: 'Database', href: 'index.html', children: [
+      { key: 'database', label: 'Database', href: 'index.html' },
+      { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
+      { key: 'favorites', label: 'Favorites', href: 'favorites.html' }
+    ] },
   { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
   { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' },
-  { key: 'figures', label: 'Data & Insights', href: 'figures.html' },
-  { key: 'sources', label: 'Sources', href: 'sources.html' },
+  { key: 'brainstorm', label: 'Brainstorm', href: 'brainstorm.html' },
+  { key: 'figures', label: 'Data & Insights', href: 'figures.html', children: [
+      { key: 'figures', label: 'Insights', href: 'figures.html' },
+      { key: 'sources', label: 'Sources', href: 'sources.html' }
+    ] },
   { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
 
+const NAV_LEAVES = NAV_GROUPS.flatMap(g => g.children || [g]);
+
 export function navLabel(key) {
-  const link = NAV_LINKS.find(l => l.key === key);
+  const link = NAV_LEAVES.find(l => l.key === key);
   return getAppSetting(`nav_label:${key}`, link ? link.label : key);
+}
+
+// The group whose top-level tab should be highlighted, and whose children (if any)
+// populate the secondary tab row — found by matching either the group's own key or
+// one of its children's, so it works whether activeKey is a flat page or a leaf.
+function groupFor(activeKey) {
+  return NAV_GROUPS.find(g => g.key === activeKey || (g.children && g.children.some(c => c.key === activeKey))) || NAV_GROUPS[0];
 }
 
 export function getIdentity() {
@@ -56,14 +78,30 @@ function avatarInnerHTML(name) {
 }
 
 const MOBILE_QUERY = '(max-width: 860px)';
+const NAV_H = 56, SUBNAV_H = 44;
 
 function renderNav(activeKey) {
   const root = document.getElementById('nav-root');
   if (!root) return;
+  const activeGroup = groupFor(activeKey);
 
-  const links = NAV_LINKS.map(l =>
-    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(l.key))}</a>`
+  const links = NAV_GROUPS.map(g =>
+    `<a href="${g.href}" class="${g === activeGroup ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`
   ).join('');
+
+  const subNavHTML = activeGroup.children ? `
+    <div class="sub-nav">
+      <div class="sub-nav-inner">
+        ${activeGroup.children.map(c => `<a href="${c.href}" class="${c.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(c.key))}</a>`).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  // Content below the fixed header (body padding, every page's own sticky filter/tab
+  // bar) needs to know the header's real total height, which now varies by page — see
+  // the matching `!important` overrides in style.css that pin this back to NAV_H alone
+  // once the sub-nav bar itself is hidden at the mobile breakpoint.
+  document.documentElement.style.setProperty('--nav-h', `${activeGroup.children ? NAV_H + SUBNAV_H : NAV_H}px`);
 
   root.innerHTML = `
     <nav class="nav">
@@ -81,6 +119,7 @@ function renderNav(activeKey) {
         </div>
       </div>
     </nav>
+    ${subNavHTML}
   `;
 
   renderMobileDrawer(activeKey);
@@ -101,9 +140,17 @@ function renderMobileDrawer(activeKey) {
     document.body.appendChild(root);
   }
 
-  const links = NAV_LINKS.map(l =>
-    `<a href="${l.href}" class="${l.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(l.key))}</a>`
-  ).join('');
+  // Flattened, not nested — a group's own link is followed immediately by its
+  // (indented) children, so the drawer stays a single scannable list instead of
+  // needing an accordion for what's still a short list either way.
+  const links = NAV_GROUPS.map(g => {
+    const headerHTML = `<a href="${g.href}" class="${!g.children && g.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`;
+    if (!g.children) return headerHTML;
+    const childrenHTML = g.children.map(c =>
+      `<a href="${c.href}" class="mobile-drawer-child ${c.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(c.key))}</a>`
+    ).join('');
+    return headerHTML + childrenHTML;
+  }).join('');
 
   root.innerHTML = `
     <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" hidden>

@@ -1398,6 +1398,26 @@ function renderMilestoneStripSection() {
   });
 }
 
+// ---------------- Tabs (Calendar / Tasks / Polls) ----------------
+// Every tab's data loads and renders up front in init() regardless of which is
+// active — switching is pure visibility, so it's instant and never re-fetches.
+
+const TABS = ['calendar', 'tasks', 'polls'];
+const TAB_STORAGE_KEY = 'tasks_active_tab';
+let activeTab = (() => {
+  try { const saved = localStorage.getItem(TAB_STORAGE_KEY); return TABS.includes(saved) ? saved : TABS[0]; }
+  catch { return TABS[0]; }
+})();
+
+function showTab(tab) {
+  activeTab = tab;
+  try { localStorage.setItem(TAB_STORAGE_KEY, tab); } catch { /* private mode etc. */ }
+  document.querySelectorAll('.lab-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+  TABS.forEach(t => { document.getElementById(`workspace-${t}`).hidden = t !== tab; });
+}
+
+document.querySelectorAll('.lab-tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
 // ---------------- Init ----------------
 
 document.getElementById('btn-add-meeting').addEventListener('click', () => openAddMeetingModal());
@@ -1414,6 +1434,7 @@ function renderAll() {
 }
 
 async function init() {
+  showTab(activeTab);
   await Promise.all([loadMeetings(), loadTasks(), loadPolls()]);
   milestones = await loadMilestones();
   renderAll();

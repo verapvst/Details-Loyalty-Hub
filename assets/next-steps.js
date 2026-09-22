@@ -23,8 +23,10 @@ export function nextStepDisplayTitle(s) {
 }
 
 // One modal for both Add (step=null) and Edit (step=existing row) — Title and
-// Details are optional; only the main Next Step text is required.
-export function openNextStepModal({ step, onChange }) {
+// Details are optional; only the main Next Step text is required. `prefill` (add
+// mode only) lets the Issue Tree's "Promote to Next Step" open this same modal with
+// the node's title already filled in and its id recorded on save.
+export function openNextStepModal({ step, prefill, onChange }) {
   let root = document.getElementById('next-step-modal-root');
   if (!root) {
     root = document.createElement('div');
@@ -40,11 +42,11 @@ export function openNextStepModal({ step, onChange }) {
           <div class="form-modal-body">
             <div class="form-field full">
               <label>Title <span style="font-weight:400; color: var(--muted);">(optional, shown on the list; falls back to the text below)</span></label>
-              <input type="text" name="title" value="${escapeHtml(step?.title)}" placeholder="Short label, e.g. Benchmark Analysis" />
+              <input type="text" name="title" value="${escapeHtml(step?.title || prefill?.title || '')}" placeholder="Short label, e.g. Benchmark Analysis" />
             </div>
             <div class="form-field full">
               <label>Next Step *</label>
-              <textarea name="text" rows="2" required placeholder="e.g. Start analysing the benchmark data">${escapeHtml(step?.text)}</textarea>
+              <textarea name="text" rows="2" required placeholder="e.g. Start analysing the benchmark data">${escapeHtml(step?.text || prefill?.text || '')}</textarea>
             </div>
             <div class="form-field full">
               <label>Details <span style="font-weight:400; color: var(--muted);">(optional, full context, shown only when opened)</span></label>
@@ -85,6 +87,7 @@ export function openNextStepModal({ step, onChange }) {
       payload.status = 'active';
       payload.created_by = getIdentity();
       payload.created_at = new Date().toISOString();
+      if (prefill?.related_node_id) payload.related_node_id = prefill.related_node_id;
       ({ error } = await supabase.from('next_steps').insert(payload));
     }
     if (error) {

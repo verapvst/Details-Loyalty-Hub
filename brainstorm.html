@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Brainstorm · Details Loyalty Hub</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1>Brainstorm</h1>
+      <p>Where the team's thinking turns into the project's strategic direction: raw ideas, the Issue Tree they converge into, open questions, and the Next Steps that come out the other end.</p>
+    </div>
+  </div>
+</div>
+
+<div class="lab-tabs-wrap">
+  <div class="lab-tabs">
+    <button type="button" class="lab-tab" data-tab="ideas">Ideas</button>
+    <button type="button" class="lab-tab" data-tab="issue-tree">Issue Tree</button>
+    <button type="button" class="lab-tab" data-tab="questions">Questions</button>
+    <button type="button" class="lab-tab" data-tab="next-steps">Next Steps</button>
+  </div>
+</div>
+
+<div class="workspace" id="workspace-ideas">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div id="idea-board-root">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
+
+<div class="workspace" id="workspace-issue-tree">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div id="issue-tree-root">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
+
+<div class="workspace" id="workspace-questions">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div class="section-head">
+      <h2 class="section-title">Questions &amp; Support Needed</h2>
+      <button class="btn-outline" id="btn-add-question" type="button">+ Add</button>
+    </div>
+    <div class="settings-hint" style="margin-bottom: 14px;">Manual: active items appear in the next generated Weekly Report; resolving one keeps it as history without deleting it.</div>
+    <div id="question-list">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
+
+<div class="workspace" id="workspace-next-steps">
+  <section class="section" style="padding-top: 24px; padding-bottom: 24px;">
+    <div class="section-head">
+      <h2 class="section-title">Next Steps</h2>
+    </div>
+    <div class="settings-hint" style="margin-bottom: 14px;">Strategic directions, not operational Tasks. Born from a promoted Issue Tree node, not added freehand — see the Issue Tree tab. Feeds into the next generated Weekly Report.</div>
+    <div id="next-steps-list">
+      <div class="loading-state">Loading…</div>
+    </div>
+  </section>
+</div>
+
+<div id="side-panel-root"></div>
+
+<script type="module" src="assets/brainstorm.js"></script>
+</body>
+</html>
