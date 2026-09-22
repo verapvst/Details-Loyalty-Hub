@@ -21,7 +21,9 @@ const NAV_GROUPS = [
       { key: 'favorites', label: 'Favorites', href: 'favorites.html' }
     ] },
   { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html', children: [
-      { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
+      { key: 'tasks-calendar', label: 'Calendar', href: 'tasks.html?tab=calendar' },
+      { key: 'tasks-tasks', label: 'Tasks', href: 'tasks.html?tab=tasks' },
+      { key: 'tasks-polls', label: 'Polls', href: 'tasks.html?tab=polls' },
       { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' }
     ] },
   { key: 'brainstorm', label: 'Brainstorm', href: 'brainstorm.html' },
@@ -32,7 +34,11 @@ const NAV_GROUPS = [
   { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
 
-const NAV_LEAVES = NAV_GROUPS.flatMap(g => g.children || [g]);
+// Children first, then each group's own key/label as a fallback — so navLabel(groupKey)
+// still resolves correctly for a group whose key isn't reused by any of its children
+// (e.g. "tasks", now that its children are Calendar/Tasks/Polls/Weekly Reports rather
+// than a same-keyed "Schedules & Tasks" child).
+const NAV_LEAVES = [...NAV_GROUPS.flatMap(g => g.children || [g]), ...NAV_GROUPS];
 
 export function navLabel(key) {
   const link = NAV_LEAVES.find(l => l.key === key);

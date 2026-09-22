@@ -9,7 +9,19 @@ import {
   openMilestoneModal, MILESTONE_BADGE_CLASS
 } from './milestones.js';
 
-await initNav('tasks');
+// Which in-page tab (Calendar/Tasks/Polls) to open — the nav drawer's Schedules &
+// Tasks children link here with ?tab=, so a fresh load honours that over whatever
+// was last active; navigating within the page (showTab, below) doesn't touch the URL.
+const TABS = ['calendar', 'tasks', 'polls'];
+const TAB_STORAGE_KEY = 'tasks_active_tab';
+let activeTab = (() => {
+  const fromURL = new URLSearchParams(window.location.search).get('tab');
+  if (TABS.includes(fromURL)) return fromURL;
+  try { const saved = localStorage.getItem(TAB_STORAGE_KEY); return TABS.includes(saved) ? saved : TABS[0]; }
+  catch { return TABS[0]; }
+})();
+
+await initNav(`tasks-${activeTab}`);
 await loadCustomOptions();
 await loadTeamMembers();
 const TEAM_MEMBERS = getActiveTeamMembers();
@@ -1401,13 +1413,7 @@ function renderMilestoneStripSection() {
 // ---------------- Tabs (Calendar / Tasks / Polls) ----------------
 // Every tab's data loads and renders up front in init() regardless of which is
 // active — switching is pure visibility, so it's instant and never re-fetches.
-
-const TABS = ['calendar', 'tasks', 'polls'];
-const TAB_STORAGE_KEY = 'tasks_active_tab';
-let activeTab = (() => {
-  try { const saved = localStorage.getItem(TAB_STORAGE_KEY); return TABS.includes(saved) ? saved : TABS[0]; }
-  catch { return TABS[0]; }
-})();
+// TABS/activeTab themselves are set up near the top of the file, before initNav().
 
 function showTab(tab) {
   activeTab = tab;
