@@ -20,8 +20,10 @@ const NAV_GROUPS = [
       { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
       { key: 'favorites', label: 'Favorites', href: 'favorites.html' }
     ] },
-  { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
-  { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' },
+  { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html', children: [
+      { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
+      { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' }
+    ] },
   { key: 'brainstorm', label: 'Brainstorm', href: 'brainstorm.html' },
   { key: 'figures', label: 'Data & Insights', href: 'figures.html', children: [
       { key: 'figures', label: 'Insights', href: 'figures.html' },
@@ -38,8 +40,7 @@ export function navLabel(key) {
 }
 
 // One flattened, vertical link list — a group's own link immediately followed by its
-// (indented) children — used for both the always-visible desktop sidebar and the
-// mobile drawer, so the two stay identical by construction rather than by convention.
+// (indented) children — used by the nav drawer at every screen size.
 function navLinksListHTML(activeKey) {
   return NAV_GROUPS.map(g => {
     const headerHTML = `<a href="${g.href}" class="${!g.children && g.key === activeKey ? 'active' : ''}">${escapeHtml(navLabel(g.key))}</a>`;
@@ -83,11 +84,6 @@ function avatarInnerHTML(name) {
   return url ? `<img src="${escapeHtml(url)}" alt="" />` : escapeHtml(initials(name));
 }
 
-const MOBILE_QUERY = '(max-width: 860px)';
-
-// The identity button appears twice in the DOM (compact mobile top bar, foot of the
-// desktop sidebar) — only one is ever visible at a time (CSS), so both are wired and
-// updated together rather than picking "the" one by id.
 function identityButtonHTML() {
   return `
     <button class="identity-btn" type="button">
@@ -97,79 +93,71 @@ function identityButtonHTML() {
   `;
 }
 
+// A slim top bar at every screen size — logo, a menu button that opens the nav
+// drawer (openable/closable, not a permanently pinned sidebar), and identity.
 function renderNav(activeKey) {
   const root = document.getElementById('nav-root');
   if (!root) return;
-  const linksHTML = navLinksListHTML(activeKey);
 
   root.innerHTML = `
     <nav class="nav">
       <div class="nav-inner">
-        <a href="index.html" class="nav-logo" id="nav-logo">
-          Details <span>Loyalty Hub</span>
-          <span class="nav-logo-icon" aria-hidden="true"><i></i><i></i><i></i></span>
-        </a>
+        <div class="nav-left">
+          <button class="nav-menu-btn" id="nav-menu-btn" type="button" aria-label="Open menu">
+            <span class="nav-logo-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
+          <a href="index.html" class="nav-logo">Details <span>Loyalty Hub</span></a>
+        </div>
         <div class="nav-right">${identityButtonHTML()}</div>
       </div>
     </nav>
-    <aside class="sidebar-nav">
-      <a href="index.html" class="nav-logo">Details <span>Loyalty Hub</span></a>
-      <nav class="sidebar-links">${linksHTML}</nav>
-      <div class="sidebar-foot">${identityButtonHTML()}</div>
-    </aside>
   `;
 
-  renderMobileDrawer(activeKey);
-
-  document.getElementById('nav-logo').addEventListener('click', (e) => {
-    if (window.matchMedia(MOBILE_QUERY).matches) {
-      e.preventDefault();
-      openMobileDrawer();
-    }
-  });
+  renderNavDrawer(activeKey);
+  document.getElementById('nav-menu-btn').addEventListener('click', openNavDrawer);
 }
 
-function renderMobileDrawer(activeKey) {
-  let root = document.getElementById('mobile-drawer-root');
+function renderNavDrawer(activeKey) {
+  let root = document.getElementById('nav-drawer-root');
   if (!root) {
     root = document.createElement('div');
-    root.id = 'mobile-drawer-root';
+    root.id = 'nav-drawer-root';
     document.body.appendChild(root);
   }
 
   root.innerHTML = `
-    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay" hidden>
-      <div class="mobile-drawer">
-        <div class="mobile-drawer-head">
+    <div class="nav-drawer-overlay" id="nav-drawer-overlay" hidden>
+      <div class="nav-drawer">
+        <div class="nav-drawer-head">
           <span class="nav-logo">Details <span>Loyalty Hub</span></span>
-          <button class="mobile-drawer-close" id="mobile-drawer-close" type="button" aria-label="Close menu">&times;</button>
+          <button class="nav-drawer-close" id="nav-drawer-close" type="button" aria-label="Close menu">&times;</button>
         </div>
-        <nav class="mobile-drawer-links">${navLinksListHTML(activeKey)}</nav>
+        <nav class="nav-drawer-links">${navLinksListHTML(activeKey)}</nav>
       </div>
     </div>
   `;
 
-  const overlay = document.getElementById('mobile-drawer-overlay');
-  document.getElementById('mobile-drawer-close').addEventListener('click', closeMobileDrawer);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMobileDrawer(); });
+  const overlay = document.getElementById('nav-drawer-overlay');
+  document.getElementById('nav-drawer-close').addEventListener('click', closeNavDrawer);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeNavDrawer(); });
 }
 
-function openMobileDrawer() {
-  const overlay = document.getElementById('mobile-drawer-overlay');
+function openNavDrawer() {
+  const overlay = document.getElementById('nav-drawer-overlay');
   if (!overlay) return;
   overlay.hidden = false;
   document.addEventListener('keydown', handleDrawerEscape);
 }
 
-function closeMobileDrawer() {
-  const overlay = document.getElementById('mobile-drawer-overlay');
+function closeNavDrawer() {
+  const overlay = document.getElementById('nav-drawer-overlay');
   if (!overlay) return;
   overlay.hidden = true;
   document.removeEventListener('keydown', handleDrawerEscape);
 }
 
 function handleDrawerEscape(e) {
-  if (e.key === 'Escape') closeMobileDrawer();
+  if (e.key === 'Escape') closeNavDrawer();
 }
 
 async function renderIdentityModal({ forceChoice }) {
