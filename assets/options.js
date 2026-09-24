@@ -162,16 +162,14 @@ export const OPTIONS = {
   ]
 };
 
-// Analytical ordering for Mechanisms, used ONLY in analysis (heatmaps, co-occurrence,
-// Mechanics Lab); data entry and filters stay alphabetical. Grouped by dimension, not a
-// single transactional -> experiential ladder:
-//   Earning (how value is earned) · Value delivered · Progression · Reach · Acquisition · Belonging
+// Analytical ordering for Mechanisms: from more transactional to more experiential.
+// Used in ALL analysis (cards, charts, heatmaps, trends); only picklists stay
+// alphabetical (OPTIONS.mechanisms). It is a reading convention, not a measured score:
+// Reach (partners, ecosystem) and Referral sit where their typical value type sits.
 export const MECHANISM_ANALYTICAL_ORDER = [
-  'Spend-based earning', 'Behaviour-based rewards',
-  'Member pricing', 'Included member benefits', 'Privileged access', 'Member experiences & events',
-  'Earned status',
-  'Ecosystem cross-use', 'External partner network',
-  'Referral',
+  'Member pricing', 'Spend-based earning', 'External partner network',
+  'Included member benefits', 'Ecosystem cross-use', 'Behaviour-based rewards',
+  'Referral', 'Earned status', 'Privileged access', 'Member experiences & events',
   'Community'
 ];
 
@@ -184,6 +182,23 @@ export const MECHANISM_DIMENSIONS = {
   'Referral': 'Acquisition',
   'Community': 'Belonging'
 };
+
+// Spectrum colour: grey (transactional) to Details gold (experiential).
+const SPECTRUM_FROM = [110, 110, 115]; // #6E6E73
+const SPECTRUM_TO = [177, 143, 70];    // #B18F46
+export const MECHANISM_SPECTRUM_GRADIENT = 'linear-gradient(90deg, #C7C7CC 0%, #B18F46 100%)';
+export function mechanismSpectrumColor(name) {
+  const i = MECHANISM_ANALYTICAL_ORDER.indexOf(name);
+  if (i === -1) return null;
+  const t = MECHANISM_ANALYTICAL_ORDER.length > 1 ? i / (MECHANISM_ANALYTICAL_ORDER.length - 1) : 0;
+  const c = SPECTRUM_FROM.map((f, k) => Math.round(f + (SPECTRUM_TO[k] - f) * t));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+export function sortByMechanismOrder(values) {
+  const known = MECHANISM_ANALYTICAL_ORDER.filter(m => values.includes(m));
+  const rest = values.filter(v => !MECHANISM_ANALYTICAL_ORDER.includes(v));
+  return [...known, ...rest];
+}
 
 // ---------------- Programme form structure ----------------
 // Simple fields (no conditional logic) — driven generically like other forms.

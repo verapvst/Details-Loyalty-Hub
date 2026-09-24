@@ -8,6 +8,7 @@
 import { escapeHtml } from './fields.js';
 import { distribution, mechanismKpis, mechanismStackingDistribution, mechanismTopPairs, mechanismProfile, mechanismCooccurrence, programmesMatching } from './analysisData.js';
 import { renderHBarChart, renderHeatmap, renderLineChart, fmtNum, fmtPct } from './charts.js';
+import { mechanismSpectrumColor, MECHANISM_SPECTRUM_GRADIENT } from './options.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
 
@@ -39,14 +40,20 @@ function barRow(rows, valueFmt) {
 
 function mechanismGridHTML(rows, selected) {
   return `
-    <div class="mechanism-grid">
-      ${rows.map(r => `
-        <button type="button" class="mechanism-card ${r.value === selected ? 'active' : ''}" data-mech="${escapeHtml(r.value)}">
+    <div class="mechanism-spectrum">
+      <div class="mechanism-spectrum-labels"><span>More transactional</span><span>More experiential</span></div>
+      <div class="mechanism-spectrum-bar" style="background:${MECHANISM_SPECTRUM_GRADIENT}"></div>
+    </div>
+    <div class="mechanism-grid mechanism-grid-spectrum" style="--mech-count:${rows.length}">
+      ${rows.map(r => {
+        const c = mechanismSpectrumColor(r.value);
+        return `
+        <button type="button" class="mechanism-card ${r.value === selected ? 'active' : ''}" data-mech="${escapeHtml(r.value)}" ${c ? `style="border-top:3px solid ${c}"` : ''}>
           <div class="mechanism-card-name">${escapeHtml(r.value)}</div>
-          <div class="mechanism-card-pct">${fmtPct(r.pct)}</div>
+          <div class="mechanism-card-pct" ${c ? `style="color:${c}"` : ''}>${fmtPct(r.pct)}</div>
           <div class="mechanism-card-count">${fmtNum(r.measureValue)} programme${r.measureValue === 1 ? '' : 's'}</div>
-        </button>
-      `).join('')}
+        </button>`;
+      }).join('')}
     </div>
   `;
 }
@@ -185,6 +192,7 @@ export function mount(container, ctx) {
       mountChartCard(cooccurRow.querySelector('#mech-heatmap-card'), {
         title: 'Mechanism × Mechanism', subtitle: heatSubtitle,
         buildChart: (el) => renderHeatmap(el, {
+            labelColor: mechanismSpectrumColor,
           title: 'Mechanism × Mechanism', subtitle: heatSubtitle,
           rows: co.mechanisms, cols: co.mechanisms, matrix: co.matrix,
           cellText: (v) => fmtNum(v),

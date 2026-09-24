@@ -247,7 +247,7 @@ export function renderHBarChart(container, spec) {
     svg.appendChild(labelEl);
     const bw = maxVal ? (r.value / maxVal) * plotW : 0;
     svg.appendChild(el('rect', {
-      x: plotX, y: y + 3, width: Math.max(bw, 1), height: rowH - 7, rx: 3, fill: spec.barColor || colorAt(0),
+      x: plotX, y: y + 3, width: Math.max(bw, 1), height: rowH - 7, rx: 3, fill: r.color || spec.barColor || colorAt(0),
       class: spec.onSelect ? 'hbar-rect hbar-rect-clickable' : 'hbar-rect', 'data-value': r.label
     }));
     const labelStr = spec.valueLabel ? spec.valueLabel(r) : fmtNum(r.value);
@@ -437,6 +437,8 @@ export function renderHeatmap(container, spec) {
     const g = el('g', { transform: `translate(${plotX + ci * cellW + cellW / 2}, ${plotY - 6}) rotate(-32)` });
     g.appendChild(text(0, 0, String(c), { 'font-size': 8.5, fill: '#1D1D1F', 'text-anchor': 'start' }));
     svg.appendChild(g);
+    const cc = spec.labelColor ? spec.labelColor(c) : null;
+    if (cc) svg.appendChild(el('rect', { x: plotX + ci * cellW, y: plotY - 4, width: cellW - 1.5, height: 2.5, rx: 1, fill: cc }));
   });
 
   spec.rows.forEach((r, ri) => {
@@ -449,6 +451,8 @@ export function renderHeatmap(container, spec) {
       labelEl.appendChild(titleEl);
     }
     svg.appendChild(labelEl);
+    const rc = spec.labelColor ? spec.labelColor(r) : null;
+    if (rc) svg.appendChild(el('rect', { x: plotX - 5, y: plotY + ri * cellH + 2, width: 2.5, height: cellH - 5.5, rx: 1, fill: rc }));
     spec.cols.forEach((c, ci) => {
       const v = spec.matrix[ri][ci];
       const intensity = maxV ? Math.min(v / maxV, 1) : 0;
