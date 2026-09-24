@@ -171,20 +171,20 @@ function featureRowEditHTML(f = {}) {
   `;
 }
 
-const MECHANISM_BLOCKS = { Points: 'r-block-points', Discounts: 'r-block-discounts', Partnerships: 'r-block-partnerships', Tiering: 'r-block-tiering' };
+const MECHANISM_BLOCKS = { 'Spend-based earning': 'r-block-points', 'Member pricing': 'r-block-discounts', 'External partner network': 'r-block-partnerships' };
 
 function mechanismsBlockHTML() {
   const mechanisms = programme.mechanisms || [];
 
   if (!editing) {
-    const pointsInfo = mechanisms.includes('Points') && (programme.points_expires !== null || programme.points_notes)
+    const pointsInfo = mechanisms.includes('Spend-based earning') && (programme.points_expires !== null || programme.points_notes)
       ? `<div class="record-field full"><label>Points Details</label><span class="value">${
           programme.points_expires === true ? `Expires${programme.points_expiration_period ? ` (${escapeHtml(programme.points_expiration_period)})` : ''}` :
           programme.points_expires === false ? 'Does not expire' : ''
         }${programme.points_notes ? ` · ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
-    const discountInfo = mechanisms.includes('Discounts & Vouchers') && programme.discount_types && programme.discount_types.length
+    const discountInfo = mechanisms.includes('Member pricing') && programme.discount_types && programme.discount_types.length
       ? `<div class="record-field full"><label>Discount Type</label>${chipsOrEmpty(programme.discount_types)}</div>` : '';
-    const partnerInfo = mechanisms.includes('Partner Network') && programme.partner_companies && programme.partner_companies.length
+    const partnerInfo = mechanisms.includes('External partner network') && programme.partner_companies && programme.partner_companies.length
       ? `<div class="record-field full"><label>Partner Companies</label>${chipsOrEmpty(programme.partner_companies)}</div>` : '';
 
     return `
@@ -207,7 +207,7 @@ function mechanismsBlockHTML() {
       ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, mechanisms)}
 
       <div id="r-block-points" class="mech-block" hidden>
-        <div class="form-section-label">Points</div>
+        <div class="form-section-label">Points / Earning</div>
         <div class="form-grid">
           <div class="form-field"><label>Expires?</label>${inputHTML({ key: 'points_expires', type: 'select', options: 'yes_no' }, programme.points_expires === true ? 'Yes' : (programme.points_expires === false ? 'No' : ''))}</div>
           <div class="form-field"><label>Expiration Period</label>${inputHTML({ key: 'points_expiration_period', type: 'text' }, programme.points_expiration_period)}</div>
@@ -216,18 +216,18 @@ function mechanismsBlockHTML() {
       </div>
 
       <div id="r-block-discounts" class="mech-block" hidden>
-        <div class="form-section-label">Discounts</div>
+        <div class="form-section-label">Member pricing</div>
         ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, programme.discount_types)}
       </div>
 
       <div id="r-block-partnerships" class="mech-block" hidden>
-        <div class="form-section-label">Partnerships</div>
+        <div class="form-section-label">External partner network</div>
         <div class="form-field full"><label>Partner Companies (separate with ;)</label>
           <input type="text" name="partner_companies" value="${escapeHtml((programme.partner_companies || []).join('; '))}" />
         </div>
       </div>
 
-      <div id="r-block-tiering" class="mech-block" hidden>
+      <div id="r-block-tiering" class="mech-block">
         <div class="form-section-label">Tier Structure</div>
         <div class="tier-rows" id="tier-rows">${tierList.map(tierRowEditHTML).join('')}</div>
         <button type="button" class="btn-add-tier" id="btn-add-tier">+ Add tier</button>
