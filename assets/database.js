@@ -207,9 +207,9 @@ function wireRepeatingRows(container, addBtn, rowHTML, rowSelector) {
 // table, not a "Tiering" mechanism (removed from Mechanisms entirely; see
 // options.js), so its block is always visible rather than gated by a checkbox.
 const MECHANISM_BLOCKS = {
-  Points: 'block-points',
-  'Discounts & Vouchers': 'block-discounts',
-  'Partner Network': 'block-partnerships'
+  'Spend-based earning': 'block-points',
+  'Member pricing': 'block-discounts',
+  'External partner network': 'block-partnerships'
 };
 
 function wireMechanismToggle(form) {
@@ -231,7 +231,7 @@ function mechanismsSectionHTML(p = {}) {
     ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, p.mechanisms)}
 
     <div id="block-points" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Points</div>
+      <div class="form-section-label" style="margin-top:20px;">Points / Earning</div>
       <div class="form-grid">
         <div class="form-field"><label>Expires?</label>${inputHTML({ key: 'points_expires', type: 'select', options: 'yes_no' }, p.points_expires === true ? 'Yes' : (p.points_expires === false ? 'No' : ''))}</div>
         <div class="form-field"><label>Expiration Period</label>${inputHTML({ key: 'points_expiration_period', type: 'text' }, p.points_expiration_period)}</div>
@@ -240,12 +240,12 @@ function mechanismsSectionHTML(p = {}) {
     </div>
 
     <div id="block-discounts" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Discounts &amp; Vouchers</div>
+      <div class="form-section-label" style="margin-top:20px;">Member pricing</div>
       ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, p.discount_types)}
     </div>
 
     <div id="block-partnerships" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Partner Network</div>
+      <div class="form-section-label" style="margin-top:20px;">External partner network</div>
       <div class="form-field full"><label>Partner Companies (separate with ;)</label>
         <input type="text" name="partner_companies" placeholder="Emirates; Uber; Booking.com" value="${escapeHtml((p.partner_companies || []).join('; '))}" />
       </div>

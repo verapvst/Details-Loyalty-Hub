@@ -6,6 +6,7 @@
 // what a two-dimension relationship looks like when one dimension is time).
 import { escapeHtml } from './fields.js';
 import { DIMENSIONS, crossTab, normaliseCell, timeSeries, programmesMatching } from './analysisData.js';
+import { mechanismSpectrumColor } from './options.js';
 import { renderHeatmap, renderBarChart, renderLineChart, compatibleChartTypes, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
@@ -120,6 +121,7 @@ export function mount(container, ctx) {
 
     if (state.chartType === 'heatmap') {
       return renderHeatmap(el, {
+            labelColor: mechanismSpectrumColor,
         title: crossTitle(), subtitle: subtitleText(multiNote),
         rows: table.yValues, cols: table.xValues,
         matrix: table.matrix.map((row, ri) => row.map((v, ci) => normaliseCell(v, ri, ci, table, state.normalise))),

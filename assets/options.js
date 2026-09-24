@@ -68,11 +68,13 @@ export const OPTIONS = {
     'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
+  // Industries (taxonomy review 2026-09): 9 analytical industries, sized for comparison.
+  // Leisure destinations (ski, parks) sit in Leisure & Entertainment, consumer packaged
+  // goods sit in Retail (not Food & Beverage), education sits in Leisure & Entertainment.
   industry: [
-    'Hotels & Hospitality', 'Golf', 'Tourism & Leisure', 'Airlines & Travel', 'Luxury', 'Retail',
-    'Banking & Financial Services (incl. Credit Cards)', 'Fitness & Wellness', 'Restaurants & F&B',
-    'Automotive', 'Entertainment & Media', "Private Members' Clubs", 'Education',
-    'Telecommunications', 'Healthcare', 'Other'
+    'Hotels & Hospitality', 'Golf', 'Food & Beverage', 'Fitness & Wellness',
+    'Leisure & Entertainment', 'Automotive', 'Travel & Mobility', 'Retail',
+    'Banking & Financial Services', 'Other'
   ],
   // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
   // below for the shared team definitions) — orthogonal to Scope, which is what it's about.
@@ -105,25 +107,15 @@ export const OPTIONS = {
   // none). Ideas themselves carry no classification at all — see brainstormIdeas.js.
   brainstorm_vertical: ['Hospitality', 'Golf', 'Sports & Leisure', 'Food & Beverages'],
   brainstorm_audience: ['B2C', 'B2B', 'B2B2C'],
-  // Mechanisms: the concrete ways a programme creates, delivers or activates value for
-  // members. Formerly split across two overlapping fields (Mechanisms + Benefits) —
-  // consolidated into one taxonomy (2026-09) since the same concept (e.g. "Discounts",
-  // "Exclusivity"/"Access & Exclusivity", "Experiences"/"Experiences & Events") was
-  // being asked and answered twice. See migration/consolidate_mechanisms.py for the
-  // one-time data migration and its old-value -> new-value mapping.
-  // Taxonomy due diligence (2026-09): removed Tiering (redundant with the structured
-  // programme_tiers table — see analysisData.js's hasTierRows), merged Coupons /
-  // Vouchers into Discounts and Free Product / Service Credit into Complimentary
-  // Services (same member value, different redemption format — not a distinction
-  // researchers were reliably applying), renamed Partnerships -> Partner Network to
-  // disambiguate from Cross-brand / Ecosystem Access, and added Transferability /
-  // Gifting (a real, previously-uncaptured mechanic). See MECHANISM_ANALYTICAL_ORDER
-  // below for the conceptual (non-alphabetical) ordering used in analysis.
+  // Mechanisms (taxonomy review 2026-09, v3): what the programme structurally does to
+  // create value or change behaviour. Benefits (what the customer receives) and feelings
+  // (exclusivity, belonging, "money can't buy") are NOT mechanisms. 11 mechanisms in
+  // 6 dimensions (see MECHANISM_ANALYTICAL_ORDER). Old -> new mapping and coding rules:
+  // migration/remap_mechanisms_v3.md.
   mechanisms: [
-    'Cashback', 'Community', 'Complimentary Benefits & Credits', 'Cross-brand / Ecosystem Access',
-    'Discounts & Vouchers', 'Early Access', 'Exclusivity', 'Experiences', 'Gamification', 'Other',
-    'Partner Network', 'Personalisation', 'Points', 'Priority Access', 'Referral',
-    'Status Recognition', 'Transferability / Gifting', 'Upgrades'
+    'Behaviour-based rewards', 'Community', 'Earned status', 'Ecosystem cross-use',
+    'External partner network', 'Included member benefits', 'Member experiences & events',
+    'Member pricing', 'Privileged access', 'Referral', 'Spend-based earning'
   ],
   discount_type: [
     'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',
@@ -170,20 +162,43 @@ export const OPTIONS = {
   ]
 };
 
-// Analytical ordering for Mechanisms — used ONLY in analysis (heatmaps, co-occurrence,
-// Mechanics Lab), never for data entry or filters (those stay alphabetical, i.e.
-// OPTIONS.mechanisms as-is). Not a strict Transactional -> Experiential spectrum for
-// every item — see the taxonomy due diligence: positions 1-11 are a genuine economic
-// -> relational spectrum for reward-type mechanisms; 12-18 are grouped by conceptual
-// family (modifier / engagement / acquisition / ecosystem / architecture) rather than
-// ranked, since those don't have a stable position on a single line. A value not in
-// this list (legacy data, a future addition) sorts after everything named here.
+// Analytical ordering for Mechanisms: from more transactional to more experiential.
+// Used in ALL analysis (cards, charts, heatmaps, trends); only picklists stay
+// alphabetical (OPTIONS.mechanisms). It is a reading convention, not a measured score:
+// Reach (partners, ecosystem) and Referral sit where their typical value type sits.
 export const MECHANISM_ANALYTICAL_ORDER = [
-  'Cashback', 'Discounts & Vouchers', 'Points', 'Upgrades', 'Complimentary Benefits & Credits',
-  'Priority Access', 'Early Access', 'Exclusivity', 'Status Recognition', 'Experiences', 'Community',
-  'Personalisation', 'Gamification', 'Referral', 'Partner Network', 'Cross-brand / Ecosystem Access',
-  'Transferability / Gifting', 'Other'
+  'Member pricing', 'Spend-based earning', 'External partner network',
+  'Included member benefits', 'Ecosystem cross-use', 'Behaviour-based rewards',
+  'Referral', 'Earned status', 'Privileged access', 'Member experiences & events',
+  'Community'
 ];
+
+export const MECHANISM_DIMENSIONS = {
+  'Spend-based earning': 'Earning', 'Behaviour-based rewards': 'Earning',
+  'Member pricing': 'Value delivered', 'Included member benefits': 'Value delivered',
+  'Privileged access': 'Value delivered', 'Member experiences & events': 'Value delivered',
+  'Earned status': 'Progression',
+  'Ecosystem cross-use': 'Reach', 'External partner network': 'Reach',
+  'Referral': 'Acquisition',
+  'Community': 'Belonging'
+};
+
+// Spectrum colour: grey (transactional) to Details gold (experiential).
+const SPECTRUM_FROM = [110, 110, 115]; // #6E6E73
+const SPECTRUM_TO = [177, 143, 70];    // #B18F46
+export const MECHANISM_SPECTRUM_GRADIENT = 'linear-gradient(90deg, #C7C7CC 0%, #B18F46 100%)';
+export function mechanismSpectrumColor(name) {
+  const i = MECHANISM_ANALYTICAL_ORDER.indexOf(name);
+  if (i === -1) return null;
+  const t = MECHANISM_ANALYTICAL_ORDER.length > 1 ? i / (MECHANISM_ANALYTICAL_ORDER.length - 1) : 0;
+  const c = SPECTRUM_FROM.map((f, k) => Math.round(f + (SPECTRUM_TO[k] - f) * t));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+export function sortByMechanismOrder(values) {
+  const known = MECHANISM_ANALYTICAL_ORDER.filter(m => values.includes(m));
+  const rest = values.filter(v => !MECHANISM_ANALYTICAL_ORDER.includes(v));
+  return [...known, ...rest];
+}
 
 // ---------------- Programme form structure ----------------
 // Simple fields (no conditional logic) — driven generically like other forms.

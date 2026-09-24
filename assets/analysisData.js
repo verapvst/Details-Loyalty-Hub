@@ -7,7 +7,7 @@
 // mutually-exclusive buckets — a programme with 3 mechanisms contributes to 3
 // counts, and percentages for these fields are allowed to exceed 100%.
 import { supabase } from './supabase.js';
-import { MECHANISM_ANALYTICAL_ORDER } from './options.js';
+import { MECHANISM_ANALYTICAL_ORDER, sortByMechanismOrder } from './options.js';
 
 // ---------------- Dimension registry ----------------
 // Single place describing every field Analysis can group/filter/cross-tab by.
@@ -108,6 +108,8 @@ function sortedValues(agg, dimKey) {
   const dim = DIMENSIONS[dimKey];
   const values = [...agg.groups.keys()];
   if (dim.kind === 'time') return values.sort((a, b) => a - b);
+  // Mechanisms always read transactional -> experiential, never as a leaderboard.
+  if (dimKey === 'mechanisms') return sortByMechanismOrder(values.sort((a, b) => agg.groups.get(b).programmeCount - agg.groups.get(a).programmeCount));
   return values.sort((a, b) => agg.groups.get(b).programmeCount - agg.groups.get(a).programmeCount);
 }
 
@@ -171,7 +173,8 @@ export function timeSeries(programmes, { groupByKey = 'none', measure = 'count' 
   // Order series by total volume (most common first) for stable, readable stacking/legends.
   const totals = new Map([...seriesNames].map(n => [n, 0]));
   perYear.forEach(yearMap => yearMap.forEach((g, name) => totals.set(name, totals.get(name) + g.programmeCount)));
-  const orderedNames = [...seriesNames].sort((a, b) => totals.get(b) - totals.get(a));
+  let orderedNames = [...seriesNames].sort((a, b) => totals.get(b) - totals.get(a));
+  if (groupByKey === 'mechanisms') orderedNames = sortByMechanismOrder(orderedNames);
 
   const series = orderedNames.map(name => {
     const values = years.map(y => {

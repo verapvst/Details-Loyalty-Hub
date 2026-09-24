@@ -5,6 +5,7 @@
 import { escapeHtml } from './fields.js';
 import { DIMENSIONS, distribution, categoryProfile, snapshotKpis } from './analysisData.js';
 import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
+import { mechanismSpectrumColor } from './options.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
 
@@ -152,7 +153,7 @@ export function mount(container, ctx) {
         }
         return renderHBarChart(el, {
           title: `${title} Distribution`, subtitle,
-          rows: dist.rows.map(r => ({ label: r.value, value: r.measureValue })),
+          rows: dist.rows.map(r => ({ label: r.value, value: r.measureValue, color: state.dimKey === 'mechanisms' ? mechanismSpectrumColor(r.value) : null })),
           valueLabel: (r) => state.measure === 'pct' ? fmtPct(r.value) : fmtNum(r.value),
           onSelect
         });
