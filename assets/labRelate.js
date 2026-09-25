@@ -88,6 +88,15 @@ export function mount(container, ctx) {
     return `${DIMENSIONS[state.yKey].label} × ${DIMENSIONS[state.xKey].label}`;
   }
   function measureLabel() { return state.measure === 'companies' ? 'Number of Companies' : 'Number of Programmes'; }
+  // Whether either chosen axis is multi-select — determines the whole note below.
+  // Depends only on which dimensions are picked, not on the data, so it's safe to
+  // call before the chart itself is built (e.g. for the chart-card's own header,
+  // which is shown on screen and must not silently drop this warning).
+  function isMultiSelectPair() { return DIMENSIONS[state.xKey].kind === 'multi' || DIMENSIONS[state.yKey].kind === 'multi'; }
+  function multiSelectNote() {
+    if (!isMultiSelectPair()) return '';
+    return state.chartType === 'heatmap' ? 'multi-select axis — row/column % may exceed 100%' : 'multi-select axis — values may exceed totals';
+  }
   function subtitleText(multiNote) {
     const parts = [ctx.filtersSummaryText(), measureLabel()];
     if (state.chartType === 'heatmap') parts.push(state.normalise === 'row' ? 'Row %' : state.normalise === 'col' ? 'Column %' : 'Count');
@@ -107,7 +116,7 @@ export function mount(container, ctx) {
       const ts = timeSeries(programmes, { groupByKey: groupKey, measure: state.measure === 'companies' ? 'companies' : 'count' });
       if (!ts.years.length) { showEmptyChartState(el, 'No programmes with a recorded launch year match the current filters.'); return null; }
       const spec = {
-        title: crossTitle(), subtitle: subtitleText(ts.multiSelect ? 'multi-select — may exceed totals' : ''), categories: ts.years, series: ts.series,
+        title: crossTitle(), subtitle: subtitleText(multiSelectNote()), categories: ts.years, series: ts.series,
         onSelect: (year, seriesName) => openCellProgrammes(isTime(state.yKey) ? year : seriesName, isTime(state.xKey) ? year : seriesName, programmes)
       };
       if (['line', 'area', 'stackedArea'].includes(state.chartType)) return renderLineChart(el, { ...spec, mode: state.chartType });
@@ -117,12 +126,11 @@ export function mount(container, ctx) {
 
     const table = crossTab(programmes, state.xKey, state.yKey, { measure: state.measure });
     if (!table.xValues.length || !table.yValues.length) { showEmptyChartState(el, 'Not enough data for this comparison — try different dimensions or clear a filter.'); return null; }
-    const multiNote = (table.xMultiSelect || table.yMultiSelect) ? 'a multi-select axis is involved — its own row/column % stays independently correct' : '';
 
     if (state.chartType === 'heatmap') {
       return renderHeatmap(el, {
             labelColor: mechanismSpectrumColor,
-        title: crossTitle(), subtitle: subtitleText(multiNote),
+        title: crossTitle(), subtitle: subtitleText(multiSelectNote()),
         rows: table.yValues, cols: table.xValues,
         matrix: table.matrix.map((row, ri) => row.map((v, ci) => normaliseCell(v, ri, ci, table, state.normalise))),
         cellText: (v) => state.normalise === 'count' ? fmtNum(v) : fmtPct(v),
@@ -133,7 +141,7 @@ export function mount(container, ctx) {
     const series = table.xValues.map((xv, ci) => ({ name: xv, values: table.yValues.map((yv, ri) => table.matrix[ri][ci]) }));
     const mode = state.chartType === 'stackedBar' ? 'stacked' : state.chartType === 'stacked100Bar' ? 'percent' : 'grouped';
     return renderBarChart(el, {
-      title: crossTitle(), subtitle: subtitleText(multiNote), categories: table.yValues, series, mode,
+      title: crossTitle(), subtitle: subtitleText(multiSelectNote()), categories: table.yValues, series, mode,
       onSelect: (yValue, xValue) => openCellProgrammes(yValue, xValue, programmes)
     });
   }
@@ -202,7 +210,7 @@ export function mount(container, ctx) {
 
     const cardRoot = resultEl.querySelector('#re-chart-card');
     mountChartCard(cardRoot, {
-      title: crossTitle(), subtitle: subtitleText(),
+      title: crossTitle(), subtitle: subtitleText(multiSelectNote()),
       buildChart: (el) => buildChartInto(el, programmes),
       getTableData: () => getTableData(programmes),
       filename: `${state.yKey}-x-${state.xKey}`,
