@@ -5,7 +5,7 @@
 import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
-import { loadAnalysisDataset, applyGlobalFilters, snapshotKpis } from './analysisData.js';
+import { loadAnalysisDataset, applyGlobalFilters } from './analysisData.js';
 import { fmtNum } from './charts.js';
 
 import { mount as mountExplore } from './labExplore.js';
@@ -133,14 +133,6 @@ function restoreFilterUI() {
   if (panel) panel.innerHTML = filterAddPanelHTML();
 }
 
-// ---------------- Header / orientation line ----------------
-
-function renderOrientationLine(programmes) {
-  const k = snapshotKpis(programmes);
-  document.getElementById('lab-orientation').textContent =
-    `${fmtNum(k.total)} programmes · ${fmtNum(k.companies)} companies · ${fmtNum(k.industries)} industries · ${fmtNum(k.countries)} countries`;
-}
-
 // ---------------- Workspace tabs ----------------
 
 const WORKSPACES = ['explore', 'relate', 'trends', 'tiers', 'mechanisms', 'saved'];
@@ -214,8 +206,13 @@ let allProgrammes = [];
 
 function rerenderAll() {
   const filtered = applyGlobalFilters(allProgrammes, globalFilters);
-  renderOrientationLine(filtered);
-  DATA_DRIVEN_WORKSPACES.forEach(key => workspaces[key].render(filtered));
+  // Each workspace renders independently — one throwing (e.g. a stale cached copy of
+  // this file calling something that no longer exists) must not leave every other
+  // workspace stuck showing stale/empty data.
+  DATA_DRIVEN_WORKSPACES.forEach(key => {
+    try { workspaces[key].render(filtered); }
+    catch (e) { console.error(`${key} workspace failed to render:`, e); }
+  });
 }
 
 try {

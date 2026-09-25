@@ -2,11 +2,19 @@
 // dimension?" Consolidates the old Distribution Lab and the old standalone Mechanism
 // Distribution card (Mechanism is just one more dimension here, nothing special).
 // Reuses the existing engine verbatim: distribution(), categoryProfile().
+//
+// Layout (2026-09 redesign): one horizontal control row (dimension/measure/view-as,
+// no more stacked full-width prompts), a big feature chart, and — once a category is
+// clicked — a full-width "selected category" workspace below it: breakdowns on the
+// left, the actual underlying programmes on the right, each linking straight to its
+// own programme page. The click path is meant to read as
+// chart category -> underlying characteristics -> actual programmes -> programme page,
+// not category -> a small info panel.
 import { escapeHtml } from './fields.js';
 import { DIMENSIONS, distribution, categoryProfile, snapshotKpis } from './analysisData.js';
 import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
 import { mechanismSpectrumColor } from './options.js';
-import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
+import { mountChartCard, showEmptyChartState, showTipOnce } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
 
 const DIM_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms'];
@@ -23,40 +31,71 @@ function viewAsOptions(dimKey) {
   return DIMENSIONS[dimKey].kind === 'multi' ? [] : [['bar', 'Bar'], ['donut', 'Donut']];
 }
 
-function barRow(profileRows) {
-  const max = Math.max(...profileRows.map(r => r.pct), 1);
+// A muted, brand-family palette for the small stacked-proportion bars below — never
+// the main chart's own gold, so these clearly read as secondary/subordinate to it.
+const STACK_COLORS = ['#B18F46', '#6E6E73', '#D8C6A0', '#93753A', '#AEAEB2', '#C9A667', '#4C4A42', '#E4DAC4'];
+
+// One thin horizontal bar, segmented proportionally — a shape you can read at a
+// glance before the exact-numbers list underneath it spells them out.
+function stackedBarHTML(profileRows) {
+  const total = profileRows.reduce((s, r) => s + r.pct, 0) || 1;
+  return `
+    <div class="mini-stack-bar">
+      ${profileRows.map((r, i) => `<span class="mini-stack-seg" style="width:${(r.pct / total * 100).toFixed(1)}%; background:${STACK_COLORS[i % STACK_COLORS.length]}" title="${escapeHtml(r.value)} — ${fmtPct(r.pct)}"></span>`).join('')}
+    </div>
+  `;
+}
+
+// The exact numbers, as a plain list — the stacked bar above already carries the
+// "see it visually" job, so this stays text-only rather than repeating the same
+// proportion a second time as a row of individual mini-bars.
+function valueListHTML(profileRows) {
   return profileRows.map(r => `
     <div class="drilldown-bar-row">
       <span class="dbr-label" title="${escapeHtml(r.value)}">${escapeHtml(r.value)}</span>
-      <span class="dbr-track"><span class="dbr-fill" style="width:${((r.pct / max) * 100).toFixed(1)}%"></span></span>
       <span class="dbr-pct">${fmtPct(r.pct)}</span>
     </div>
   `).join('') || '<div class="drilldown-empty">No data.</div>';
 }
 
-function renderDrilldown(el, dimKey, value, programmes, ctx) {
-  if (!value) {
-    el.innerHTML = '<div class="drilldown-empty">Click a category in the chart to inspect it here.</div>';
-    return;
-  }
-  const profile = categoryProfile(programmes, dimKey, value);
-  // Any mechanism gets a bridge into the dedicated Mechanisms workspace, which shows
-  // co-occurrence and year trend Explore doesn't (and would duplicate to add).
-  const isMechanismBridge = dimKey === 'mechanisms';
-  el.innerHTML = `
-    <div class="drilldown-title">${escapeHtml(value)}</div>
-    <button type="button" class="drill-count-link" id="drill-count-link">${fmtNum(profile.count)} programme${profile.count === 1 ? '' : 's'} →</button>
-    ${isMechanismBridge ? `<button type="button" class="drill-bridge-link" id="drill-bridge-mechanisms">→ Analyze ${escapeHtml(value)} in Mechanisms</button>` : ''}
-    <div class="drilldown-block"><div class="drilldown-block-label">Positioning</div>${barRow(profile.positioning.rows)}</div>
-    <div class="drilldown-block"><div class="drilldown-block-label">Membership</div>${barRow(profile.membership.rows)}</div>
-    <div class="drilldown-block"><div class="drilldown-block-label">Geographic Scope</div>${barRow(profile.geography.rows)}</div>
-    <div class="drilldown-block"><div class="drilldown-block-label">Top Mechanisms <span class="drilldown-block-note">(multi-select)</span></div>${barRow(profile.topMechanisms)}</div>
+function programmeRowHTML(p) {
+  return `
+    <a class="prog-list-row" href="programme.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">
+      <span class="prog-list-name">${escapeHtml(p.programme_name || 'Untitled programme')}</span>
+      <span class="prog-list-company">${escapeHtml(p.company || '')}</span>
+    </a>
   `;
-  el.querySelector('#drill-count-link').addEventListener('click', () => {
-    openProgrammeListModal({ title: value, subtitle: `${DIMENSIONS[dimKey].label} · ${fmtNum(profile.count)} programme(s)`, programmes: profile.subset });
-  });
-  const mechanismsBridgeBtn = el.querySelector('#drill-bridge-mechanisms');
-  if (mechanismsBridgeBtn) mechanismsBridgeBtn.addEventListener('click', () => ctx.switchToMechanism(value));
+}
+
+// The category workspace: breakdowns (left) + the actual underlying programmes
+// (right, each a real link into the existing programme page) — replaces the old
+// "click count to open a modal" indirection with the list always in view once a
+// category is selected.
+function categorySectionHTML(dimKey, value, programmes) {
+  const profile = categoryProfile(programmes, dimKey, value);
+  const isMechanismBridge = dimKey === 'mechanisms';
+  const rows = [...profile.subset].sort((a, b) => (a.programme_name || '').localeCompare(b.programme_name || ''));
+
+  return `
+    <div class="category-section-head">
+      <div class="category-section-title">${escapeHtml(value)}<span class="category-section-count">${fmtNum(profile.count)} programme${profile.count === 1 ? '' : 's'}</span></div>
+      ${isMechanismBridge ? `<button type="button" class="btn-text" id="ex-drill-bridge-mechanisms">→ Analyze ${escapeHtml(value)} in Mechanisms</button>` : ''}
+    </div>
+    <div class="category-drilldown-grid">
+      <div class="category-breakdown-grid">
+        <div class="breakdown-block"><div class="drilldown-block-label">Positioning</div>${stackedBarHTML(profile.positioning.rows)}${valueListHTML(profile.positioning.rows)}</div>
+        <div class="breakdown-block"><div class="drilldown-block-label">Membership</div>${stackedBarHTML(profile.membership.rows)}${valueListHTML(profile.membership.rows)}</div>
+        <div class="breakdown-block"><div class="drilldown-block-label">Geographic Scope</div>${stackedBarHTML(profile.geography.rows)}${valueListHTML(profile.geography.rows)}</div>
+        <div class="breakdown-block"><div class="drilldown-block-label">Top Mechanisms <span class="drilldown-block-note">(multi-select)</span></div>${valueListHTML(profile.topMechanisms)}</div>
+      </div>
+      <div>
+        <div class="prog-list-count">${fmtNum(profile.count)} programme${profile.count === 1 ? '' : 's'} — click one to open it</div>
+        <div class="category-programme-list-wrap">
+          <div class="category-programme-list prog-list">${rows.length ? rows.map(programmeRowHTML).join('') : '<div class="drilldown-empty">No programmes match.</div>'}</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function kpiRowHTML(programmes) {
@@ -83,29 +122,58 @@ export function mount(container, ctx) {
 
   container.innerHTML = `
     <div id="ex-kpis"></div>
-    <div class="workspace-prompt">
-      <div class="workspace-prompt-label">What would you like to explore?</div>
-      <select class="control-select control-select-lg" id="ex-dim">
-        <option value="" disabled ${!state.dimKey ? 'selected' : ''}>Select a dimension…</option>
-        ${DIM_KEYS.map(k => `<option value="${k}">${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}
-      </select>
+    <div class="workspace-secondary-controls">
+      <div class="control-group">
+        <label>Explore by</label>
+        <select class="control-select" id="ex-dim">
+          <option value="" disabled ${!state.dimKey ? 'selected' : ''}>Select a dimension…</option>
+          ${DIM_KEYS.map(k => `<option value="${k}">${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="control-group" id="ex-measure-group" hidden>
+        <label>Measure</label>
+        <select class="control-select" id="ex-measure">${MEASURE_OPTIONS.map(([v, l]) => `<option value="${v}" ${v === state.measure ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div class="control-group" id="ex-viewas-group" hidden>
+        <label>View as…</label>
+        <select class="control-select" id="ex-viewas"></select>
+      </div>
     </div>
     <div id="ex-result"></div>
   `;
 
   const kpisEl = container.querySelector('#ex-kpis');
   const dimSel = container.querySelector('#ex-dim');
+  const measureGroup = container.querySelector('#ex-measure-group');
+  const measureSel = container.querySelector('#ex-measure');
+  const viewAsGroup = container.querySelector('#ex-viewas-group');
+  const viewAsSel = container.querySelector('#ex-viewas');
   const resultEl = container.querySelector('#ex-result');
+
+  measureSel.addEventListener('change', () => { state.measure = measureSel.value; ctx.persist(state); render(lastProgrammes); });
+  viewAsSel.addEventListener('change', () => { state.chartType = viewAsSel.value; ctx.persist(state); render(lastProgrammes); });
+
+  function renderCategorySection() {
+    const el = resultEl.querySelector('#ex-category-section');
+    if (!el) return;
+    if (!selectedValue) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.innerHTML = categorySectionHTML(state.dimKey, selectedValue, lastProgrammes);
+    el.querySelector('#ex-drill-bridge-mechanisms')?.addEventListener('click', () => ctx.switchToMechanism(selectedValue));
+  }
 
   function onSelect(value) {
     selectedValue = value;
-    renderDrilldown(container.querySelector('#ex-drilldown'), state.dimKey, selectedValue, lastProgrammes, ctx);
+    renderCategorySection();
+    resultEl.querySelector('#ex-category-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function render(programmes) {
     lastProgrammes = programmes;
     kpisEl.innerHTML = kpiRowHTML(programmes);
     if (!state.dimKey) {
+      measureGroup.hidden = true;
+      viewAsGroup.hidden = true;
       resultEl.innerHTML = '';
       return;
     }
@@ -114,37 +182,27 @@ export function mount(container, ctx) {
     const title = DIMENSIONS[state.dimKey].label;
     const viewOpts = viewAsOptions(state.dimKey);
 
-    resultEl.innerHTML = `
-      <div class="workspace-secondary-controls">
-        <div class="control-group"><label>Measure</label>
-          <select class="control-select" id="ex-measure">${MEASURE_OPTIONS.map(([v, l]) => `<option value="${v}" ${v === state.measure ? 'selected' : ''}>${l}</option>`).join('')}</select>
-        </div>
-        ${viewOpts.length ? `
-        <div class="control-group"><label>View as…</label>
-          <select class="control-select" id="ex-viewas">${viewOpts.map(([v, l]) => `<option value="${v}" ${v === state.chartType ? 'selected' : ''}>${l}</option>`).join('')}</select>
-        </div>` : ''}
-      </div>
-      <div class="workspace-columns">
-        <div id="ex-chart-card"></div>
-        <div class="drilldown-panel" id="ex-drilldown"><div class="drilldown-empty">Click a category in the chart to inspect it here.</div></div>
-      </div>
-    `;
+    measureGroup.hidden = false;
+    viewAsGroup.hidden = viewOpts.length === 0;
+    if (viewOpts.length) {
+      viewAsSel.innerHTML = viewOpts.map(([v, l]) => `<option value="${v}" ${v === state.chartType ? 'selected' : ''}>${l}</option>`).join('');
+    }
 
-    const measureSel = resultEl.querySelector('#ex-measure');
-    measureSel.addEventListener('change', () => { state.measure = measureSel.value; render(lastProgrammes); });
-    const viewAsSel = resultEl.querySelector('#ex-viewas');
-    if (viewAsSel) viewAsSel.addEventListener('change', () => { state.chartType = viewAsSel.value; render(lastProgrammes); });
+    resultEl.innerHTML = `
+      <div class="explore-chart-wrap" id="ex-chart-card"></div>
+      <div class="category-section" id="ex-category-section" hidden></div>
+    `;
 
     const cardRoot = resultEl.querySelector('#ex-chart-card');
     if (!dist.rows.length) {
       showEmptyChartState(cardRoot, 'No programmes with a value for this dimension match the current filters.');
-      renderDrilldown(resultEl.querySelector('#ex-drilldown'), state.dimKey, null, programmes, ctx);
       return;
     }
 
     const subtitle = [ctx.filtersSummaryText(), dist.multiSelect ? 'multi-select — shares may not sum to 100%' : null].filter(Boolean).join(' · ');
     const note = dist.missing ? `${dist.missing} programme(s) have no value for ${title} and are excluded above.` : '';
 
+    cardRoot.classList.add('chart-card-feature');
     mountChartCard(cardRoot, {
       title: `${title} Distribution`, subtitle, note,
       buildChart: (el) => {
@@ -170,8 +228,8 @@ export function mount(container, ctx) {
       }
     });
 
-    showTipOnce(cardRoot, 'clickthrough', 'Tip: click any bar to see the underlying programmes.');
-    renderDrilldown(resultEl.querySelector('#ex-drilldown'), state.dimKey, null, programmes, ctx);
+    showTipOnce(cardRoot, 'clickthrough', 'Tip: click any bar to see the full breakdown and its programmes below.');
+    renderCategorySection();
   }
 
   dimSel.addEventListener('change', () => {

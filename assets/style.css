@@ -849,11 +849,10 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
    dashboards, so containers/cards are used only where they aid grouping or
    interaction, never as decoration. */
 
-.lab-header { padding: 28px 40px 0; max-width: 1280px; margin: 0 auto; }
-.lab-orientation { color: var(--muted-light); font-size: 12px; margin-top: 14px; }
-
-/* ---------- Compact filter row: active filters only, everything else behind one button ---------- */
-.lab-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-bottom: 18px; }
+/* ---------- Compact filter row: active filters only, everything else behind one
+   button — lives inline in the workspace tabs row (see .lab-tabs-action), not its
+   own header block. ---------- */
+.lab-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .filter-chip {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px 5px 12px; border-radius: 20px;
@@ -865,7 +864,7 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .filter-add-btn { font-size: 11.5px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 20px; background: var(--surface-alt); }
 .filter-add-btn:hover { color: var(--dark); background: var(--border); }
 .filter-add-panel {
-  position: absolute; top: calc(100% + 8px); left: 0; z-index: 95; width: 340px; max-height: 420px; overflow-y: auto;
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 95; width: 340px; max-height: 420px; overflow-y: auto;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.14); display: flex; flex-direction: column; gap: 16px;
 }
@@ -940,6 +939,37 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
    nothing is selected. */
 .workspace-secondary-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 20px; margin: 14px 0 14px; }
 .workspace-columns { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+
+/* ---------- Explore: full-width feature chart + below-the-fold category workspace ---------- */
+/* Opt-in only (a handful of charts with few, meaningful categories) — most charts
+   stay capped at their native size (see --native-w above) so a sparse one (a small
+   heatmap, a short bar list) never stretches into oversized, hard-to-scan cells. */
+.chart-card-feature .chart-card-body svg { max-width: none; }
+.explore-chart-wrap { max-width: 920px; margin: 0 auto; }
+.explore-hint { text-align: center; font-size: 12px; color: var(--muted-light); margin-top: 14px; }
+
+.category-section { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--border); }
+.category-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.category-section-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--dark); }
+.category-section-title .category-section-count { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+.category-drilldown-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: start; }
+.category-breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
+.breakdown-block { min-width: 0; }
+/* One glanceable shape before the exact-numbers list underneath spells it out —
+   deliberately plain and thin so it stays subordinate to the main chart above. */
+.mini-stack-bar { display: flex; width: 100%; height: 8px; border-radius: 5px; overflow: hidden; margin-bottom: 10px; background: var(--border); }
+.mini-stack-seg { height: 100%; }
+.mini-stack-seg:not(:last-child) { border-right: 1px solid var(--surface); }
+.category-programme-list-wrap { background: var(--surface-alt); border-radius: var(--radius-lg); padding: 6px 20px; }
+.category-programme-list { max-height: 460px; overflow-y: auto; }
+.category-programme-list .prog-list-row { padding: 10px 0; }
+
+@media (max-width: 980px) {
+  .category-drilldown-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .category-breakdown-grid { grid-template-columns: 1fr; }
+}
 
 .tip-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
@@ -1065,11 +1095,9 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .drilldown-block:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .drilldown-block-note { font-weight: 400; text-transform: none; letter-spacing: 0; }
 .drilldown-block-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.drilldown-bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 3px 0; }
-.drilldown-bar-row .dbr-label { width: 128px; flex-shrink: 0; color: var(--dark); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drilldown-bar-row .dbr-track { flex: 1; height: 7px; border-radius: 6px; background: var(--accent-light); overflow: hidden; }
-.drilldown-bar-row .dbr-fill { height: 100%; background: linear-gradient(90deg, var(--accent-mid), var(--accent)); border-radius: 6px; transition: width 0.2s ease; }
-.drilldown-bar-row .dbr-pct { width: 46px; text-align: right; color: var(--dark); font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.drilldown-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; }
+.drilldown-bar-row .dbr-label { color: var(--dark); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drilldown-bar-row .dbr-pct { color: var(--dark); font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .distribution-row-clickable { cursor: pointer; }
 
 /* ---------- Mechanisms: mechanism-native card grid ---------- */
@@ -1190,9 +1218,9 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 }
 
 @media (max-width: 860px) {
-  .lab-header, .lab-tabs, .lab-main { padding-left: 20px; padding-right: 20px; }
+  .lab-tabs, .lab-main { padding-left: 20px; padding-right: 20px; }
   .workspace-columns { grid-template-columns: 1fr; }
   .relate-xy-row { gap: 14px; }
   .data-modal-body, .chart-modal-body { padding-left: 18px; padding-right: 18px; }
-  .filter-add-panel { width: calc(100vw - 40px); left: -20px; }
+  .filter-add-panel { width: calc(100vw - 40px); right: -20px; }
 }

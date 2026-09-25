@@ -28,11 +28,9 @@ function kpiRowHTML(k) {
 }
 
 function barRow(rows, valueFmt) {
-  const max = Math.max(...rows.map(r => r.value), 1);
   return rows.map(r => `
     <div class="drilldown-bar-row">
       <span class="dbr-label" title="${escapeHtml(r.label)}">${escapeHtml(r.label)}</span>
-      <span class="dbr-track"><span class="dbr-fill" style="width:${((r.value / max) * 100).toFixed(1)}%"></span></span>
       <span class="dbr-pct">${valueFmt(r.value)}</span>
     </div>
   `).join('') || '<div class="drilldown-empty">No data.</div>';

@@ -20,23 +20,17 @@ export function mount(container, ctx) {
   let lastProgrammes = [];
 
   container.innerHTML = `
-    <div class="workspace-prompt">
-      <div class="workspace-prompt-label">What would you like to see evolve, year by year?</div>
-      <select class="control-select control-select-lg" id="tr-y">${Y_KEYS.map(k => `<option value="${k}" ${k === state.yKey ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}</select>
-    </div>
     <div class="try-chips" id="tr-presets">
-      <span class="try-chips-label">Try:</span>
+      <span class="try-chips-label">See evolve over time:</span>
       ${PRESETS.map(k => `<button type="button" class="try-chip" data-y="${k}">${escapeHtml(DIMENSIONS[k].label)}</button>`).join('')}
     </div>
     <div id="tr-result"></div>
   `;
 
-  const ySel = container.querySelector('#tr-y');
   const resultEl = container.querySelector('#tr-result');
 
   container.querySelector('#tr-presets').querySelectorAll('.try-chip').forEach(btn => btn.addEventListener('click', () => {
     state.yKey = btn.dataset.y;
-    ySel.value = state.yKey;
     ctx.persist(state);
     render(lastProgrammes);
   }));
@@ -53,6 +47,9 @@ export function mount(container, ctx) {
 
     resultEl.innerHTML = `
       <div class="workspace-secondary-controls">
+        <div class="control-group"><label>Show</label>
+          <select class="control-select" id="tr-y">${Y_KEYS.map(k => `<option value="${k}" ${k === state.yKey ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}</select>
+        </div>
         <div class="control-group"><label>Measure</label>
           <select class="control-select" id="tr-measure">
             <option value="count" ${state.measure === 'count' ? 'selected' : ''}>Number of Programmes</option>
@@ -63,13 +60,15 @@ export function mount(container, ctx) {
           <select class="control-select" id="tr-viewas">${CHART_TYPES.map(v => `<option value="${v}" ${v === state.chartType ? 'selected' : ''}>${CHART_TYPE_LABELS[v]}</option>`).join('')}</select>
         </div>
       </div>
-      <div id="tr-chart-card"></div>
+      <div class="explore-chart-wrap" id="tr-chart-card"></div>
     `;
 
+    resultEl.querySelector('#tr-y').addEventListener('change', (e) => { state.yKey = e.target.value; ctx.persist(state); render(lastProgrammes); });
     resultEl.querySelector('#tr-measure').addEventListener('change', (e) => { state.measure = e.target.value; ctx.persist(state); render(lastProgrammes); });
     resultEl.querySelector('#tr-viewas').addEventListener('change', (e) => { state.chartType = e.target.value; ctx.persist(state); render(lastProgrammes); });
 
     const cardRoot = resultEl.querySelector('#tr-chart-card');
+    cardRoot.classList.add('chart-card-feature');
     const ts = timeSeries(programmes, { groupByKey: state.yKey, measure: state.measure });
     if (!ts.years.length) {
       showEmptyChartState(cardRoot, 'No programmes with a recorded launch year match the current filters.');
@@ -98,15 +97,13 @@ export function mount(container, ctx) {
   }
 
   function applyConfig(config) {
-    if (config.yKey) { state.yKey = config.yKey; ySel.value = state.yKey; }
+    if (config.yKey) state.yKey = config.yKey;
     if (config.measure) state.measure = config.measure;
     if (config.chartType) state.chartType = config.chartType;
     render(lastProgrammes);
   }
 
   function getConfig() { return { ...state }; }
-
-  ySel.addEventListener('change', () => { state.yKey = ySel.value; ctx.persist(state); render(lastProgrammes); });
 
   return { render, applyConfig, getConfig };
 }
