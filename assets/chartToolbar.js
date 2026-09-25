@@ -236,7 +236,7 @@ export function mountChartCard(container, opts) {
   container.querySelector('[data-action="png"]').addEventListener('click', async () => {
     moreMenu.hidden = true;
     try {
-      const blob = await svgToPngBlob(svg);
+      const blob = await svgToPngBlob(svg, { title, subtitle });
       downloadBlob(blob, `${slug(filename || title)}.png`);
     } catch {
       showToast('Could not export this chart as PNG.', true);

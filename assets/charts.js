@@ -1,8 +1,12 @@
 // Analysis tab — dependency-free SVG chart rendering + export.
 //
-// Every chart is a single self-contained <svg> (title, subtitle, axes, legend and
-// marks all drawn as SVG so "Download PNG" captures exactly what's on screen with a
-// transparent background, presentation-ready). No charting library, no build step.
+// Every chart is a single self-contained <svg> (axes, legend and marks drawn as SVG
+// so "Download PNG" rasterizes with a transparent background). Title/subtitle are
+// NOT drawn into this SVG — mountChartCard's HTML header already shows them right
+// above the chart, so drawing them again here would duplicate that text on screen.
+// They're composited onto the canvas at PNG-export time instead (see svgToPngBlob),
+// so a downloaded PNG is still presentation-ready with a title even without the
+// surrounding page chrome. No charting library, no build step.
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Muted, low-saturation qualitative palette matching the app's gold/neutral aesthetic
@@ -82,10 +86,9 @@ function wrapSubtitle(subtitle, width) {
   return lines;
 }
 
-// Measures the title/subtitle block's height BEFORE a chart's total canvas height is
-// fixed, so callers whose height formula doesn't already self-adjust (anything that
-// isn't derived from topOffset, e.g. a fixed-height legend or row list below it) can
-// grow to fit however many lines the subtitle wrapped into instead of clipping them.
+// Measures the title/subtitle block's height, used only when compositing a title onto
+// the exported PNG's canvas (see drawTitleOnCanvas/svgToPngBlob) — the on-screen SVG
+// itself no longer reserves space for a title block, since it doesn't draw one.
 function titleBlockHeight(title, subtitle, width) {
   const lines = wrapSubtitle(subtitle, width);
   if (lines.length) return 34 + (lines.length - 1) * SUBTITLE_LINE_H + 12;
@@ -93,20 +96,8 @@ function titleBlockHeight(title, subtitle, width) {
   return 10;
 }
 
-function titleBlock(svg, title, subtitle, width) {
-  if (title) svg.appendChild(text(14, 20, title, { 'font-size': 12.5, 'font-weight': 600, fill: '#1D1D1F' }));
-  const lines = wrapSubtitle(subtitle, width);
-  lines.forEach((line, i) => svg.appendChild(text(14, 34 + i * SUBTITLE_LINE_H, line, { 'font-size': 9, fill: '#6E6E73' })));
-  return titleBlockHeight(title, subtitle, width);
-}
-
-// How much taller the title block is than its single-line default (46/32/10) —
-// callers whose height formula assumes a single-line subtitle add this so a wrapped
-// one pushes everything below it down instead of overlapping or clipping.
-function subtitleExtraHeight(title, subtitle, width) {
-  const singleLineDefault = subtitle ? 46 : (title ? 32 : 10);
-  return Math.max(0, titleBlockHeight(title, subtitle, width) - singleLineDefault);
-}
+// Small fixed top padding every chart uses in place of a drawn-in title block.
+const TOP_PADDING = 10;
 
 const LEGEND_ROW_GAP = 16;
 
@@ -140,13 +131,13 @@ function drawLegend(svg, items, x, y, maxWidth) {
 // spec: { title, subtitle, categories:[str], series:[{name,values:[num]}], mode:'grouped'|'stacked'|'percent', valueSuffix }
 export function renderBarChart(container, spec) {
   const width = 520;
-  const baseHeight = 260 + subtitleExtraHeight(spec.title, spec.subtitle, width);
+  const baseHeight = 260;
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
   const legendH = legendRowCount * LEGEND_ROW_GAP;
   const height = baseHeight + legendH;
   const svg = baseSvg(width, height);
-  const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
+  const topOffset = TOP_PADDING;
 
   const plotX = 44, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
@@ -221,9 +212,9 @@ export function renderBarChart(container, spec) {
 export function renderHBarChart(container, spec) {
   const rowH = 18;
   const width = 520;
-  const height = 62 + spec.rows.length * rowH + subtitleExtraHeight(spec.title, spec.subtitle, width);
+  const height = 62 + spec.rows.length * rowH;
   const svg = baseSvg(width, height);
-  const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
+  const topOffset = TOP_PADDING;
 
   const CHAR_W = 5.4;
   const labelW = Math.min(150, Math.max(70, ...spec.rows.map(r => String(r.label).length * CHAR_W)));
@@ -267,13 +258,13 @@ export function renderHBarChart(container, spec) {
 // spec: { title, subtitle, categories:[year], series:[{name,values}], mode:'line'|'area'|'stackedArea', percent }
 export function renderLineChart(container, spec) {
   const width = 520;
-  const baseHeight = 260 + subtitleExtraHeight(spec.title, spec.subtitle, width);
+  const baseHeight = 260;
   const legendItems = spec.series.map((s, i) => ({ name: s.name, color: colorAt(i) }));
   const legendRowCount = spec.series.length > 1 ? legendRows(legendItems, width - 32) : 0;
   const legendH = legendRowCount * LEGEND_ROW_GAP;
   const height = baseHeight + legendH;
   const svg = baseSvg(width, height);
-  const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
+  const topOffset = TOP_PADDING;
 
   const plotX = 44, plotY = topOffset + 8, plotW = width - plotX - 16, plotH = baseHeight - plotY - 26;
   const n = spec.categories.length;
@@ -358,12 +349,12 @@ export function renderDonutChart(container, spec) {
   // Height used to be fixed at 230 regardless of how many legend rows there were, so
   // a category list longer than ~11 items ran past the bottom edge and got clipped —
   // it now grows with the data, same principle as legendRows()/drawLegend() below.
-  const topOffsetEstimate = titleBlockHeight(spec.title, spec.subtitle, width);
+  const topOffsetEstimate = TOP_PADDING;
   const legendH = spec.data.length * 15 + 10;
   const circleH = topOffsetEstimate + r * 2 + 40;
   const height = Math.max(circleH, topOffsetEstimate + legendH + 14);
   const svg = baseSvg(width, height);
-  const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
+  const topOffset = TOP_PADDING;
   const cx = 96, cy = topOffset + r + 16;
   const total = spec.data.reduce((s, d) => s + d.value, 0) || 1;
 
@@ -426,9 +417,9 @@ export function renderHeatmap(container, spec) {
   const cellH = 20;
   const width = rowLabelW + cellW * spec.cols.length + 18;
   const colHeaderH = 40;
-  const height = 42 + colHeaderH + cellH * spec.rows.length + 12 + subtitleExtraHeight(spec.title, spec.subtitle, width);
+  const height = 42 + colHeaderH + cellH * spec.rows.length + 12;
   const svg = baseSvg(width, height);
-  const topOffset = titleBlock(svg, spec.title, spec.subtitle, width);
+  const topOffset = TOP_PADDING;
 
   const plotX = rowLabelW + 8, plotY = topOffset + colHeaderH;
   const maxV = spec.colorMax ?? Math.max(...spec.matrix.flat(), 1);
@@ -489,13 +480,27 @@ function hexToRgb(hex) {
 
 // ---------------- Export ----------------
 
-export function svgToPngBlob(svgEl, { scale = 2 } = {}) {
+// Draws the title/subtitle that the on-screen SVG deliberately omits (mountChartCard's
+// HTML header shows it there instead) onto the exported canvas, so a standalone PNG —
+// with none of the page chrome around it — still reads on its own in a deck or thesis.
+function drawTitleOnCanvas(ctx, title, subtitle, width) {
+  ctx.fillStyle = '#1D1D1F';
+  ctx.font = "600 12.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  ctx.textBaseline = 'alphabetic';
+  if (title) ctx.fillText(title, 14, 20);
+  ctx.fillStyle = '#6E6E73';
+  ctx.font = "9px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  wrapSubtitle(subtitle, width).forEach((line, i) => ctx.fillText(line, 14, 34 + i * SUBTITLE_LINE_H));
+}
+
+export function svgToPngBlob(svgEl, { title, subtitle, scale = 2 } = {}) {
   return new Promise((resolve, reject) => {
     const clone = svgEl.cloneNode(true);
     clone.setAttribute('xmlns', SVG_NS);
     const vb = svgEl.viewBox.baseVal;
     const w = (vb && vb.width) || svgEl.width.baseVal.value || 680;
     const h = (vb && vb.height) || svgEl.height.baseVal.value || 400;
+    const titleH = (title || subtitle) ? titleBlockHeight(title, subtitle, w) : 0;
     const xml = new XMLSerializer().serializeToString(clone);
     const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
@@ -503,10 +508,11 @@ export function svgToPngBlob(svgEl, { scale = 2 } = {}) {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = w * scale;
-      canvas.height = h * scale;
+      canvas.height = (h + titleH) * scale;
       const ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0, w, h);
+      if (titleH) drawTitleOnCanvas(ctx, title, subtitle, w);
+      ctx.drawImage(img, 0, titleH, w, h);
       URL.revokeObjectURL(url);
       canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG export failed')), 'image/png');
     };

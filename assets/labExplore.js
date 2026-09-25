@@ -116,7 +116,9 @@ function kpiRowHTML(programmes) {
 }
 
 export function mount(container, ctx) {
-  const state = { dimKey: null, measure: 'count', chartType: 'bar' };
+  // Industry/Donut is the default first-open view (a fresh session with no saved
+  // config) — the single most useful "what does the landscape look like" cut.
+  const state = { dimKey: 'industry', measure: 'count', chartType: 'donut' };
   let lastProgrammes = [];
   let selectedValue = null;
 
@@ -127,7 +129,7 @@ export function mount(container, ctx) {
         <label>Explore by</label>
         <select class="control-select" id="ex-dim">
           <option value="" disabled ${!state.dimKey ? 'selected' : ''}>Select a dimension…</option>
-          ${DIM_KEYS.map(k => `<option value="${k}">${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}
+          ${DIM_KEYS.map(k => `<option value="${k}" ${k === state.dimKey ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}
         </select>
       </div>
       <div class="control-group" id="ex-measure-group" hidden>
