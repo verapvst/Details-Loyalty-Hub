@@ -408,10 +408,14 @@ export function tieringByDimension(programmes, dimKey) {
 }
 
 // Tier-to-tier jump analysis, segmented so incompatible qualification units (or
-// currencies, for fee jumps) are never diffed against each other.
+// currencies, for fee jumps) are never diffed against each other. Every jump also
+// carries jumpIndex (1st jump = tier 1->2, 2nd = tier 2->3, ...) so callers can
+// additionally group "by position" (tierJumpsByPosition below) instead of only by
+// unit/currency — e.g. is the 3rd jump proportionally bigger than the 1st, across
+// programmes that don't share a qualification unit or currency at all.
 export function tierJumps(programmes) {
-  const byUnit = new Map();   // qualification_unit -> [{programme, from, to, fromAmount, toAmount, absolute, pct}]
-  const byCurrency = new Map(); // currency -> [{programme, from, to, fromFee, toFee, absolute, pct}]
+  const byUnit = new Map();   // qualification_unit -> [{programme, from, to, fromAmount, toAmount, absolute, pct, jumpIndex}]
+  const byCurrency = new Map(); // currency -> [{programme, from, to, fromFee, toFee, absolute, pct, jumpIndex}]
 
   programmes.filter(hasTierRows).forEach(p => {
     const rows = [...p.programme_tiers].sort((a, b) => (a.tier_order ?? 0) - (b.tier_order ?? 0));
@@ -423,19 +427,216 @@ export function tierJumps(programmes) {
         const pct = prev.qualification_amount !== 0 ? (absolute / prev.qualification_amount) * 100 : null;
         const key = prev.qualification_unit;
         if (!byUnit.has(key)) byUnit.set(key, []);
-        byUnit.get(key).push({ programme: p.programme_name, from: prev.tier_name, to: cur.tier_name, fromAmount: prev.qualification_amount, toAmount: cur.qualification_amount, absolute, pct });
+        byUnit.get(key).push({ programme: p.programme_name, from: prev.tier_name, to: cur.tier_name, fromAmount: prev.qualification_amount, toAmount: cur.qualification_amount, absolute, pct, jumpIndex: i });
       }
       const prevCurrency = prev.currency || 'EUR', curCurrency = cur.currency || 'EUR';
       if (prev.tier_price != null && cur.tier_price != null && prevCurrency === curCurrency) {
         const absolute = cur.tier_price - prev.tier_price;
         const pct = prev.tier_price !== 0 ? (absolute / prev.tier_price) * 100 : null;
         if (!byCurrency.has(prevCurrency)) byCurrency.set(prevCurrency, []);
-        byCurrency.get(prevCurrency).push({ programme: p.programme_name, from: prev.tier_name, to: cur.tier_name, fromFee: prev.tier_price, toFee: cur.tier_price, absolute, pct });
+        byCurrency.get(prevCurrency).push({ programme: p.programme_name, from: prev.tier_name, to: cur.tier_name, fromFee: prev.tier_price, toFee: cur.tier_price, absolute, pct, jumpIndex: i });
       }
     }
   });
 
   return { byUnit, byCurrency };
+}
+
+// Same underlying jumps as tierJumps(), regrouped by position (1st tier->tier jump,
+// 2nd, 3rd, ...) instead of by unit/currency. % increase is scale-invariant enough to
+// pool across units/currencies for this view; absolute increase is not, so it isn't
+// offered here — use tierJumps()'s byCurrency breakdown for absolute amounts.
+export function tierJumpsByPosition(programmes, mode = 'fee') {
+  const jumps = tierJumps(programmes);
+  const flat = [...(mode === 'fee' ? jumps.byCurrency : jumps.byUnit).values()].flat();
+  const byPosition = new Map();
+  flat.forEach(j => {
+    if (j.pct == null) return;
+    if (!byPosition.has(j.jumpIndex)) byPosition.set(j.jumpIndex, []);
+    byPosition.get(j.jumpIndex).push(j);
+  });
+  return [...byPosition.entries()]
+    .map(([position, list]) => {
+      const pcts = list.map(j => j.pct).sort((a, b) => a - b);
+      return { position, count: list.length, avgPct: pcts.reduce((a, b) => a + b, 0) / pcts.length, medianPct: median(pcts), list };
+    })
+    .sort((a, b) => a.position - b.position);
+}
+
+// ---------------- Tier architecture: Earned vs. Paid vs. Free vs. Invitation ----------------
+// Answerable today with zero new data collection: a tier is something a member pays
+// for (tier_price > 0), earns through behaviour (tier_price is 0/null and the
+// qualification is behavioural — spend, nights, points, transactions...), gets
+// automatically (tier_price 0/null, qualification "Automatic / No qualification" or
+// unset), or is invitation-only. This is a structural reading of programme_tiers,
+// not a new field — see migration/remap_mechanisms_v3.md-style due-diligence notes.
+const AUTOMATIC_UNITS = new Set(['Automatic / No qualification', null, undefined]);
+const INVITATION_UNITS = new Set(['Invitation only']);
+
+export function classifyTierRow(tier) {
+  if (tier.tier_price != null && tier.tier_price > 0) return 'Paid tier';
+  if (INVITATION_UNITS.has(tier.qualification_unit)) return 'Invitation tier';
+  if (AUTOMATIC_UNITS.has(tier.qualification_unit)) return 'Free tier';
+  return 'Earned tier';
+}
+
+// One programme's architecture label, from the SET of tier-row classifications it
+// has — "Mixed" covers the common case of a free entry tier plus earned status tiers
+// above it (still one coherent ladder, not two different programmes).
+function programmeTierArchitecture(p) {
+  if (!hasTierRows(p)) return 'No tier data';
+  const types = new Set(p.programme_tiers.map(classifyTierRow));
+  if (types.size === 1) return [...types][0] + 's only';
+  return 'Mixed (' + [...types].sort().join(' + ') + ')';
+}
+
+export function tierArchitectureOverview(programmes) {
+  const total = programmes.length;
+  const rowCounts = new Map();
+  programmes.forEach(p => (p.programme_tiers || []).forEach(t => {
+    const label = classifyTierRow(t);
+    rowCounts.set(label, (rowCounts.get(label) || 0) + 1);
+  }));
+  const totalRows = [...rowCounts.values()].reduce((a, b) => a + b, 0);
+  const tierRowBreakdown = [...rowCounts.entries()].map(([label, count]) => ({ label, count, pct: totalRows ? (count / totalRows) * 100 : 0 })).sort((a, b) => b.count - a.count);
+
+  const progCounts = new Map();
+  programmes.forEach(p => {
+    const label = programmeTierArchitecture(p);
+    progCounts.set(label, (progCounts.get(label) || 0) + 1);
+  });
+  const programmeBreakdown = [...progCounts.entries()].map(([label, count]) => ({ label, count, pct: total ? (count / total) * 100 : 0 })).sort((a, b) => b.count - a.count);
+
+  return { total, tierRowBreakdown, programmeBreakdown };
+}
+
+export function tierArchitectureByDimension(programmes, dimKey) {
+  const dim = DIMENSIONS[dimKey];
+  const groups = new Map(); // value -> label -> count, plus total
+  programmes.forEach(p => {
+    const label = programmeTierArchitecture(p);
+    valuesOf(dim, p).forEach(v => {
+      if (!groups.has(v)) groups.set(v, { total: 0, byLabel: new Map() });
+      const g = groups.get(v);
+      g.total++;
+      g.byLabel.set(label, (g.byLabel.get(label) || 0) + 1);
+    });
+  });
+  return [...groups.entries()]
+    .map(([value, g]) => ({
+      value, total: g.total,
+      breakdown: [...g.byLabel.entries()].map(([label, count]) => ({ label, count, pct: g.total ? (count / g.total) * 100 : 0 })).sort((a, b) => b.count - a.count)
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// ---------------- Currency normalisation ----------------
+// Static, approximate rates (Sept 2026) — good enough to compare price LEVELS
+// across currencies at 225-programme scale; not a live FX feed, and not precise
+// enough for anything beyond "which industry/positioning tends to cost more".
+// Revisit if this sample grows enough for the rate's staleness to start mattering.
+export const FX_TO_EUR = { EUR: 1, USD: 0.92, GBP: 1.17, AUD: 0.60, HKD: 0.118 };
+export function toEUR(amount, currency) {
+  const rate = FX_TO_EUR[currency];
+  return (amount == null || rate == null) ? null : amount * rate;
+}
+
+// EUR-normalised entry/top fee, pooling every currency together — the "average
+// programme price" figure the per-currency feeOverview() deliberately avoids
+// producing. unconvertedCount flags programmes whose currency has no FX rate, so
+// they're never silently dropped without a trace.
+export function feeOverviewEUR(programmes) {
+  const entries = [], tops = [];
+  let unconvertedCount = 0;
+  programmes.forEach(p => {
+    const f = entryAndTopFee(p);
+    if (!f) return;
+    const entryEUR = toEUR(f.entryFee, f.currency);
+    const topEUR = toEUR(f.topFee, f.currency);
+    if (entryEUR == null) { unconvertedCount++; return; }
+    entries.push(entryEUR);
+    tops.push(topEUR);
+  });
+  return {
+    total: programmes.length,
+    withFeeCount: entries.length,
+    unconvertedCount,
+    avgEntryFeeEUR: entries.length ? entries.reduce((a, b) => a + b, 0) / entries.length : null,
+    medianEntryFeeEUR: median(entries),
+    avgTopFeeEUR: tops.length ? tops.reduce((a, b) => a + b, 0) / tops.length : null,
+    medianTopFeeEUR: median(tops)
+  };
+}
+
+// Avg entry fee by dimension, EUR-normalised and pooling all currencies — the
+// cross-currency equivalent of avgEntryFeeByDimension(). At today's sample size
+// (~25 programmes with any non-zero fee) treat this as directional, not a
+// benchmark: always surface `count` alongside the average.
+export function avgEntryFeeByDimensionEUR(programmes, dimKey) {
+  const dim = DIMENSIONS[dimKey];
+  const groups = new Map();
+  programmes.forEach(p => {
+    const f = entryAndTopFee(p);
+    if (!f) return;
+    const eur = toEUR(f.entryFee, f.currency);
+    if (eur == null) return;
+    valuesOf(dim, p).forEach(v => {
+      if (!groups.has(v)) groups.set(v, []);
+      groups.get(v).push(eur);
+    });
+  });
+  return [...groups.entries()]
+    .map(([value, fees]) => ({ value, count: fees.length, avgEntryFeeEUR: fees.reduce((a, b) => a + b, 0) / fees.length, medianEntryFeeEUR: median(fees) }))
+    .sort((a, b) => b.avgEntryFeeEUR - a.avgEntryFeeEUR);
+}
+
+// ---------------- Mechanism "characteristic-ness" by dimension ----------------
+// Relate already shows raw counts/% for Mechanism x Industry; this answers a
+// different question — which mechanisms are DISTINCTIVE to a category, not just
+// common overall. index = 100 means "exactly as common here as in the whole
+// dataset"; index > 130 means meaningfully over-represented. Small categories (n<10)
+// are flagged so a single-programme fluke doesn't read as a strong pattern.
+export function mechanismIndexByDimension(programmes, dimKey) {
+  const dim = DIMENSIONS[dimKey];
+  const total = programmes.length;
+  const allMechanisms = new Set();
+  programmes.forEach(p => arr(p.mechanisms).forEach(m => allMechanisms.add(m)));
+  const baseRate = new Map([...allMechanisms].map(m => [m, programmes.filter(p => arr(p.mechanisms).includes(m)).length / total]));
+
+  const groups = new Map();
+  programmes.forEach(p => valuesOf(dim, p).forEach(v => {
+    if (!groups.has(v)) groups.set(v, []);
+    groups.get(v).push(p);
+  }));
+
+  return [...groups.entries()].map(([value, subset]) => {
+    const n = subset.length;
+    const mechanisms = [...allMechanisms].map(m => {
+      const count = subset.filter(p => arr(p.mechanisms).includes(m)).length;
+      const rate = count / n;
+      const index = baseRate.get(m) ? Math.round((rate / baseRate.get(m)) * 100) : 0;
+      return { mechanism: m, count, rate, index };
+    }).filter(r => r.count > 0).sort((a, b) => b.index - a.index);
+    return { value, n, smallSample: n < 10, mechanisms };
+  }).sort((a, b) => b.n - a.n);
+}
+
+// ---------------- Import cohort ----------------
+// 2026-09 database audit finding: a meaningful share of the sample was added in a
+// few deliberate, gap-filling sessions (specific industries/positioning/geography
+// the team went looking for), not sampled organically. Any trend or "how common is
+// X" claim should be read against this — it isn't market evolution, it's curation.
+// cutoffISO defaults to the start of the most recent deliberate batch run.
+export function importCohortSummary(programmes, cutoffISO = '2026-09-24') {
+  const cutoff = new Date(cutoffISO).getTime();
+  const recent = programmes.filter(p => p.created_at && new Date(p.created_at).getTime() >= cutoff);
+  const original = programmes.filter(p => !p.created_at || new Date(p.created_at).getTime() < cutoff);
+  const withBenefits = (list) => list.filter(p => arr(p.benefits).length > 0).length;
+  return {
+    total: programmes.length,
+    original: { count: original.length, benefitsPct: original.length ? (withBenefits(original) / original.length) * 100 : 0 },
+    recent: { count: recent.length, benefitsPct: recent.length ? (withBenefits(recent) / recent.length) * 100 : 0 }
+  };
 }
 
 // A programme's cheapest (entry) and priciest (top) recorded tier_price, kept to one
@@ -556,19 +757,28 @@ export function snapshotKpis(programmes) {
   };
 }
 
+const PRICEABLE_TYPES = new Set(['Paid', 'Subscription', 'Hybrid']);
 const DATA_QUALITY_FIELDS = [
   { key: 'launch_year', label: 'Launch Year', has: p => typeof p.launch_year === 'number' },
   { key: 'programme_positioning', label: 'Programme Positioning', has: p => !!p.programme_positioning },
   { key: 'membership_type', label: 'Membership Type', has: p => !!p.membership_type },
   { key: 'geographic_scope', label: 'Geographic Scope', has: p => arr(p.geographic_scope).length > 0 },
-  { key: 'source_url', label: 'Source URL', has: p => !!p.source_url }
+  { key: 'source_url', label: 'Source URL', has: p => !!p.source_url },
+  { key: 'benefits', label: 'Benefits tag (legacy — uneven by import batch)', has: p => arr(p.benefits).length > 0 },
+  {
+    key: 'price_when_paid', label: 'Price (of Paid / Subscription / Hybrid programmes)',
+    // Scoped to its own denominator (priceable programmes), not the full 225 — a
+    // Free programme having no price isn't missing data, it's the correct value.
+    has: p => hasTierRows(p) && p.programme_tiers.some(t => t.tier_price != null),
+    scope: p => PRICEABLE_TYPES.has(p.membership_type)
+  }
 ];
 
 export function dataQuality(programmes) {
-  const total = programmes.length;
   return DATA_QUALITY_FIELDS.map(f => {
-    const present = programmes.filter(f.has).length;
-    return { key: f.key, label: f.label, present, missing: total - present, pct: total ? (present / total) * 100 : 0 };
+    const base = f.scope ? programmes.filter(f.scope) : programmes;
+    const present = base.filter(f.has).length;
+    return { key: f.key, label: f.label, present, missing: base.length - present, total: base.length, pct: base.length ? (present / base.length) * 100 : 0 };
   });
 }
 

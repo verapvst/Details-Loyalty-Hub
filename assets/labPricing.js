@@ -9,8 +9,9 @@
 // label and framing changed, not the config shape.
 import { escapeHtml } from './fields.js';
 import {
-  DIMENSIONS, tierOverview, tieringByDimension, tierJumps, programmesMatching,
-  feeOverview, entryFeeDistribution, avgEntryFeeByDimension
+  DIMENSIONS, tierOverview, tieringByDimension, tierJumps, tierJumpsByPosition, programmesMatching,
+  feeOverview, entryFeeDistribution, avgEntryFeeByDimension, feeOverviewEUR, avgEntryFeeByDimensionEUR,
+  tierArchitectureOverview, classifyTierRow
 } from './analysisData.js';
 import { renderHBarChart, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
@@ -28,6 +29,10 @@ function renderStructure(container, ctx, state, programmes) {
       <div class="kpi-item"><div class="kpi-label">Median Tiers</div><div class="kpi-value">${ov.medianTiers == null ? '—' : ov.medianTiers}</div></div>
     </div>
     <div id="tier-dist-card"></div>
+    <div class="workspace-prompt" style="margin-top: 28px;">
+      <div class="workspace-prompt-label">Tier Architecture — Earned vs. Paid vs. Free vs. Invitation</div>
+    </div>
+    <div id="tier-arch-card"></div>
     <div class="workspace-secondary-controls" style="margin-top: 28px;">
       <div class="control-group"><label>Tiering by</label>
         <select class="control-select" id="tier-by-dim">${TIERING_BY_KEYS.map(k => `<option value="${k}" ${k === state.byDim ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}</select>
@@ -59,6 +64,40 @@ function renderStructure(container, ctx, state, programmes) {
       getTableData: () => ({ headers: ['Number of Tiers', 'Programmes'], rows: distRows.map(d => [d.bucket, d.count]) }),
       filename: 'tier-count-distribution',
       saveTitle: 'Tier Count Distribution',
+      onSave: async (name, takeaway) => {
+        const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'structure', globalFilters: ctx.getGlobalFilters() } });
+        if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
+      }
+    });
+  }
+
+  const arch = tierArchitectureOverview(programmes);
+  const archCard = container.querySelector('#tier-arch-card');
+  if (!arch.programmeBreakdown.length) {
+    showEmptyChartState(archCard, 'No programmes match the current filters.');
+  } else {
+    const archSubtitle = `${ctx.filtersSummaryText()} · a tier counts as Paid (fee > 0), Earned (behavioural qualification — spend/nights/points/etc.), Free (automatic, no fee) or Invitation-only; "Mixed" is a programme with more than one of these — e.g. a free entry tier plus earned status tiers above it`;
+    const archByLabel = new Map(arch.programmeBreakdown.map(d => [d.label, d]));
+    mountChartCard(archCard, {
+      title: 'Programme Architecture', subtitle: archSubtitle,
+      buildChart: (el) => renderHBarChart(el, {
+        title: 'Programme Architecture', subtitle: archSubtitle,
+        rows: arch.programmeBreakdown.map(d => ({ label: d.label, value: d.count })),
+        onSelect: (label) => {
+          const d = archByLabel.get(label);
+          if (!d) return;
+          const subset = programmes.filter(p => {
+            if (!Array.isArray(p.programme_tiers) || !p.programme_tiers.length) return label === 'No tier data';
+            const types = new Set(p.programme_tiers.map(classifyTierRow));
+            const computedLabel = types.size === 1 ? [...types][0] + 's only' : 'Mixed (' + [...types].sort().join(' + ') + ')';
+            return computedLabel === label;
+          });
+          openProgrammeListModal({ title: label, subtitle: `${fmtNum(subset.length)} programme(s)`, programmes: subset });
+        }
+      }),
+      getTableData: () => ({ headers: ['Architecture', 'Programmes', '% of Total'], rows: arch.programmeBreakdown.map(d => [d.label, d.count, Number(d.pct.toFixed(1))]) }),
+      filename: 'tier-architecture',
+      saveTitle: 'Programme Architecture',
       onSave: async (name, takeaway) => {
         const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'structure', globalFilters: ctx.getGlobalFilters() } });
         if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
@@ -120,6 +159,7 @@ function renderFees(container, ctx, state, programmes) {
     state.feeCurrency = overview.currencies[0].currency;
   }
   const cur = overview.currencies.find(c => c.currency === state.feeCurrency);
+  const eur = overview.currencies.length > 1 ? feeOverviewEUR(programmes) : null;
 
   container.innerHTML = `
     <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); margin-bottom: 20px;">
@@ -128,6 +168,10 @@ function renderFees(container, ctx, state, programmes) {
       <div class="kpi-item"><div class="kpi-label">Median Entry Fee</div><div class="kpi-value">${cur.currency} ${fmtNum(Math.round(cur.medianEntryFee))}</div></div>
       <div class="kpi-item"><div class="kpi-label">Avg Top-Tier Fee</div><div class="kpi-value">${cur.currency} ${fmtNum(Math.round(cur.avgTopFee))}</div></div>
     </div>
+    ${eur && eur.withFeeCount ? `
+    <div class="chart-card-note" style="margin-bottom: 20px;">
+      All currencies pooled (approximate EUR, static rates) — avg entry fee €${fmtNum(Math.round(eur.avgEntryFeeEUR))} · median €${fmtNum(Math.round(eur.medianEntryFeeEUR))} · avg top-tier fee €${fmtNum(Math.round(eur.avgTopFeeEUR))}, based on ${fmtNum(eur.withFeeCount)} programme(s)${eur.unconvertedCount ? ` (${fmtNum(eur.unconvertedCount)} in an unmapped currency excluded)` : ''} — directional only at this sample size, not a benchmark.
+    </div>` : ''}
     <div class="workspace-secondary-controls">
       ${overview.currencies.length > 1 ? `
       <div class="control-group"><label>Currency</label>
@@ -141,6 +185,7 @@ function renderFees(container, ctx, state, programmes) {
       </div>
     </div>
     <div id="fee-by-card"></div>
+    <div id="fee-by-eur-card"></div>
   `;
 
   const currencySel = container.querySelector('#fee-currency');
@@ -206,6 +251,31 @@ function renderFees(container, ctx, state, programmes) {
       if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
     }
   });
+
+  const eurByCard = container.querySelector('#fee-by-eur-card');
+  if (overview.currencies.length > 1) {
+    const eurByRows = avgEntryFeeByDimensionEUR(programmes, state.feeByDim);
+    if (eurByRows.length) {
+      const eurByTitle = `Avg Entry Fee by ${DIMENSIONS[state.feeByDim].label} — all currencies pooled (EUR)`;
+      const eurBySubtitle = `${ctx.filtersSummaryText()} · approximate EUR, directional only`;
+      mountChartCard(eurByCard, {
+        title: eurByTitle, subtitle: eurBySubtitle,
+        note: 'Static FX rates — a cross-currency comparison, not a benchmark at this sample size.',
+        buildChart: (el) => renderHBarChart(el, {
+          title: eurByTitle, subtitle: eurBySubtitle,
+          rows: eurByRows.map(r => ({ label: `${r.value} (${fmtNum(r.count)})`, value: r.avgEntryFeeEUR })),
+          valueLabel: (r) => `€${fmtNum(Math.round(r.value))}`
+        }),
+        getTableData: () => ({ headers: [DIMENSIONS[state.feeByDim].label, 'Programmes', 'Avg Entry Fee (EUR)', 'Median Entry Fee (EUR)'], rows: eurByRows.map(r => [r.value, r.count, Math.round(r.avgEntryFeeEUR), Math.round(r.medianEntryFeeEUR)]) }),
+        filename: `avg-entry-fee-eur-by-${state.feeByDim}`,
+        saveTitle: eurByTitle,
+        onSave: async (name, takeaway) => {
+          const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'fees', feeByDim: state.feeByDim, globalFilters: ctx.getGlobalFilters() } });
+          if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
+        }
+      });
+    }
+  }
 }
 
 function summarizeJumps(map) {
@@ -220,24 +290,41 @@ function renderJumps(container, ctx, state, programmes) {
   container.innerHTML = `
     <div class="workspace-secondary-controls">
       <div class="control-group"><label>Basis</label>
-        <div class="control-toggle-group">
+        <div class="control-toggle-group" id="jumps-basis-toggle">
           <button type="button" class="control-toggle ${state.jumpsMode === 'qualification' ? 'active' : ''}" data-m="qualification">Qualification (Spend / Nights / Points…)</button>
           <button type="button" class="control-toggle ${state.jumpsMode === 'fee' ? 'active' : ''}" data-m="fee">Fee</button>
+        </div>
+      </div>
+      <div class="control-group"><label>Group by</label>
+        <div class="control-toggle-group" id="jumps-groupby-toggle">
+          <button type="button" class="control-toggle ${state.jumpsGroupBy !== 'position' ? 'active' : ''}" data-g="segment">Unit / Currency</button>
+          <button type="button" class="control-toggle ${state.jumpsGroupBy === 'position' ? 'active' : ''}" data-g="position">Tier Position (1st jump, 2nd, …)</button>
         </div>
       </div>
     </div>
     <div id="tier-jumps-card"></div>
   `;
-  container.querySelectorAll('.control-toggle').forEach(btn => btn.addEventListener('click', () => {
+  container.querySelector('#jumps-basis-toggle').querySelectorAll('.control-toggle').forEach(btn => btn.addEventListener('click', () => {
     state.jumpsMode = btn.dataset.m;
     ctx.persist(state);
     renderJumps(container, ctx, state, programmes);
   }));
+  container.querySelector('#jumps-groupby-toggle').querySelectorAll('.control-toggle').forEach(btn => btn.addEventListener('click', () => {
+    state.jumpsGroupBy = btn.dataset.g;
+    ctx.persist(state);
+    renderJumps(container, ctx, state, programmes);
+  }));
+
+  const cardRoot = container.querySelector('#tier-jumps-card');
+
+  if (state.jumpsGroupBy === 'position') {
+    renderJumpsByPosition(cardRoot, ctx, state, programmes);
+    return;
+  }
 
   const jumps = tierJumps(programmes);
   const map = state.jumpsMode === 'qualification' ? jumps.byUnit : jumps.byCurrency;
   const summary = summarizeJumps(map);
-  const cardRoot = container.querySelector('#tier-jumps-card');
   if (!summary.length) { showEmptyChartState(cardRoot, 'No comparable consecutive-tier jumps found for the current filters.'); return; }
 
   const title = state.jumpsMode === 'qualification' ? 'Average Tier Jump — by Qualification Unit' : 'Average Tier Jump — by Fee Currency';
@@ -278,8 +365,48 @@ function renderJumps(container, ctx, state, programmes) {
   });
 }
 
+// "Is the 3rd jump proportionally bigger than the 1st?" — grouped by jump position
+// instead of by unit/currency, so it pools across programmes that don't share a
+// qualification unit or currency at all. % only (see tierJumpsByPosition — absolute
+// amounts aren't poolable this way).
+function renderJumpsByPosition(cardRoot, ctx, state, programmes) {
+  const byPosition = tierJumpsByPosition(programmes, state.jumpsMode);
+  if (!byPosition.length) { showEmptyChartState(cardRoot, 'No comparable consecutive-tier jumps found for the current filters.'); return; }
+
+  const ordinal = (n) => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
+  const title = `Average Tier Jump — by Position (${state.jumpsMode === 'fee' ? 'Fee' : 'Qualification'})`;
+  const subtitle = `${ctx.filtersSummaryText()} · average % increase for the Nth tier-to-tier jump, pooled across units/currencies`;
+  const posByLabel = new Map(byPosition.map(s => [`${ordinal(s.position)} jump (${s.count})`, s]));
+  mountChartCard(cardRoot, {
+    title, subtitle,
+    note: 'Only % increase is comparable across mixed units/currencies — see "Unit / Currency" grouping for absolute amounts.',
+    buildChart: (el) => renderHBarChart(el, {
+      title, subtitle,
+      rows: byPosition.map(s => ({ label: `${ordinal(s.position)} jump (${s.count})`, value: s.avgPct })),
+      valueLabel: (r) => fmtPct(r.value),
+      onSelect: (label) => {
+        const s = posByLabel.get(label);
+        if (!s) return;
+        const names = new Set(s.list.map(j => j.programme));
+        const subset = programmes.filter(p => names.has(p.programme_name));
+        openProgrammeListModal({ title: `${ordinal(s.position)} tier jump`, subtitle: `${fmtNum(subset.length)} programme(s)`, programmes: subset });
+      }
+    }),
+    getTableData: () => ({
+      headers: ['Jump Position', 'Programmes', 'Avg % Increase', 'Median % Increase'],
+      rows: byPosition.map(s => [`${ordinal(s.position)} jump`, s.count, Number(s.avgPct.toFixed(1)), Number(s.medianPct.toFixed(1))])
+    }),
+    filename: `tier-jumps-by-position-${state.jumpsMode}`,
+    saveTitle: title,
+    onSave: async (name, takeaway) => {
+      const row = await saveAnalysis({ name, lab: 'tiers', config: { view: 'jumps', jumpsMode: state.jumpsMode, jumpsGroupBy: 'position', globalFilters: ctx.getGlobalFilters() } });
+      if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
+    }
+  });
+}
+
 export function mount(container, ctx) {
-  const state = { view: 'structure', byDim: 'industry', jumpsMode: 'qualification', feeCurrency: null, feeByDim: 'industry' };
+  const state = { view: 'structure', byDim: 'industry', jumpsMode: 'qualification', jumpsGroupBy: 'segment', feeCurrency: null, feeByDim: 'industry' };
   let lastProgrammes = [];
 
   container.innerHTML = `
@@ -310,6 +437,7 @@ export function mount(container, ctx) {
     if (config.view) state.view = config.view;
     if (config.byDim) state.byDim = config.byDim;
     if (config.jumpsMode) state.jumpsMode = config.jumpsMode;
+    if (config.jumpsGroupBy) state.jumpsGroupBy = config.jumpsGroupBy;
     if (config.feeCurrency) state.feeCurrency = config.feeCurrency;
     if (config.feeByDim) state.feeByDim = config.feeByDim;
     container.querySelectorAll('.tiers-view-toggle .control-toggle').forEach(b => b.classList.toggle('active', b.dataset.view === state.view));

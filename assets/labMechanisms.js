@@ -6,7 +6,7 @@
 // aggregations are the ones nothing else already computes: stacking distribution,
 // mechanism KPIs and ranked co-occurrence pairs (all in analysisData.js).
 import { escapeHtml } from './fields.js';
-import { distribution, mechanismKpis, mechanismStackingDistribution, mechanismTopPairs, mechanismProfile, mechanismCooccurrence, programmesMatching } from './analysisData.js';
+import { DIMENSIONS, distribution, mechanismKpis, mechanismStackingDistribution, mechanismTopPairs, mechanismProfile, mechanismCooccurrence, mechanismIndexByDimension, programmesMatching } from './analysisData.js';
 import { renderHBarChart, renderHeatmap, renderLineChart, fmtNum, fmtPct } from './charts.js';
 import { mechanismSpectrumColor, MECHANISM_SPECTRUM_GRADIENT } from './options.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
@@ -104,8 +104,34 @@ function renderDetail(el, mechanism, programmes, ctx) {
   }
 }
 
+const CHARACTERISTIC_BY_KEYS = ['industry', 'programme_positioning', 'membership_type'];
+const INDEX_THRESHOLD = 130; // over-represented enough to call "characteristic", not just present
+
+// A mechanism common OVERALL will show up everywhere — this asks a different
+// question: which mechanisms are DISTINCTIVE to this category (index = 100 means
+// "exactly as common here as in the whole dataset"). Reuses labMechanisms' own
+// barRow renderer so it reads consistently with the per-mechanism profile above it.
+function characteristicMechanismsHTML(programmes, dimKey) {
+  const rows = mechanismIndexByDimension(programmes, dimKey);
+  if (!rows.length) return '<div class="drilldown-empty">No data for this dimension in the current filters.</div>';
+  return `
+    <div class="workspace-columns" style="grid-template-columns: repeat(auto-fit, minmax(220px,1fr));">
+      ${rows.map(r => {
+        const top = r.mechanisms.filter(m => m.index >= INDEX_THRESHOLD).slice(0, 4);
+        return `
+        <div class="drilldown-block">
+          <div class="drilldown-block-label">${escapeHtml(r.value)} (n=${r.n}${r.smallSample ? ' — small sample' : ''})</div>
+          ${top.length
+            ? barRow(top.map(m => ({ label: m.mechanism, value: m.index })), (v) => `${v} idx`)
+            : '<div class="drilldown-empty">No mechanism clearly over-indexed here.</div>'}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
 export function mount(container, ctx) {
-  const state = { selectedMechanism: null };
+  const state = { selectedMechanism: null, characteristicByDim: 'industry' };
   let lastProgrammes = [];
 
   container.innerHTML = `
@@ -120,6 +146,13 @@ export function mount(container, ctx) {
       <div class="workspace-prompt-label">Co-occurrence</div>
     </div>
     <div class="workspace-columns" id="mech-cooccur-row"></div>
+    <div class="workspace-secondary-controls" style="margin-top: 28px;">
+      <div class="control-group"><label>Characteristic mechanisms by</label>
+        <select class="control-select" id="mech-char-dim">${CHARACTERISTIC_BY_KEYS.map(k => `<option value="${k}" ${k === state.characteristicByDim ? 'selected' : ''}>${escapeHtml(DIMENSIONS[k].label)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="chart-card-note" style="margin: 4px 0 16px;">Index = 100 means a mechanism is exactly as common in this category as across all programmes; shown only when index ≥ ${INDEX_THRESHOLD} (meaningfully over-represented, not just present).</div>
+    <div id="mech-characteristic-root"></div>
   `;
 
   const kpisEl = container.querySelector('#mech-kpis');
@@ -127,6 +160,13 @@ export function mount(container, ctx) {
   const gridRoot = container.querySelector('#mech-grid-root');
   const detailEl = container.querySelector('#mech-detail');
   const cooccurRow = container.querySelector('#mech-cooccur-row');
+  const charDimSel = container.querySelector('#mech-char-dim');
+  const charRoot = container.querySelector('#mech-characteristic-root');
+  charDimSel.addEventListener('change', () => {
+    state.characteristicByDim = charDimSel.value;
+    ctx.persist(state);
+    charRoot.innerHTML = characteristicMechanismsHTML(lastProgrammes, state.characteristicByDim);
+  });
 
   function selectMechanism(mechanism) {
     state.selectedMechanism = mechanism;
@@ -139,6 +179,7 @@ export function mount(container, ctx) {
     lastProgrammes = programmes;
     const k = mechanismKpis(programmes);
     kpisEl.innerHTML = kpiRowHTML(k);
+    charRoot.innerHTML = characteristicMechanismsHTML(programmes, state.characteristicByDim);
 
     const stackRows = mechanismStackingDistribution(programmes).filter(d => d.count > 0);
     if (!stackRows.length) {
@@ -241,6 +282,7 @@ export function mount(container, ctx) {
 
   function applyConfig(config) {
     if (config.selectedMechanism) state.selectedMechanism = config.selectedMechanism;
+    if (config.characteristicByDim) { state.characteristicByDim = config.characteristicByDim; charDimSel.value = state.characteristicByDim; }
     render(lastProgrammes);
   }
 

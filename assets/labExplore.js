@@ -11,7 +11,7 @@
 // chart category -> underlying characteristics -> actual programmes -> programme page,
 // not category -> a small info panel.
 import { escapeHtml } from './fields.js';
-import { DIMENSIONS, distribution, categoryProfile, snapshotKpis } from './analysisData.js';
+import { DIMENSIONS, distribution, categoryProfile, snapshotKpis, dataQuality, importCohortSummary } from './analysisData.js';
 import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
 import { mechanismSpectrumColor } from './options.js';
 import { mountChartCard, showEmptyChartState, showTipOnce } from './chartToolbar.js';
@@ -115,6 +115,25 @@ function kpiRowHTML(programmes) {
   `;
 }
 
+// Standing caveat, always visible (not behind a click) — the 2026-09 audit's core
+// finding was that price/benefits coverage and import timing can silently bias any
+// reading of this dataset, so the warning lives where every session starts, not
+// buried in a report nobody re-opens.
+function dataQualityNoteHTML(programmes) {
+  const dq = dataQuality(programmes);
+  const priceRow = dq.find(r => r.key === 'price_when_paid');
+  const benefitsRow = dq.find(r => r.key === 'benefits');
+  const launchRow = dq.find(r => r.key === 'launch_year');
+  const cohort = importCohortSummary(programmes);
+  if (!programmes.length) return '';
+  const parts = [];
+  if (priceRow && priceRow.total) parts.push(`Price known for ${fmtPct(priceRow.pct)} of Paid/Subscription/Hybrid programmes (${fmtNum(priceRow.present)}/${fmtNum(priceRow.total)}) — pricing splits below this line are directional, not a benchmark`);
+  if (benefitsRow) parts.push(`Benefits tag known for ${fmtPct(benefitsRow.pct)} overall, but ${fmtPct(cohort.recent.benefitsPct)} of the ${fmtNum(cohort.recent.count)} programme(s) added since 24 Sep vs. ${fmtPct(cohort.original.benefitsPct)} of the earlier ${fmtNum(cohort.original.count)} — don't compare "Benefits" across cohorts`);
+  if (launchRow) parts.push(`Launch year known for ${fmtPct(launchRow.pct)} — Trends reflect under half the sample`);
+  if (!parts.length) return '';
+  return `<div class="chart-card-note" style="margin: -8px 0 20px;">${parts.join(' · ')}</div>`;
+}
+
 export function mount(container, ctx) {
   // Industry/Donut is the default first-open view (a fresh session with no saved
   // config) — the single most useful "what does the landscape look like" cut.
@@ -172,7 +191,7 @@ export function mount(container, ctx) {
 
   function render(programmes) {
     lastProgrammes = programmes;
-    kpisEl.innerHTML = kpiRowHTML(programmes);
+    kpisEl.innerHTML = kpiRowHTML(programmes) + dataQualityNoteHTML(programmes);
     if (!state.dimKey) {
       measureGroup.hidden = true;
       viewAsGroup.hidden = true;
