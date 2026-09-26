@@ -535,7 +535,7 @@ export function tierArchitectureByDimension(programmes, dimKey) {
 // across currencies at 225-programme scale; not a live FX feed, and not precise
 // enough for anything beyond "which industry/positioning tends to cost more".
 // Revisit if this sample grows enough for the rate's staleness to start mattering.
-export const FX_TO_EUR = { EUR: 1, USD: 0.92, GBP: 1.17, AUD: 0.60, HKD: 0.118 };
+export const FX_TO_EUR = { EUR: 1, USD: 0.92, GBP: 1.17, AUD: 0.60, HKD: 0.118, AED: 0.25, CAD: 0.68, INR: 0.0104 };
 export function toEUR(amount, currency) {
   const rate = FX_TO_EUR[currency];
   return (amount == null || rate == null) ? null : amount * rate;

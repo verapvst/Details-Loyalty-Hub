@@ -87,11 +87,15 @@ export const OPTIONS = {
     'Market Report', 'Book / Book Chapter', 'News / Media', 'Website', 'Other'
   ],
   programme_positioning: ['Mass', 'Mid-market', 'Premium', 'Luxury'],
+  // Senior / Retiree added 2026-09 (age-dimension pass): golf-club membership and
+  // cruise loyalty are the two segments in this dataset with well-documented older/
+  // retiree-skewed demographics (NGF/R&A golfer-age data; cruise-industry age data) —
+  // added for those, not applied speculatively elsewhere.
   target_customer: [
     'Mass Market', 'Families', 'Students', 'Young Adults', 'Professionals',
     'Business Customers', 'High-Value Customers', 'Frequent Customers',
     'Price-Sensitive Customers', 'Enthusiasts / Hobbyists', 'Local Customers',
-    'International Customers', 'Premium / Luxury Customers', 'Other'
+    'International Customers', 'Premium / Luxury Customers', 'Senior / Retiree', 'Other'
   ],
   geographic_scope: [
     'Portugal', 'Europe', 'North America', 'Latin America & Caribbean',
