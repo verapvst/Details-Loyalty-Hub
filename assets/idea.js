@@ -10,7 +10,7 @@ import { wireBackLink } from './backLink.js';
 import { loadIdea, updateIdea, deleteIdea } from './brainstormIdeas.js';
 import { loadCurrentTree, loadNodes, openPromoteIdeaModal } from './issueTree.js';
 
-await initNav('brainstorm-ideas');
+await initNav('brainstorm');
 
 const root = document.getElementById('idea-root');
 const params = new URLSearchParams(window.location.search);

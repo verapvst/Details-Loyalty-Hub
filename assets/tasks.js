@@ -21,7 +21,7 @@ let activeTab = (() => {
   catch { return TABS[0]; }
 })();
 
-await initNav(`tasks-${activeTab}`);
+await initNav('tasks');
 await loadCustomOptions();
 await loadTeamMembers();
 const TEAM_MEMBERS = getActiveTeamMembers();

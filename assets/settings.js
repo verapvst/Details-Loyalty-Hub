@@ -175,19 +175,12 @@ const NAV_ITEMS = [
   { key: 'database', label: 'Database' },
   { key: 'analysis', label: 'Analysis' },
   { key: 'favorites', label: 'Favorites' },
-  { key: 'tasks', label: 'Schedules & Tasks' },
-  { key: 'tasks-calendar', label: 'Calendar' },
-  { key: 'tasks-tasks', label: 'Tasks' },
-  { key: 'tasks-polls', label: 'Polls' },
-  { key: 'reports', label: 'Weekly Reports' },
-  { key: 'brainstorm', label: 'Brainstorms' },
-  { key: 'brainstorm-ideas', label: 'Ideas' },
-  { key: 'brainstorm-issue-tree', label: 'Issue Tree' },
-  { key: 'brainstorm-questions', label: 'Questions' },
-  { key: 'brainstorm-next-steps', label: 'Next Steps' },
   { key: 'research', label: 'Research' },
   { key: 'figures', label: 'Data Insights' },
   { key: 'sources', label: 'Sources' },
+  { key: 'tasks', label: 'Schedules & Tasks' },
+  { key: 'brainstorm', label: 'Brainstorms' },
+  { key: 'map', label: 'Portfolio Map' },
   { key: 'settings', label: 'Settings' }
 ];
 

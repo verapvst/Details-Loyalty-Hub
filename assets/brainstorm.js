@@ -26,7 +26,7 @@ let activeTab = (() => {
   catch { return TABS[0]; }
 })();
 
-await initNav(`brainstorm-${activeTab}`);
+await initNav('brainstorm');
 
 function showTab(tab) {
   activeTab = tab;

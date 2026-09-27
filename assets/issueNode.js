@@ -12,7 +12,7 @@ import {
   openEvidencePickerModal
 } from './issueTree.js';
 
-await initNav('brainstorm-issue-tree');
+await initNav('brainstorm');
 
 const root = document.getElementById('issue-node-root');
 const params = new URLSearchParams(window.location.search);

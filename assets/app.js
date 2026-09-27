@@ -25,22 +25,15 @@ const NAV_GROUPS = [
       { key: 'analysis', label: 'Analysis', href: 'analysis.html' },
       { key: 'favorites', label: 'Favorites', href: 'favorites.html' }
     ] },
-  { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html', children: [
-      { key: 'tasks-calendar', label: 'Calendar', href: 'tasks.html?tab=calendar' },
-      { key: 'tasks-tasks', label: 'Tasks', href: 'tasks.html?tab=tasks' },
-      { key: 'tasks-polls', label: 'Polls', href: 'tasks.html?tab=polls' },
-      { key: 'reports', label: 'Weekly Reports', href: 'weekly-reports.html' }
-    ] },
-  { key: 'brainstorm', label: 'Brainstorms', href: 'brainstorm.html', children: [
-      { key: 'brainstorm-ideas', label: 'Ideas', href: 'brainstorm.html?tab=ideas' },
-      { key: 'brainstorm-issue-tree', label: 'Issue Tree', href: 'brainstorm.html?tab=issue-tree' },
-      { key: 'brainstorm-questions', label: 'Questions', href: 'brainstorm.html?tab=questions' },
-      { key: 'brainstorm-next-steps', label: 'Next Steps', href: 'brainstorm.html?tab=next-steps' }
-    ] },
   { key: 'research', label: 'Research', href: 'figures.html', children: [
       { key: 'figures', label: 'Data Insights', href: 'figures.html' },
       { key: 'sources', label: 'Sources', href: 'sources.html' }
     ] },
+  // Lightly used — flat links (no children shown in the sidebar) rather than
+  // expandable groups. Their own in-page tab bars (tasks.html / brainstorm.html)
+  // still reach every sub-page; only the sidebar stopped listing them separately.
+  { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
+  { key: 'brainstorm', label: 'Brainstorms', href: 'brainstorm.html' },
   { key: 'map', label: 'Portfolio Map', href: 'map.html' },
   { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
