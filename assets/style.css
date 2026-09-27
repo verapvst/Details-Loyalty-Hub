@@ -821,6 +821,96 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .month-day-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
 .month-day-empty { font-size: 13px; color: var(--muted); margin-top: 18px; }
 
+/* ---------- Portfolio Map ---------- */
+/* Layout: a slim filter/legend/list sidebar beside a full-height map canvas — the
+   map itself is the point, so it gets almost all the vertical space rather than
+   sharing it with a big hero photo (page.html uses the compact .page-header, not
+   .hero, for exactly this reason). Category colour is the validated palette from
+   assets/mapData.js — see that file's comment for why colour is never the only
+   identity signal (legend + filters + the info panel's text label back it up). */
+.map-page {
+  display: flex;
+  height: calc(100vh - var(--nav-h) - 108px);
+  min-height: 480px;
+  border-top: 1px solid var(--border);
+}
+.map-sidebar {
+  width: 320px; flex: none; display: flex; flex-direction: column;
+  border-right: 1px solid var(--border); background: var(--surface);
+  overflow: hidden;
+}
+.map-sidebar-section { padding: 18px 20px; }
+.map-sidebar-section + .map-sidebar-section { border-top: 1px solid var(--border); }
+.map-sidebar-grow { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.map-search { width: 100%; }
+.map-sidebar-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+}
+.map-total-count { color: var(--muted-light); font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+.map-legend { display: flex; flex-direction: column; gap: 2px; }
+.map-legend-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px;
+  background: none; border: none; text-align: left; width: 100%;
+  transition: background var(--transition), opacity var(--transition);
+}
+.map-legend-item:hover { background: var(--surface-alt); }
+.map-legend-item.inactive { opacity: 0.35; }
+.map-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.map-legend-label { font-size: 13px; font-weight: 500; color: var(--dark); flex: 1; }
+.map-legend-count { font-size: 11px; color: var(--muted-light); font-variant-numeric: tabular-nums; }
+
+.map-asset-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.map-list-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+  background: none; border: none; text-align: left; width: 100%;
+  transition: background var(--transition);
+}
+.map-list-item:hover, .map-list-item.active { background: var(--surface-alt); }
+.map-list-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.map-list-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.map-list-name { font-size: 12.5px; font-weight: 500; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-list-loc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-list-empty { padding: 20px; font-size: 12.5px; color: var(--muted); }
+
+.map-canvas-wrap { position: relative; flex: 1; }
+#map-canvas { width: 100%; height: 100%; background: #F5F5F3; }
+.leaflet-tile-pane { filter: saturate(0.85); }
+
+.map-region-jump {
+  position: absolute; top: 16px; left: 16px; z-index: 400;
+  display: flex; background: var(--surface); border-radius: 20px; padding: 3px;
+  box-shadow: var(--shadow); gap: 2px;
+}
+.map-region-btn {
+  padding: 7px 16px; border: none; border-radius: 17px; background: none;
+  font-size: 12px; font-weight: 500; color: var(--muted); transition: background var(--transition), color var(--transition);
+}
+.map-region-btn.active { background: var(--dark); color: var(--white); }
+.map-region-btn:not(.active):hover { background: var(--surface-alt); }
+
+.map-info-panel {
+  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-hover);
+  max-width: 380px; width: 100%; padding: 28px 26px; position: relative;
+}
+.map-info-close {
+  position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface-alt); color: var(--muted); font-size: 18px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; border: none;
+}
+.map-info-close:hover { background: var(--border); color: var(--dark); }
+.map-info-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; padding-right: 30px; }
+.map-info-cat-chip {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 12px; border: 1px solid; background: none;
+}
+.map-info-title { font-family: var(--font-display); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 4px; }
+.map-info-loc { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.map-info-notes { font-size: 13px; color: var(--dark); line-height: 1.6; margin-bottom: 14px; }
+.map-info-confidence { font-size: 11.5px; color: var(--muted-light); font-style: italic; margin-bottom: 16px; line-height: 1.5; }
+.map-info-link { display: inline-flex; text-decoration: none; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   .wrap, .section, .record-body, .record-head-inner { padding-left: 20px; padding-right: 20px; }
@@ -832,6 +922,9 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   .tier-row-v2 { grid-template-columns: 1fr 1fr; }
   .tier-row-v2 > button { grid-column: 1 / -1; justify-self: end; }
   .agenda-row, .task-row { flex-wrap: wrap; }
+  .map-page { flex-direction: column; height: auto; }
+  .map-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 360px; }
+  .map-canvas-wrap { height: 60vh; min-height: 380px; }
   .poll-grid-cell { width: 38px; height: 26px; }
   .poll-grid-daycol, .poll-grid-corner { min-width: 42px; }
   .month-cell { padding: 5px; min-height: 72px; }

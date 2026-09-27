@@ -41,6 +41,7 @@ const NAV_GROUPS = [
       { key: 'figures', label: 'Data Insights', href: 'figures.html' },
       { key: 'sources', label: 'Sources', href: 'sources.html' }
     ] },
+  { key: 'map', label: 'Portfolio Map', href: 'map.html' },
   { key: 'settings', label: 'Settings', href: 'settings.html' }
 ];
 

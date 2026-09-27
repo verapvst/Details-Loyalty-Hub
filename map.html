@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Portfolio Map · Details Loyalty Hub</title>
+<link rel="stylesheet" href="assets/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1>Portfolio Map</h1>
+      <p>Where Details' hotels, golf courses and leisure assets sit across Portugal, and which destinations combine more than one.</p>
+    </div>
+  </div>
+</div>
+
+<div class="map-page">
+  <aside class="map-sidebar">
+    <div class="map-sidebar-section">
+      <input class="search-input map-search" id="map-search" type="search" placeholder="Search asset or location…" />
+    </div>
+    <div class="map-sidebar-section">
+      <div class="map-sidebar-label">Categories <span id="map-total-count" class="map-total-count"></span></div>
+      <div id="map-legend" class="map-legend"></div>
+    </div>
+    <div class="map-sidebar-section map-sidebar-grow">
+      <div class="map-sidebar-label">Assets shown <span id="map-list-count" class="map-total-count"></span></div>
+      <div id="map-asset-list" class="map-asset-list"></div>
+    </div>
+  </aside>
+
+  <div class="map-canvas-wrap">
+    <div id="map-canvas"></div>
+    <div class="map-region-jump">
+      <button type="button" class="map-region-btn active" data-region="portugal">Portugal</button>
+      <button type="button" class="map-region-btn" data-region="algarve">Algarve</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="map-info-overlay" hidden>
+  <div class="map-info-panel" id="map-info-panel"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script type="module" src="assets/map.js"></script>
+</body>
+</html>
