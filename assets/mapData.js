@@ -42,7 +42,11 @@ export function categoryLabel(cat) {
 // button and to size/centre the initial view so the Algarve cluster reads clearly
 // even though a couple of assets (Madeira, Porto-area) sit well outside it.
 export const ALGARVE_BOUNDS = [[36.95, -8.95], [37.25, -7.45]];
-export const PORTUGAL_BOUNDS = [[32.4, -17.3], [42.2, -6.1]];
+// Mainland only, deliberately — Madeira sits ~600km southwest, and including it
+// in the default framing forces a wide-zoomed view with mostly empty ocean/Spain
+// on screen. Madeira's assets are still on the map and reachable via search or
+// the sidebar list; this bounds only sets the two region-jump buttons' framing.
+export const PORTUGAL_BOUNDS = [[36.85, -9.65], [42.25, -6.05]];
 
 let cached = null;
 
