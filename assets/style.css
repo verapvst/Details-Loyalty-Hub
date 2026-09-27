@@ -941,6 +941,10 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   display: block; border-radius: 50%; box-sizing: border-box;
   border-color: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.28);
 }
+/* Multi-category dot: the SVG pie fills the circle, so this variant drops the
+   flat background and just clips the SVG + draws the same white ring. */
+.map-dot-icon-pie { overflow: hidden; background: none; }
+.map-dot-icon-pie svg { display: block; }
 
 /* Cluster icon — a small donut chart of the categories inside it, so zooming
    out never hides "there's also a hotel here" behind a single dominant colour;

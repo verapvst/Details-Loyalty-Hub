@@ -70,13 +70,50 @@ function markerDiameter(confidence) {
   return confidence === 'approximate' ? 14 : 16;
 }
 
+// A single asset in 2+ categories (Monte Rei: Golf + Resort, equally — not
+// "mostly golf") gets the same even-split pie treatment as a cluster of
+// several assets, just sized down to dot scale, instead of collapsing to one
+// "primary" colour — nothing about these categories is actually weighted, so
+// the dot shouldn't imply one is dominant. A single-category asset keeps the
+// cheaper flat-colour dot (still the common case: 26 of 32 assets).
+function assetDotHTML(asset, size) {
+  const cats = asset.categories || [];
+  const borderStyle = asset.coordinate_confidence === 'approximate' ? 'dashed' : 'solid';
+  if (cats.length <= 1) {
+    const color = categoryColor(cats[0]);
+    return `<span class="map-dot-icon" style="width:${size}px;height:${size}px;background:${color};border-width:1.5px;border-style:${borderStyle};"></span>`;
+  }
+  // A stroke-drawn donut ring (fine for the larger cluster icons) breaks down at
+  // this scale: filling the hole needs a stroke much thicker than the radius,
+  // and the later-drawn arc's thick round ends then bleed across the centre and
+  // overpaint most of the earlier one — an even split rendered as ~90/10. Filled
+  // pie wedges (true sectors from the centre) don't have that failure mode at
+  // any radius, so individual dots use those instead of donutSegmentsSVG.
+  const counts = cats.map(cat => ({ color: categoryColor(cat), count: 1 }));
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${pieSlicesSVG(counts, size)}</svg>`;
+  return `<span class="map-dot-icon map-dot-icon-pie" style="width:${size}px;height:${size}px;border-width:2px;border-style:${borderStyle};">${svg}</span>`;
+}
+
+function pieSlicesSVG(counts, size) {
+  const total = counts.reduce((s, c) => s + c.count, 0);
+  const c = size / 2;
+  const r = c;
+  let angle = -Math.PI / 2;
+  return counts.map(({ color, count }) => {
+    const sweep = (count / total) * 2 * Math.PI;
+    const next = angle + sweep;
+    const x1 = (c + r * Math.cos(angle)).toFixed(2), y1 = (c + r * Math.sin(angle)).toFixed(2);
+    const x2 = (c + r * Math.cos(next)).toFixed(2), y2 = (c + r * Math.sin(next)).toFixed(2);
+    const largeArc = sweep > Math.PI ? 1 : 0;
+    angle = next;
+    return `<path d="M ${c} ${c} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${color}" />`;
+  }).join('');
+}
+
 function buildMarker(asset) {
   const cat = primaryCategory(asset);
-  const color = categoryColor(cat);
-  const isMulti = (asset.categories || []).length > 1;
-  const size = markerDiameter(asset.coordinate_confidence);
-  const borderStyle = asset.coordinate_confidence === 'approximate' ? 'dashed' : 'solid';
-  const html = `<span class="map-dot-icon" style="width:${size}px;height:${size}px;background:${color};border-width:${isMulti ? 2.5 : 1.5}px;border-style:${borderStyle};"></span>`;
+  const size = markerDiameter(asset.coordinate_confidence) + ((asset.categories || []).length > 1 ? 2 : 0);
+  const html = assetDotHTML(asset, size);
   const icon = L.divIcon({ className: 'map-dot-icon-wrap', html, iconSize: [size, size] });
   const m = L.marker([asset.latitude, asset.longitude], { icon });
   m._assetCategory = cat;
