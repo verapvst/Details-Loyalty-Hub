@@ -5,6 +5,12 @@ import {
   ALGARVE_BOUNDS, PORTUGAL_BOUNDS
 } from './mapData.js';
 
+// Chrome/Safari restore a previous scroll offset on reload by default, which
+// on a page with no natural scroll (the shell is exactly viewport-height)
+// only ever shows as the header clipped a few px under the fixed nav.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
 await initNav('map');
 
 const state = { activeCategories: new Set(CATEGORY_ORDER), query: '' };
