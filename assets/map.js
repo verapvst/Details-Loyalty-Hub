@@ -117,6 +117,7 @@ function buildMarker(asset) {
   const icon = L.divIcon({ className: 'map-dot-icon-wrap', html, iconSize: [size, size] });
   const m = L.marker([asset.latitude, asset.longitude], { icon });
   m._assetCategory = cat;
+  m._assetCategories = asset.categories || [cat];
   m.on('click', () => openInfoPanel(asset));
   m.bindTooltip(asset.asset_name, { direction: 'top', offset: [0, -size / 2], opacity: 0.95 });
   return m;
@@ -145,8 +146,18 @@ function donutSegmentsSVG(counts, size, strokeWidth) {
 
 function buildClusterIcon(cluster) {
   const markers = cluster.getAllChildMarkers();
+  // Each marker contributes to EVERY one of its categories, not just a single
+  // "primary" one — otherwise a Golf+Resort asset like Palmares or Monte Rei
+  // always reads as pure Resort in the cluster donut and its Golf side
+  // disappears the moment you zoom out past the individual-marker view.
+  // Weighted 1/N per category so a multi-category asset still counts as one
+  // asset overall (matches the "total" badge), just split across its colours.
   const byCategory = new Map();
-  markers.forEach(m => byCategory.set(m._assetCategory, (byCategory.get(m._assetCategory) || 0) + 1));
+  markers.forEach(m => {
+    const cats = m._assetCategories && m._assetCategories.length ? m._assetCategories : [m._assetCategory];
+    const weight = 1 / cats.length;
+    cats.forEach(cat => byCategory.set(cat, (byCategory.get(cat) || 0) + weight));
+  });
   const counts = CATEGORY_ORDER.filter(cat => byCategory.has(cat)).map(cat => ({ color: categoryColor(cat), count: byCategory.get(cat) }));
   const total = markers.length;
   const size = total < 8 ? 42 : total < 20 ? 52 : 64;
