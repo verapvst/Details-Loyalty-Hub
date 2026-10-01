@@ -71,6 +71,23 @@ export function checkboxGroupHTML(fieldKey, optionKey, selected) {
   }).join('')}</div>`;
 }
 
+// Checkbox groups under a small heading each (used for the 14 mechanisms by family).
+// groups: [{ label, items: [{ value, title }] }]. Same input name for every group, so
+// readCheckboxGroup(form, fieldKey) reads them as one list. A value already saved but
+// no longer in any group is kept visible (marked inactive), like checkboxGroupHTML.
+export function groupedCheckboxHTML(fieldKey, groups, selected) {
+  const sel = Array.isArray(selected) ? selected : [];
+  const known = new Set(groups.flatMap(g => g.items.map(i => i.value)));
+  const orphaned = sel.filter(v => !known.has(v));
+  const all = orphaned.length ? [...groups, { label: 'Not in current list', items: orphaned.map(v => ({ value: v, title: '', suffix: ' (inactive)' })) }] : groups;
+  return all.map(g => `
+    ${g.label ? `<div class="form-section-label" style="margin-top: 12px;">${escapeHtml(g.label)}</div>` : ''}
+    <div class="checkbox-row">${g.items.map(i => `
+      <label class="checkbox-item" ${i.title ? `title="${escapeHtml(i.title)}"` : ''}><input type="checkbox" name="${fieldKey}" value="${escapeHtml(i.value)}" ${sel.includes(i.value) ? 'checked' : ''} /> ${escapeHtml(i.value)}${i.suffix || ''}</label>
+    `).join('')}</div>
+  `).join('');
+}
+
 // A checkbox-row plus a small "All"/"Clear" toggle button — for people-picker lists
 // (assignees, participants) where selecting the whole team one-by-one is tedious.
 // Call wireSelectAllToggle() on the containing form/element after inserting this HTML.

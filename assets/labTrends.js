@@ -10,8 +10,8 @@ import { renderLineChart, renderBarChart, fmtNum } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
 
-const Y_KEYS = ['mechanisms', 'industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'target_customer', 'country', 'access_registration'];
-const PRESETS = ['mechanisms', 'industry', 'programme_positioning', 'membership_type'];
+const Y_KEYS = ['mechanisms14', 'benefits18', 'mechanisms', 'industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'target_customer', 'country', 'access_registration'];
+const PRESETS = ['mechanisms14', 'industry', 'programme_positioning', 'membership_type'];
 const CHART_TYPE_LABELS = { line: 'Line', area: 'Area', stackedArea: 'Stacked Area', bar: 'Bar', stackedBar: 'Stacked Bar', stacked100Bar: '100% Stacked Bar' };
 const CHART_TYPES = ['line', 'area', 'stackedArea', 'bar', 'stackedBar', 'stacked100Bar'];
 

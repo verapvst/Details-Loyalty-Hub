@@ -2,9 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
-  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_18
 } from './options.js';
-import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
+import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { loadLikes, likeSummary, heartHTML, wireHearts, openTargetPickerModal } from './likes.js';
 import { loadTeamMembers, teamMemberSelectHTML } from './teamMembers.js';
@@ -171,30 +172,68 @@ function featureRowEditHTML(f = {}) {
   `;
 }
 
-const MECHANISM_BLOCKS = { 'Spend-based earning': 'r-block-points', 'Member pricing': 'r-block-discounts', 'External partner network': 'r-block-partnerships' };
+// Conditional detail blocks. They follow the new coding but also stay visible while a
+// programme still carries only the old (v3) coding, so existing detail data is never hidden.
+const POINTS_MECHS = ['Accumulated by Spending (redeemable for spending)', 'Accumulated by Actions (redeemable for spending)'];
+const DISCOUNT_BENEFIT = 'Cashback / Direct Discounts / Coupons';
+const PARTNER_BENEFIT = 'Partner Benefits';
+const BLOCK_RULES = [
+  { id: 'r-block-points', test: (m, b, legacy) => m.some(v => POINTS_MECHS.includes(v)) || legacy.includes('Spend-based earning') },
+  { id: 'r-block-discounts', test: (m, b, legacy) => b.includes(DISCOUNT_BENEFIT) || legacy.includes('Member pricing') },
+  { id: 'r-block-partnerships', test: (m, b, legacy) => b.includes(PARTNER_BENEFIT) || legacy.includes('External partner network') }
+];
+
+function mechanismGroups() {
+  return MECHANISM14_FAMILIES.map(f => ({
+    label: f,
+    items: MECHANISMS_14.filter(m => m.family === f).map(m => ({ value: m.name, title: m.definition }))
+  }));
+}
+
+function legacyBlockHTML() {
+  const legacyMech = programme.mechanisms || [];
+  const legacyBen = (programme.benefits || []).filter(Boolean);
+  if (!legacyMech.length && !legacyBen.length) return '';
+  const chips = arr => arr.length ? `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>` : '<span class="value empty">—</span>';
+  return `
+    <details class="record-block" ${editing ? 'open' : ''}>
+      <summary style="cursor:pointer;font-weight:600;">Previous coding (v3), reference while recoding</summary>
+      <div class="record-grid" style="margin-top:12px;">
+        <div class="record-field full"><label>Old mechanisms (11 values)</label>${chips(legacyMech)}</div>
+        <div class="record-field full"><label>Old benefits</label>${chips(legacyBen)}</div>
+      </div>
+    </details>
+  `;
+}
 
 function mechanismsBlockHTML() {
-  const mechanisms = programme.mechanisms || [];
+  const mech14 = programme.mechanisms_14 || [];
+  const ben18 = programme.benefits_18 || [];
+  const legacy = programme.mechanisms || [];
+  const status = programme.recode_status || 'To recode';
 
   if (!editing) {
-    const pointsInfo = mechanisms.includes('Spend-based earning') && (programme.points_expires !== null || programme.points_notes)
+    const pointsInfo = (mech14.some(v => POINTS_MECHS.includes(v)) || legacy.includes('Spend-based earning')) && (programme.points_expires !== null || programme.points_notes)
       ? `<div class="record-field full"><label>Points Details</label><span class="value">${
           programme.points_expires === true ? `Expires${programme.points_expiration_period ? ` (${escapeHtml(programme.points_expiration_period)})` : ''}` :
           programme.points_expires === false ? 'Does not expire' : ''
         }${programme.points_notes ? ` · ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
-    const discountInfo = mechanisms.includes('Member pricing') && programme.discount_types && programme.discount_types.length
+    const discountInfo = (ben18.includes(DISCOUNT_BENEFIT) || legacy.includes('Member pricing')) && programme.discount_types && programme.discount_types.length
       ? `<div class="record-field full"><label>Discount Type</label>${chipsOrEmpty(programme.discount_types)}</div>` : '';
-    const partnerInfo = mechanisms.includes('External partner network') && programme.partner_companies && programme.partner_companies.length
+    const partnerInfo = (ben18.includes(PARTNER_BENEFIT) || legacy.includes('External partner network')) && programme.partner_companies && programme.partner_companies.length
       ? `<div class="record-field full"><label>Partner Companies</label>${chipsOrEmpty(programme.partner_companies)}</div>` : '';
 
     return `
       <div class="record-block">
-        <h3>Mechanisms</h3>
+        <h3>Mechanisms and Benefits <span class="badge ${status === 'Verified' || status === 'Recoded' ? 'badge-green' : 'badge-muted'}" style="margin-left:8px;">${escapeHtml(status)}</span></h3>
         <div class="record-grid">
-          <div class="record-field full"><label>Mechanisms</label>${likeableChipsHTML('mechanism', mechanisms)}</div>
+          <div class="record-field full"><label>Mechanisms (how members unlock benefits)</label>${likeableChipsHTML('mechanism', mech14)}</div>
+          <div class="record-field full"><label>Benefits (what members get)</label>${chipsOrEmpty(ben18)}</div>
+          ${programme.coding_notes ? `<div class="record-field full"><label>Coding notes</label><span class="value">${escapeHtml(programme.coding_notes)}</span></div>` : ''}
           ${pointsInfo}${discountInfo}${partnerInfo}
         </div>
       </div>
+      ${legacyBlockHTML()}
       ${tiersDisplayBlockHTML()}
     `;
   }
@@ -202,9 +241,17 @@ function mechanismsBlockHTML() {
   const tierList = tiers.length ? tiers : [{}];
   return `
     <div class="record-block">
-      <h3>Mechanisms</h3>
-      <div class="form-section-label" style="margin-top:0;">Mechanisms</div>
-      ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, mechanisms)}
+      <h3>Mechanisms and Benefits</h3>
+      <div class="form-section-label" style="margin-top:0;">Mechanisms (how members unlock benefits)</div>
+      ${groupedCheckboxHTML('mechanisms_14', mechanismGroups(), mech14)}
+
+      <div class="form-section-label" style="margin-top:20px;">Benefits (what members get)</div>
+      ${groupedCheckboxHTML('benefits_18', [{ label: '', items: BENEFITS_18.map(b => ({ value: b.name, title: b.examples })) }], ben18)}
+
+      <div class="form-grid" style="margin-top:20px;">
+        <div class="form-field"><label>Recode status</label>${inputHTML({ key: 'recode_status', type: 'select', options: 'recode_status' }, status)}</div>
+        <div class="form-field full"><label>Coding notes (where on the official page each item was found)</label>${inputHTML({ key: 'coding_notes', type: 'textarea' }, programme.coding_notes)}</div>
+      </div>
 
       <div id="r-block-points" class="mech-block" hidden>
         <div class="form-section-label">Points / Earning</div>
@@ -216,16 +263,18 @@ function mechanismsBlockHTML() {
       </div>
 
       <div id="r-block-discounts" class="mech-block" hidden>
-        <div class="form-section-label">Member pricing</div>
+        <div class="form-section-label">Cashback / discounts / coupons</div>
         ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, programme.discount_types)}
       </div>
 
       <div id="r-block-partnerships" class="mech-block" hidden>
-        <div class="form-section-label">External partner network</div>
+        <div class="form-section-label">Partner benefits</div>
         <div class="form-field full"><label>Partner Companies (separate with ;)</label>
           <input type="text" name="partner_companies" value="${escapeHtml((programme.partner_companies || []).join('; '))}" />
         </div>
       </div>
+
+      ${legacyBlockHTML()}
 
       <div id="r-block-tiering" class="mech-block">
         <div class="form-section-label">Tier Structure</div>
@@ -306,14 +355,16 @@ function sourceBlockHTML() {
 }
 
 function wireMechanismToggle(container) {
+  const legacy = programme.mechanisms || [];
   function sync() {
-    const checked = readCheckboxGroup(container, 'mechanisms');
-    Object.entries(MECHANISM_BLOCKS).forEach(([mech, blockId]) => {
-      const el = document.getElementById(blockId);
-      if (el) el.hidden = !checked.includes(mech);
+    const m = readCheckboxGroup(container, 'mechanisms_14');
+    const b = readCheckboxGroup(container, 'benefits_18');
+    BLOCK_RULES.forEach(r => {
+      const el = document.getElementById(r.id);
+      if (el) el.hidden = !r.test(m, b, legacy);
     });
   }
-  container.querySelectorAll('input[name="mechanisms"]').forEach(cb => cb.addEventListener('change', sync));
+  container.querySelectorAll('input[name="mechanisms_14"], input[name="benefits_18"]').forEach(cb => cb.addEventListener('change', sync));
   sync();
 }
 
@@ -418,7 +469,10 @@ async function saveChanges() {
     created_by: form.elements['created_by'].value || null,
     target_customer: readCheckboxGroup(form, 'target_customer'),
     geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
-    mechanisms: readCheckboxGroup(form, 'mechanisms'),
+    mechanisms_14: readCheckboxGroup(form, 'mechanisms_14'),
+    benefits_18: readCheckboxGroup(form, 'benefits_18'),
+    recode_status: form.elements['recode_status'].value || 'To recode',
+    coding_notes: form.elements['coding_notes'].value.trim() || null,
     discount_types: readCheckboxGroup(form, 'discount_types'),
     points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
     points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,
