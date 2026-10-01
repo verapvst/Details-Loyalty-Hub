@@ -39,6 +39,55 @@ export const INSIGHT_TYPE_DEFINITIONS = {
   'Other': 'Information that does not clearly fit any of the categories above.'
 };
 
+// ---------------- Scorecard taxonomies (14 mechanisms, 18 benefits) ----------------
+// Source of truth: METHODOLOGY/Scorecards (Mechanisms_Scorecard_FINAL.xlsx, Benefits Scorecard.xlsx),
+// list confirmed by the team on 2026-10-01. Mechanisms answer "how do you unlock the benefits";
+// benefits answer "what does the member get". These REPLACE the v3 mechanisms (11) for coding and
+// analysis; v3 values stay on programmes.mechanisms / programmes.benefits as read-only legacy
+// for reference while programmes are recoded (see supabase/032_taxonomy_14_18.sql).
+// Scores and tiers are deliberately NOT stored here: the scorecard owns them.
+export const MECHANISMS_14 = [
+  { name: "Paid Subscription", family: "Tiers", definition: "Access to the tier is unlocked by paying a fixed subscription/fee, with no need to reach any spend or frequency threshold" },
+  { name: "Spending at Brand/Partners - Temporary", family: "Tiers", definition: "Spend X per year (own brand or/and partners) to obtain or maintain the tier; not cumulative - requires annual requalification" },
+  { name: "Spending at Brand/Partners - Lifetime & Cumulative", family: "Tiers", definition: "The tier advances as more money is accumulated over time (own brand or/and partners); once a threshold is reached, it is never lost" },
+  { name: "Accumulated by Spending (redeemable for spending)", family: "Points", definition: "Points accumulated by spending (own brand or/and partners), redeemable for spending on products/services - the classic \"earn & burn\" model" },
+  { name: "Accumulated by Actions (redeemable for spending)", family: "Points", definition: "Points accumulated through non-spend actions (e.g., completing a survey, visiting a partner's store, creating an account, donating to an NGO, etc etc), redeemable for spending" },
+  { name: "Do X, Get Y", family: "Points", definition: "Includes classic punch-card-style loyalty mechanism: buy X units and receive 1 free, do x times an activity and unlock y (e.g., go to all 5 golf courses in the region and get to visit one for free or an experience)" },
+  { name: "Newsletter, Email, Phone", family: "Free enrolment", definition: "Free enrollment by sharing contact details (newsletter, email or phone), with no need to create an account" },
+  { name: "Create Account (e.g. Card, App, automatic, etc)", family: "Free enrolment", definition: "Enrollment through creating an account, for example in the brand's app or issuance of a physical or digital membership card" },
+  { name: "Missions/Gamification", family: "Missions / Gamification", definition: "Access or progression unlocked by completing missions or gamified challenges, strictly with non-redeemable progression, such as badges, levels or unlocks status only, with no tangible value or monetary/experiential value." },
+  { name: "Referral", family: "Referral & Invite", definition: "Benefit unlocked by referring a new member" },
+  { name: "Invite", family: "Referral & Invite", definition: "Benefit unlocked by being invited by an existing member of the loyalty" },
+  { name: "Ambassador", family: "Ambassador", definition: "Status granted to selected members to represent the brand, typically by invitation/curation from the company" },
+  { name: "Access by Ownership", family: "Access by ownership", definition: "Access to the programme granted through ownership of an asset (eg, a residential property in the portfolio)" },
+  { name: "Tenure / Legacy Recognition", family: "Tenure / Legacy", definition: "Status or perks earned simply by years as a member, rewarding relationship and belonging over transactions" },
+];
+export const MECHANISM14_FAMILIES = [...new Set(MECHANISMS_14.map(m => m.family))];
+
+export const BENEFITS_18 = [
+  { name: "Upgrades & Complimentary Offers", examples: "Automatic Room/Suite Upgrade; Complimentary Welcome Amenity; Complimentary Night / Round After Streak" },
+  { name: "Service Exclusivity & Priority Access", examples: "Dedicated Concierge / Named Contact; Guaranteed Reservation (No Waitlist); Priority Service Line" },
+  { name: "Experiential Exclusivity", examples: "Access to Member-Only Events; Access to Exclusive Facilities; Curated Experience Catalogue Access" },
+  { name: "Convenience Benefits", examples: "Late Checkout / Early Check-in; Complimentary Parking / Valet; Fast-Track Check-in / Check-out" },
+  { name: "Community & Networking", examples: "Member Directory / Networking Access; Alumni / Legacy Community Access" },
+  { name: "Partner Benefits", examples: "Curated External Partner Perks; Reciprocal Travel Partner Benefits" },
+  { name: "Flexibility & Credit", examples: "No Blackout Dates; Credit / Points Rollover; Annual Resort / F&B Statement Credit" },
+  { name: "Social / Transferable Benefits", examples: "Guest Privileges; Status or Credit Gifting; Bring a friend" },
+  { name: "Personalised Gifts", examples: "Birthday / Anniversary Gift; Milestone Gift" },
+  { name: "Personalisation", examples: "Personalised Recommendations; Tailored Communications & Offers; Preference-Based Service Delivery" },
+  { name: "Points Inflation", examples: "Extra points when spending at the brand; higher earning rate at premium assets; extra points when using multiple services; bonus points for cross-asset spending" },
+  { name: "Family Benefits", examples: "Family Membership Extension; Family Programming Access" },
+  { name: "Cashback / Direct Discounts / Coupons", examples: "Member-Rate Discount; Cash-Equivalent Account Credit" },
+  { name: "Early Access", examples: "Tier-Based Priority Booking Window; Paid Early-Access Unlock" },
+  { name: "Sustainability & Charitable Giving", examples: "Points-to-Donation Conversion; Sustainable-Choice Recognition Credit" },
+  { name: "Proprietary Credit Card Benefits", examples: "Card Purchase Protection & Travel Insurance; Card-Exclusive Statement Credits" },
+  { name: "AI-Powered Benefits", examples: "AI Concierge / Trip Planning Assistant; AI-Curated Personal Offers" },
+  { name: "Sweepstakes, Contests & Prize Draws", examples: "Automatic Entry into Prize Draws; Challenge-Linked Contest Entry" },
+];
+
+// Coding progress per programme while the Hub moves from the v3 taxonomy to the 14/18 one.
+export const RECODE_STATUS = ['To recode', 'Suggested', 'Recoded', 'Verified'];
+
 export const OPTIONS = {
   country: [
     'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina',
@@ -117,6 +166,10 @@ export const OPTIONS = {
     'External partner network', 'Included member benefits', 'Member experiences & events',
     'Member pricing', 'Privileged access', 'Referral', 'Spend-based earning'
   ],
+  // New coding taxonomies (see MECHANISMS_14 / BENEFITS_18 / RECODE_STATUS below).
+  mechanisms14: MECHANISMS_14.map(m => m.name),
+  benefits18: BENEFITS_18.map(b => b.name),
+  recode_status: RECODE_STATUS,
   discount_type: [
     'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',
     'Preferential pricing', 'None'
@@ -199,6 +252,7 @@ export function sortByMechanismOrder(values) {
   const rest = values.filter(v => !MECHANISM_ANALYTICAL_ORDER.includes(v));
   return [...known, ...rest];
 }
+
 
 // ---------------- Programme form structure ----------------
 // Simple fields (no conditional logic) — driven generically like other forms.

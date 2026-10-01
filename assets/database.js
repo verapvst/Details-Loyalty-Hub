@@ -2,9 +2,10 @@ import { supabase } from './supabase.js';
 import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
-  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS
+  PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_18, RECODE_STATUS
 } from './options.js';
-import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml } from './fields.js';
+import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
@@ -19,6 +20,7 @@ const filterIndustry = document.getElementById('filter-industry');
 const filterGeography = document.getElementById('filter-geography');
 const filterType = document.getElementById('filter-type');
 const filterAddedBy = document.getElementById('filter-added-by');
+const filterRecode = document.getElementById('filter-recode');
 const searchInput = document.getElementById('search-input');
 
 const URL_FILTER_FIELDS = [
@@ -26,6 +28,7 @@ const URL_FILTER_FIELDS = [
   { key: 'geography', get: () => filterGeography.value, set: v => { filterGeography.value = v; } },
   { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
   { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
+  { key: 'recode', get: () => filterRecode.value, set: v => { filterRecode.value = v; } },
   { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
 ];
 
@@ -48,7 +51,9 @@ function populateFilterOptions() {
   };
   fill(filterIndustry, distinctSorted(allProgrammes, 'industry'));
   fill(filterGeography, distinctFromArrays(allProgrammes, 'geographic_scope'));
-  fill(filterType, distinctFromArrays(allProgrammes, 'mechanisms'));
+  // Mechanism filter lists the full scorecard taxonomy (in scorecard order), not just values already used.
+  fill(filterType, MECHANISMS_14.map(m => m.name));
+  fill(filterRecode, RECODE_STATUS);
   fill(filterAddedBy, distinctSorted(allProgrammes, 'created_by'));
 }
 
@@ -68,7 +73,7 @@ function renderCard(p) {
     : `<div class="compact-card-logo-fallback">${escapeHtml(initial(p.programme_name))}</div>`;
 
   const meta = [
-    (p.mechanisms && p.mechanisms[0]) ? `<span class="badge badge-green">${escapeHtml(p.mechanisms[0])}</span>` : '',
+    (p.mechanisms_14 && p.mechanisms_14[0]) ? `<span class="badge badge-green">${escapeHtml(p.mechanisms_14[0])}</span>` : `<span class="badge badge-muted">${escapeHtml(p.recode_status || 'To recode')}</span>`,
     p.industry ? `<span class="badge badge-muted">${escapeHtml(p.industry)}</span>` : '',
     p.country ? `<span class="badge badge-muted">${escapeHtml(p.country)}</span>` : ''
   ].join('');
@@ -93,12 +98,14 @@ function applyFiltersAndRender() {
   const geography = filterGeography.value;
   const type = filterType.value;
   const addedBy = filterAddedBy.value;
+  const recode = filterRecode.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allProgrammes.filter(p => {
     if (industry && p.industry !== industry) return false;
     if (geography && !(p.geographic_scope || []).includes(geography)) return false;
-    if (type && !(p.mechanisms || []).includes(type)) return false;
+    if (type && !(p.mechanisms_14 || []).includes(type)) return false;
+    if (recode && (p.recode_status || 'To recode') !== recode) return false;
     if (addedBy && p.created_by !== addedBy) return false;
     if (q) {
       const hay = `${p.programme_name || ''} ${p.company || ''}`.toLowerCase();
@@ -144,13 +151,14 @@ async function loadProgrammes() {
   applyFiltersAndRender();
 }
 
-[filterIndustry, filterGeography, filterType, filterAddedBy].forEach(el => el.addEventListener('change', applyFiltersAndRender));
+[filterIndustry, filterGeography, filterType, filterAddedBy, filterRecode].forEach(el => el.addEventListener('change', applyFiltersAndRender));
 searchInput.addEventListener('input', applyFiltersAndRender);
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterIndustry.value = '';
   filterGeography.value = '';
   filterType.value = '';
   filterAddedBy.value = '';
+  filterRecode.value = '';
   searchInput.value = '';
   applyFiltersAndRender();
 });
@@ -203,32 +211,36 @@ function wireRepeatingRows(container, addBtn, rowHTML, rowSelector) {
   return wireRemove;
 }
 
-// Tier Structure is deliberately not here — it's driven by the programme_tiers
-// table, not a "Tiering" mechanism (removed from Mechanisms entirely; see
-// options.js), so its block is always visible rather than gated by a checkbox.
-const MECHANISM_BLOCKS = {
-  'Spend-based earning': 'block-points',
-  'Member pricing': 'block-discounts',
-  'External partner network': 'block-partnerships'
-};
+// Tier Structure is deliberately not here: it is driven by the programme_tiers table,
+// so its block is always visible. The three detail blocks follow the new coding.
+const POINTS_MECHS = ['Accumulated by Spending (redeemable for spending)', 'Accumulated by Actions (redeemable for spending)'];
+const BLOCK_RULES = [
+  { id: 'block-points', test: (m, b) => m.some(v => POINTS_MECHS.includes(v)) },
+  { id: 'block-discounts', test: (m, b) => b.includes('Cashback / Direct Discounts / Coupons') },
+  { id: 'block-partnerships', test: (m, b) => b.includes('Partner Benefits') }
+];
 
 function wireMechanismToggle(form) {
   function sync() {
-    const checked = readCheckboxGroup(form, 'mechanisms');
-    Object.entries(MECHANISM_BLOCKS).forEach(([mech, blockId]) => {
-      const el = document.getElementById(blockId);
-      if (el) el.hidden = !checked.includes(mech);
+    const m = readCheckboxGroup(form, 'mechanisms_14');
+    const b = readCheckboxGroup(form, 'benefits_18');
+    BLOCK_RULES.forEach(r => {
+      const el = document.getElementById(r.id);
+      if (el) el.hidden = !r.test(m, b);
     });
   }
-  form.querySelectorAll('input[name="mechanisms"]').forEach(cb => cb.addEventListener('change', sync));
+  form.querySelectorAll('input[name="mechanisms_14"], input[name="benefits_18"]').forEach(cb => cb.addEventListener('change', sync));
   sync();
 }
 
 function mechanismsSectionHTML(p = {}) {
   const tiers = p.programme_tiers && p.programme_tiers.length ? p.programme_tiers : [{}];
   return `
-    <div class="form-section-label">Mechanisms</div>
-    ${inputHTML({ key: 'mechanisms', type: 'multiselect', options: 'mechanisms' }, p.mechanisms)}
+    <div class="form-section-label">Mechanisms (how members unlock benefits)</div>
+    ${groupedCheckboxHTML('mechanisms_14', MECHANISM14_FAMILIES.map(f => ({ label: f, items: MECHANISMS_14.filter(m => m.family === f).map(m => ({ value: m.name, title: m.definition })) })), p.mechanisms_14)}
+
+    <div class="form-section-label" style="margin-top:20px;">Benefits (what members get)</div>
+    ${groupedCheckboxHTML('benefits_18', [{ label: '', items: BENEFITS_18.map(b => ({ value: b.name, title: b.examples })) }], p.benefits_18)}
 
     <div id="block-points" class="mech-block" hidden>
       <div class="form-section-label" style="margin-top:20px;">Points / Earning</div>
@@ -240,12 +252,12 @@ function mechanismsSectionHTML(p = {}) {
     </div>
 
     <div id="block-discounts" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">Member pricing</div>
+      <div class="form-section-label" style="margin-top:20px;">Cashback / discounts / coupons</div>
       ${inputHTML({ key: 'discount_types', type: 'multiselect', options: 'discount_type' }, p.discount_types)}
     </div>
 
     <div id="block-partnerships" class="mech-block" hidden>
-      <div class="form-section-label" style="margin-top:20px;">External partner network</div>
+      <div class="form-section-label" style="margin-top:20px;">Partner benefits</div>
       <div class="form-field full"><label>Partner Companies (separate with ;)</label>
         <input type="text" name="partner_companies" placeholder="Emirates; Uber; Booking.com" value="${escapeHtml((p.partner_companies || []).join('; '))}" />
       </div>
@@ -362,7 +374,9 @@ function openAddModal() {
       ...readFormValues(form, PROGRAMME_SOURCE_FIELDS),
       target_customer: readCheckboxGroup(form, 'target_customer'),
       geographic_scope: readCheckboxGroup(form, 'geographic_scope'),
-      mechanisms: readCheckboxGroup(form, 'mechanisms'),
+      mechanisms_14: readCheckboxGroup(form, 'mechanisms_14'),
+      benefits_18: readCheckboxGroup(form, 'benefits_18'),
+      recode_status: 'Recoded',
       discount_types: readCheckboxGroup(form, 'discount_types'),
       points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
       points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,

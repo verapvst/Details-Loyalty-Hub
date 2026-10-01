@@ -71,7 +71,7 @@ export function targetTypeLabel(type) {
 // Each option carries the row id when one exists (tier/feature), else null.
 function valueOptionsFor(targetType, { programme, tiers, features }) {
   switch (targetType) {
-    case 'mechanism': return (programme.mechanisms || []).map(v => ({ value: v, id: null }));
+    case 'mechanism': return (programme.mechanisms_14 && programme.mechanisms_14.length ? programme.mechanisms_14 : (programme.mechanisms || [])).map(v => ({ value: v, id: null }));
     case 'membership_type': return programme.membership_type ? [{ value: programme.membership_type, id: null }] : [];
     case 'target_customer': return (programme.target_customer || []).map(v => ({ value: v, id: null }));
     case 'tier': return (tiers || []).map(t => ({ value: t.tier_name, id: t.id }));
