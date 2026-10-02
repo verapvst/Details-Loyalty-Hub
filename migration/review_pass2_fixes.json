@@ -1,0 +1,505 @@
+{
+ "Eligo Club": {
+  "m": [
+   "Paid Subscription",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Experiential Exclusivity",
+   "Partner Benefits",
+   "Social / Transferable Benefits",
+   "Service Exclusivity & Priority Access",
+   "Community & Networking"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: app, 100+ courses with playing privileges, six brand partners, guests. Concierge and network from secondary sources."
+ },
+ "Les Bordes Golf Club": {
+  "m": [
+   "Invite",
+   "Access by Ownership"
+  ],
+  "b": [],
+  "status": "Suggested",
+  "note": "Page-verified: invitation-only, needs proposal and support of existing members; owners of a residence in the estate qualify. No fees or perks stated on the page."
+ },
+ "Pestana Golf Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers",
+   "Social / Transferable Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified (pestanagolf.com): discounts up to 15% in restaurants/pro shop/Pestana hotels, up to 14 days Tee Time Privileges, up to 3 guests/day at 50% off. Own-group discounts not coded as Partner Benefits."
+ },
+ "PlatinumClubNet": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Service Exclusivity & Priority Access",
+   "Experiential Exclusivity",
+   "Community & Networking",
+   "Partner Benefits",
+   "Personalisation",
+   "AI-Powered Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: club account and app, concierge/white-glove service, global reciprocal access, member networking, Solitaire Network partnership, AI-enhanced recommendations."
+ },
+ "Bannatyne": {
+  "m": [
+   "Paid Subscription",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Upgrades & Complimentary Offers",
+   "Partner Benefits",
+   "Cashback / Direct Discounts / Coupons",
+   "Flexibility & Credit",
+   "Personalisation"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: club-tier fees, member portal, partner rewards (Nike, Gymshark, Adidas), complimentary fitness evaluation, 1-6 month freeze, tailored evaluation."
+ },
+ "Nuffield Health": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Partner Benefits",
+   "Family Benefits",
+   "Flexibility & Credit"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: rolling and 12-month memberships, 20% off physio/assessments, Vitality/AXA partner discounts, children from GBP 6, one-month rolling notice."
+ },
+ "VivaGym Memberships": {
+  "m": [
+   "Paid Subscription",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Social / Transferable Benefits",
+   "Flexibility & Credit",
+   "Cashback / Direct Discounts / Coupons"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: ONE/FLEX/PRIME plans, online/in-club registration, friend guest invites, no lock-in, student discount."
+ },
+ "Amendoeira Golf Resort Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Service Exclusivity & Priority Access"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: exclusive discounts and priority tee-time bookings; 3-month option. Thin page."
+ },
+ "Vale do Lobo Golf Club Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Service Exclusivity & Priority Access",
+   "Experiential Exclusivity",
+   "Social / Transferable Benefits",
+   "Upgrades & Complimentary Offers",
+   "Cashback / Direct Discounts / Coupons",
+   "Family Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Official 2024 PDF: Non-Resident (admittance fee EUR 10,000) vs Resort Member annual fees; members tee times, member-only tournaments, 12 guests/yr at 50%, complimentary tokens, rental discounts, Family Card. Ownership basis of 'Resort Member' not stated: Access by Ownership removed."
+ },
+ "KemperCollection": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Experiential Exclusivity",
+   "Cashback / Direct Discounts / Coupons",
+   "Social / Transferable Benefits"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: reciprocity for members of KemperSports private clubs, preferred rates, Member-for-a-Day, up to 3 guests. No fee stated; access via club membership (codebook rule pending)."
+ },
+ "GolfPass": {
+  "m": [
+   "Paid Subscription",
+   "Accumulated by Spending (redeemable for spending)",
+   "Referral",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Flexibility & Credit",
+   "Partner Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: GolfPass+/Video paid plans, GolfPass Points redeemable on tee times, monthly promo codes, 12 waived booking fees, tee-time protection, Peacock Premium (partner), $10 per friend referred, free trial/account."
+ },
+ "CorePower Yoga": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Partner Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: All Access and class-pack purchases; 20% discount for eligible groups and company partners. No points or referral stated."
+ },
+ "F45 Play": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Accumulated by Actions (redeemable for spending)",
+   "Missions/Gamification"
+  ],
+  "b": [
+   "Partner Benefits",
+   "Sweepstakes, Contests & Prize Draws",
+   "Cashback / Direct Discounts / Coupons"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: app-based points per class/workout/challenge (actions, not spend), weekly streak bonuses, challenges, partner discounts, giveaways/raffles."
+ },
+ "My Bene-FIT": {
+  "m": [
+   "Accumulated by Spending (redeemable for spending)",
+   "Accumulated by Actions (redeemable for spending)",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers",
+   "Service Exclusivity & Priority Access",
+   "Partner Benefits",
+   "Social / Transferable Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: join at reception or app; 20 points per workout, 5-10 points per EUR; Silver/Gold/Platinum by accumulated points (reset rule not stated: tier not coded); discounts, complimentary massages/PT, priority access to events, partners, guest passes."
+ },
+ "Solinca Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Partner Benefits",
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers",
+   "Family Benefits",
+   "Flexibility & Credit"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: no lock-in, physical assessment and nutrition included, Continente partner offers, kids activities."
+ },
+ "David Lloyd": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Social / Transferable Benefits",
+   "Family Benefits",
+   "Upgrades & Complimentary Offers",
+   "Flexibility & Credit"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: Platinum/Club Plus/Club tiers, monthly guest pass (Platinum), child and couple memberships, towel included (Platinum/Club Plus), 3-month flexible term vs 12-month standard."
+ },
+ "SoulCycle": {
+  "m": [
+   "Paid Subscription",
+   "Referral",
+   "Ambassador"
+  ],
+  "b": [
+   "Upgrades & Complimentary Offers",
+   "Cashback / Direct Discounts / Coupons",
+   "Experiential Exclusivity"
+  ],
+  "status": "Recoded",
+  "note": "Official SoulCycle pages: Soul Renew month-to-month class packs (more classes = more savings, no rollover), Spread the Soul referral (free class per 2 friends), Soul Society advocacy/ambassador programme."
+ },
+ "Wellhub": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Partner Benefits",
+   "Family Benefits",
+   "Flexibility & Credit"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: Digital (free) to Platinum paid plans, employer or individual sign-up, dependents if the employer allows, no enrolment/cancellation fees, pause or upgrade anytime."
+ },
+ "The Campus Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Family Benefits",
+   "Service Exclusivity & Priority Access",
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: annual/monthly/weekly/day memberships, joint member at 25% discount and child pricing, advance booking window by plan (5/3/2 days), discounts on lessons/rentals, free induction and health assessment."
+ },
+ "Nando's Rewards": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Do X, Get Y"
+  ],
+  "b": [
+   "Upgrades & Complimentary Offers"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: account/app; one reward per day with spend of GBP 7 or more; 3/6/10 Chillies unlock Green/Orange/Red free-food rewards (stamp-style, not points per euro); rewards expire after one year."
+ },
+ "Starbucks Reward": {
+  "m": [
+   "Accumulated by Spending (redeemable for spending)",
+   "Spending at Brand/Partners - Temporary",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Personalised Gifts",
+   "Service Exclusivity & Priority Access",
+   "Upgrades & Complimentary Offers"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified (starbucks.pt): 100 stars per EUR, Gold at 10,000 stars in 12 months, rewards from 2,500 stars, birthday drink for Gold, early access to new products in the app."
+ },
+ "Capital Club Dubai": {
+  "m": [],
+  "b": [
+   "Community & Networking",
+   "Experiential Exclusivity",
+   "Partner Benefits"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: pre-qualification application reviewed by the membership team (no proposer stated), curated business and social events, 350+ reciprocal clubs. Fees not stated."
+ },
+ "Neera (Al Habtoor City, Dubai)": {
+  "m": [],
+  "b": [
+   "Experiential Exclusivity",
+   "Community & Networking",
+   "Partner Benefits",
+   "Service Exclusivity & Priority Access"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: application/curated membership, events and networking, 60+ reciprocal clubs, preferred hotel rates, lifestyle partners, dedicated concierge. Fees not stated."
+ },
+ "Soho House": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Experiential Exclusivity",
+   "Social / Transferable Benefits",
+   "Service Exclusivity & Priority Access",
+   "Cashback / Direct Discounts / Coupons"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified (Every House): unlimited access to 48 Houses, up to 3 guests, early access to new House openings, best bedroom rates, special rates at Soho Home/Cowshed. Fees and proposer rule not on the page."
+ },
+ "Zero Bond": {
+  "m": [
+   "Paid Subscription",
+   "Invite"
+  ],
+  "b": [
+   "Service Exclusivity & Priority Access",
+   "Experiential Exclusivity",
+   "Partner Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: four age-based fee tiers plus initiation fee; Global Lifetime membership by invitation only; priority reservations at BOND restaurants, member events, preferred hotel partner rates."
+ },
+ "ALL Accor": {
+  "m": [
+   "Accumulated by Spending (redeemable for spending)",
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Paid Subscription"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Points Inflation"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified (all.accor.com): free membership, 2.5-50 points per EUR 10 by tier/brand, ALL PLUS paid frequent-traveller card with guaranteed annual discounts. Tier qualification and benefits per tier not on the page: tier mechanism not coded."
+ },
+ "GHA DISCOVERY": {
+  "m": [
+   "Accumulated by Spending (redeemable for spending)",
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Spending at Brand/Partners - Temporary"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers",
+   "Partner Benefits",
+   "Sustainability & Charitable Giving",
+   "Sweepstakes, Contests & Prize Draws"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: free join, up to 7% back in DISCOVERY Dollars, Titanium free breakfast, Club Avolta partner, donate D$, prize promotion. Tier thresholds from secondary sources (annual)."
+ },
+ "I Prefer Hotel Rewards": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Accumulated by Spending (redeemable for spending)"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers"
+  ],
+  "status": "Suggested",
+  "note": "Page-verified: no fee to join, members-only rates, upgrades and amenities, points per eligible stay. Tiers/points rate not on the page."
+ },
+ "SLH Club": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Upgrades & Complimentary Offers",
+   "Convenience Benefits",
+   "Cashback / Direct Discounts / Coupons",
+   "Partner Benefits",
+   "Sustainability & Charitable Giving",
+   "Experiential Exclusivity",
+   "Sweepstakes, Contests & Prize Draws",
+   "Service Exclusivity & Priority Access"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: free join; Club 01-03 (qualification basis not stated: tier not coded); water, breakfast, upgrades, flexible check-in/out, Club Rate, partner offers, 2 trees planted per night (TreeNation), exclusive events and free-night draws (Club 03), priority access to Bonus Rate. 'Invited member' legacy is a transfer, not coded as Invite."
+ },
+ "Shangri-La Circle": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Accumulated by Spending (redeemable for spending)"
+  ],
+  "b": [
+   "Points Inflation",
+   "Upgrades & Complimentary Offers",
+   "Service Exclusivity & Priority Access",
+   "Experiential Exclusivity",
+   "Social / Transferable Benefits",
+   "Family Benefits",
+   "Cashback / Direct Discounts / Coupons"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: points on dining/stays redeemable for rooms/dining/spa; Gold/Jade/Diamond/Polaris (qualification not stated: tier not coded); 25-50% bonus points, free breakfast, priority waitlist, Club Lounge with two guests, family privilege sharing (Polaris), direct-booking offers."
+ },
+ "Marriott Bonvoy": {
+  "m": [
+   "Spending at Brand/Partners - Temporary",
+   "Accumulated by Spending (redeemable for spending)",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Points Inflation",
+   "Convenience Benefits",
+   "Upgrades & Complimentary Offers",
+   "Partner Benefits",
+   "Experiential Exclusivity",
+   "Proprietary Credit Card Benefits",
+   "Cashback / Direct Discounts / Coupons",
+   "Service Exclusivity & Priority Access"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: free join; Silver 10 / Gold 25 / Platinum 50 / Titanium 75 nights per year, Ambassador 100 nights + USD 23,000; bonus points 10-75%, priority checkout, upgrades, welcome gifts, Ambassador service, airline partners, Bonvoy credit cards, Moments experiences."
+ },
+ "Sonesta Travel Pass": {
+  "m": [
+   "Accumulated by Spending (redeemable for spending)",
+   "Create Account (e.g. Card, App, automatic, etc)"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Upgrades & Complimentary Offers",
+   "Convenience Benefits",
+   "Service Exclusivity & Priority Access",
+   "Points Inflation",
+   "Partner Benefits"
+  ],
+  "status": "Suggested",
+  "note": "Official Sonesta newsroom: points on enrolment, Bronze/Silver (10 nights or 10,000 points)/Gold (20)/Platinum (40), bonus points 50-100%; reset period not stated: tier mechanism removed. Other perks from secondary sources."
+ },
+ "Vilamoura Golf Membership": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Service Exclusivity & Priority Access",
+   "Cashback / Direct Discounts / Coupons",
+   "Social / Transferable Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: annual/6-month/3-month memberships (individual/couple), priority tee-time booking windows (2-6 days), 40% discount at Old Course, 40% guest green-fee discount."
+ },
+ "Equinox+": {
+  "m": [
+   "Paid Subscription"
+  ],
+  "b": [
+   "Partner Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Page-verified: 7-day trial, live and on-demand classes from Equinox, SoulCycle, PURE Yoga, Precision Run, solidcore, TB12 and HeadStrong in one app (partner brands). Price not shown."
+ },
+ "App Lidl Plus": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Accumulated by Spending (redeemable for spending)"
+  ],
+  "b": [
+   "Cashback / Direct Discounts / Coupons",
+   "Personalisation",
+   "Partner Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Official Lidl UK points page: app account (18+, mobile and email), 1 point per GBP spent valid 2 years, Rewards Marketplace, personalised coupons, Partner Offers. UK page: Portugal programme may differ."
+ },
+ "Target Circle": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Paid Subscription"
+  ],
+  "b": [
+   "Personalised Gifts",
+   "Personalisation",
+   "Cashback / Direct Discounts / Coupons",
+   "Service Exclusivity & Priority Access",
+   "Upgrades & Complimentary Offers",
+   "Convenience Benefits",
+   "Partner Benefits",
+   "Proprietary Credit Card Benefits"
+  ],
+  "status": "Recoded",
+  "note": "Official Target pages: free Target Circle; paid Circle 360 (USD 99/yr) with same-day delivery, monthly freebies, extended returns, Shipt partners; Circle Card holders pay USD 49. Birthday/personalised/early-access perks from Target fact sheet."
+ },
+ "Callaway Rewards": {
+  "m": [
+   "Create Account (e.g. Card, App, automatic, etc)",
+   "Accumulated by Spending (redeemable for spending)",
+   "Accumulated by Actions (redeemable for spending)",
+   "Spending at Brand/Partners - Lifetime & Cumulative"
+  ],
+  "b": [
+   "Points Inflation",
+   "Convenience Benefits",
+   "Service Exclusivity & Priority Access",
+   "Upgrades & Complimentary Offers"
+  ],
+  "status": "Recoded",
+  "note": "Official page: free account; Bronze to Platinum by points (1-4 per $), tier kept permanently; trade-in/email/demo-day points; free shipping, early access (Gold+), exclusive products (Platinum), swing evaluation."
+ }
+}
