@@ -21,9 +21,8 @@ export const DIMENSIONS = {
   country: { label: 'Company Country', kind: 'single', get: p => nonEmpty(p.country) },
   geographic_scope: { label: 'Geographic Scope', kind: 'multi', get: p => arr(p.geographic_scope) },
   target_customer: { label: 'Target Customer', kind: 'multi', get: p => arr(p.target_customer) },
-  mechanisms14: { label: 'Mechanism (scorecard, 14)', kind: 'multi', get: p => arr(p.mechanisms_14) },
-  benefits18: { label: 'Benefit (scorecard, 17)', kind: 'multi', get: p => arr(p.benefits_18) },
-  mechanisms: { label: 'Mechanism (v3, legacy)', kind: 'multi', get: p => arr(p.mechanisms) },
+  mechanisms: { label: 'Mechanism (14)', kind: 'multi', get: p => arr(p.mechanisms) },
+  benefits: { label: 'Benefit (17)', kind: 'multi', get: p => arr(p.benefits) },
   feature: { label: 'Feature', kind: 'multi', get: p => arr(p.programme_features).map(f => f.feature_name).filter(Boolean) },
   launch_year: { label: 'Launch Year', kind: 'time', get: p => (typeof p.launch_year === 'number' ? p.launch_year : null) }
 };
@@ -43,7 +42,9 @@ export async function loadAnalysisDataset({ force = false } = {}) {
     .select('*, programme_tiers(*), programme_features(*)')
     .order('programme_name', { ascending: true });
   if (error) throw error;
-  cachedDataset = data || [];
+  // The final taxonomy (14 mechanisms, 17 benefits) is the only one used in analysis: expose it as
+  // p.mechanisms / p.benefits. The legacy v3 coding stays available as mechanisms_v3 / benefits_v3.
+  cachedDataset = (data || []).map(p => ({ ...p, mechanisms_v3: p.mechanisms, benefits_v3: p.benefits, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }));
   return cachedDataset;
 }
 
@@ -766,7 +767,7 @@ const DATA_QUALITY_FIELDS = [
   { key: 'membership_type', label: 'Membership Type', has: p => !!p.membership_type },
   { key: 'geographic_scope', label: 'Geographic Scope', has: p => arr(p.geographic_scope).length > 0 },
   { key: 'source_url', label: 'Source URL', has: p => !!p.source_url },
-  { key: 'benefits', label: 'Benefits tag (legacy — uneven by import batch)', has: p => arr(p.benefits).length > 0 },
+  { key: 'benefits', label: 'Benefits coded (final 17)', has: p => arr(p.benefits).length > 0 },
   {
     key: 'price_when_paid', label: 'Price (of Paid / Subscription / Hybrid programmes)',
     // Scoped to its own denominator (priceable programmes), not the full 225 — a

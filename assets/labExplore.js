@@ -17,7 +17,7 @@ import { mechanismSpectrumColor } from './options.js';
 import { mountChartCard, showEmptyChartState, showTipOnce } from './chartToolbar.js';
 import { saveAnalysis, addNote } from './analysisSaved.js';
 
-const DIM_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms14', 'benefits18', 'mechanisms'];
+const DIM_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'benefits'];
 const MEASURE_OPTIONS = [['count', 'Number of Programmes'], ['pct', '% of Programmes'], ['companies', 'Number of Companies']];
 
 function measureLabel(measure) {
@@ -128,7 +128,7 @@ function dataQualityNoteHTML(programmes) {
   if (!programmes.length) return '';
   const parts = [];
   if (priceRow && priceRow.total) parts.push(`Price known for ${fmtPct(priceRow.pct)} of Paid/Subscription/Hybrid programmes (${fmtNum(priceRow.present)}/${fmtNum(priceRow.total)}) — pricing splits below this line are directional, not a benchmark`);
-  if (benefitsRow) parts.push(`Benefits tag known for ${fmtPct(benefitsRow.pct)} overall, but ${fmtPct(cohort.recent.benefitsPct)} of the ${fmtNum(cohort.recent.count)} programme(s) added since 24 Sep vs. ${fmtPct(cohort.original.benefitsPct)} of the earlier ${fmtNum(cohort.original.count)} — don't compare "Benefits" across cohorts`);
+  if (benefitsRow) parts.push(`Benefits (final 17) coded for ${fmtPct(benefitsRow.pct)} of programmes`);
   if (launchRow) parts.push(`Launch year known for ${fmtPct(launchRow.pct)} — Trends reflect under half the sample`);
   if (!parts.length) return '';
   return `<div class="chart-card-note" style="margin: -8px 0 20px;">${parts.join(' · ')}</div>`;

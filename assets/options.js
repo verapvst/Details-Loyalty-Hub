@@ -221,16 +221,11 @@ export const OPTIONS = {
   ]
 };
 
-// Analytical ordering for Mechanisms: from more transactional to more experiential.
-// Used in ALL analysis (cards, charts, heatmaps, trends); only picklists stay
-// alphabetical (OPTIONS.mechanisms). It is a reading convention, not a measured score:
-// Reach (partners, ecosystem) and Referral sit where their typical value type sits.
-export const MECHANISM_ANALYTICAL_ORDER = [
-  'Member pricing', 'Spend-based earning', 'External partner network',
-  'Included member benefits', 'Ecosystem cross-use', 'Behaviour-based rewards',
-  'Referral', 'Earned status', 'Privileged access', 'Member experiences & events',
-  'Community'
-];
+// Analytical ordering for Mechanisms: the 14 final scorecard mechanisms, in family order
+// (Tiers, Points, Free enrolment, Missions, Referral & Invite, Ambassador, Ownership, Tenure).
+// Used in ALL analysis (cards, charts, heatmaps, trends); only picklists stay alphabetical.
+// Reading convention, not a measured score (the scorecard owns the scores).
+export const MECHANISM_ANALYTICAL_ORDER = MECHANISMS_14.map(m => m.name);
 
 export const MECHANISM_DIMENSIONS = {
   'Spend-based earning': 'Earning', 'Behaviour-based rewards': 'Earning',
