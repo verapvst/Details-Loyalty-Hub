@@ -39,7 +39,9 @@ export const INSIGHT_TYPE_DEFINITIONS = {
   'Other': 'Information that does not clearly fit any of the categories above.'
 };
 
-// ---------------- Scorecard taxonomies (14 mechanisms, 18 benefits) ----------------
+// ---------------- Scorecard taxonomies (14 mechanisms, 17 benefits) ----------------
+// 2026-10-02: Early Access is folded into Service Exclusivity (W3 report), so the final list is 17 benefits.
+// The identifiers BENEFITS_18 / programmes.benefits_18 keep their old name to avoid a schema change; they hold the 17.
 // Source of truth: METHODOLOGY/Scorecards (Mechanisms_Scorecard_FINAL.xlsx, Benefits Scorecard.xlsx),
 // list confirmed by the team on 2026-10-01. Mechanisms answer "how do you unlock the benefits";
 // benefits answer "what does the member get". These REPLACE the v3 mechanisms (11) for coding and
@@ -66,7 +68,7 @@ export const MECHANISM14_FAMILIES = [...new Set(MECHANISMS_14.map(m => m.family)
 
 export const BENEFITS_18 = [
   { name: "Upgrades & Complimentary Offers", examples: "Automatic Room/Suite Upgrade; Complimentary Welcome Amenity; Complimentary Night / Round After Streak" },
-  { name: "Service Exclusivity & Priority Access", examples: "Dedicated Concierge / Named Contact; Guaranteed Reservation (No Waitlist); Priority Service Line" },
+  { name: "Service Exclusivity & Priority Access", examples: "Dedicated Concierge / Named Contact; Guaranteed Reservation (No Waitlist); Priority Service Line; Early Access (Tier-Based Priority Booking Window; Paid Early-Access Unlock)" },
   { name: "Experiential Exclusivity", examples: "Access to Member-Only Events; Access to Exclusive Facilities; Curated Experience Catalogue Access" },
   { name: "Convenience Benefits", examples: "Late Checkout / Early Check-in; Complimentary Parking / Valet; Fast-Track Check-in / Check-out" },
   { name: "Community & Networking", examples: "Member Directory / Networking Access; Alumni / Legacy Community Access" },
@@ -78,7 +80,6 @@ export const BENEFITS_18 = [
   { name: "Points Inflation", examples: "Extra points when spending at the brand; higher earning rate at premium assets; extra points when using multiple services; bonus points for cross-asset spending" },
   { name: "Family Benefits", examples: "Family Membership Extension; Family Programming Access" },
   { name: "Cashback / Direct Discounts / Coupons", examples: "Member-Rate Discount; Cash-Equivalent Account Credit" },
-  { name: "Early Access", examples: "Tier-Based Priority Booking Window; Paid Early-Access Unlock" },
   { name: "Sustainability & Charitable Giving", examples: "Points-to-Donation Conversion; Sustainable-Choice Recognition Credit" },
   { name: "Proprietary Credit Card Benefits", examples: "Card Purchase Protection & Travel Insurance; Card-Exclusive Statement Credits" },
   { name: "AI-Powered Benefits", examples: "AI Concierge / Trip Planning Assistant; AI-Curated Personal Offers" },
@@ -117,13 +118,14 @@ export const OPTIONS = {
     'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
-  // Industries (taxonomy review 2026-09): 9 analytical industries, sized for comparison.
+  // Industries (final, 2026-10): the first 7 are the Core Industries (Hotels, Golf, Wellness, Beach, Marine,
+  // Nightlife, Food & Beverage); the rest are non-core. One industry per programme, no secondary.
   // Leisure destinations (ski, parks) sit in Leisure & Entertainment, consumer packaged
   // goods sit in Retail (not Food & Beverage), education sits in Leisure & Entertainment.
   industry: [
-    'Hotels & Hospitality', 'Golf', 'Food & Beverage', 'Fitness & Wellness',
-    'Leisure & Entertainment', 'Automotive', 'Travel & Mobility', 'Retail',
-    'Banking & Financial Services', 'Other'
+    'Hotels', 'Golf', 'Wellness', 'Beach', 'Marine', 'Nightlife', 'Food & Beverage',
+    'Retail', 'Travel & Mobility', 'Automotive', 'Banking & Financial Services',
+    'Leisure & Entertainment', 'Other'
   ],
   // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
   // below for the shared team definitions) — orthogonal to Scope, which is what it's about.

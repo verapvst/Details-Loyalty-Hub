@@ -22,7 +22,7 @@ export const DIMENSIONS = {
   geographic_scope: { label: 'Geographic Scope', kind: 'multi', get: p => arr(p.geographic_scope) },
   target_customer: { label: 'Target Customer', kind: 'multi', get: p => arr(p.target_customer) },
   mechanisms14: { label: 'Mechanism (scorecard, 14)', kind: 'multi', get: p => arr(p.mechanisms_14) },
-  benefits18: { label: 'Benefit (scorecard, 18)', kind: 'multi', get: p => arr(p.benefits_18) },
+  benefits18: { label: 'Benefit (scorecard, 17)', kind: 'multi', get: p => arr(p.benefits_18) },
   mechanisms: { label: 'Mechanism (v3, legacy)', kind: 'multi', get: p => arr(p.mechanisms) },
   feature: { label: 'Feature', kind: 'multi', get: p => arr(p.programme_features).map(f => f.feature_name).filter(Boolean) },
   launch_year: { label: 'Launch Year', kind: 'time', get: p => (typeof p.launch_year === 'number' ? p.launch_year : null) }
