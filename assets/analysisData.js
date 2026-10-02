@@ -7,7 +7,7 @@
 // mutually-exclusive buckets — a programme with 3 mechanisms contributes to 3
 // counts, and percentages for these fields are allowed to exceed 100%.
 import { supabase } from './supabase.js';
-import { MECHANISM_ANALYTICAL_ORDER, sortByMechanismOrder } from './options.js';
+import { MECHANISM_ANALYTICAL_ORDER, sortByMechanismOrder, sortByIndustryOrder } from './options.js';
 
 // ---------------- Dimension registry ----------------
 // Single place describing every field Analysis can group/filter/cross-tab by.
@@ -21,8 +21,8 @@ export const DIMENSIONS = {
   country: { label: 'Company Country', kind: 'single', get: p => nonEmpty(p.country) },
   geographic_scope: { label: 'Geographic Scope', kind: 'multi', get: p => arr(p.geographic_scope) },
   target_customer: { label: 'Target Customer', kind: 'multi', get: p => arr(p.target_customer) },
-  mechanisms: { label: 'Mechanism (14)', kind: 'multi', get: p => arr(p.mechanisms) },
-  benefits: { label: 'Benefit (17)', kind: 'multi', get: p => arr(p.benefits) },
+  mechanisms: { label: 'Mechanisms', kind: 'multi', get: p => arr(p.mechanisms) },
+  benefits: { label: 'Benefits', kind: 'multi', get: p => arr(p.benefits) },
   feature: { label: 'Feature', kind: 'multi', get: p => arr(p.programme_features).map(f => f.feature_name).filter(Boolean) },
   launch_year: { label: 'Launch Year', kind: 'time', get: p => (typeof p.launch_year === 'number' ? p.launch_year : null) }
 };
@@ -113,6 +113,7 @@ function sortedValues(agg, dimKey) {
   if (dim.kind === 'time') return values.sort((a, b) => a - b);
   // Mechanisms always read transactional -> experiential, never as a leaderboard.
   if (dimKey === 'mechanisms') return sortByMechanismOrder(values.sort((a, b) => agg.groups.get(b).programmeCount - agg.groups.get(a).programmeCount));
+  if (dimKey === 'industry') return sortByIndustryOrder(values);
   return values.sort((a, b) => agg.groups.get(b).programmeCount - agg.groups.get(a).programmeCount);
 }
 
@@ -178,6 +179,7 @@ export function timeSeries(programmes, { groupByKey = 'none', measure = 'count' 
   perYear.forEach(yearMap => yearMap.forEach((g, name) => totals.set(name, totals.get(name) + g.programmeCount)));
   let orderedNames = [...seriesNames].sort((a, b) => totals.get(b) - totals.get(a));
   if (groupByKey === 'mechanisms') orderedNames = sortByMechanismOrder(orderedNames);
+  if (groupByKey === 'industry') orderedNames = sortByIndustryOrder(orderedNames);
 
   const series = orderedNames.map(name => {
     const values = years.map(y => {

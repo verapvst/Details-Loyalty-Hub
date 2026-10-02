@@ -352,3 +352,11 @@ export const TASK_FIELDS = [
   { key: 'status', label: 'Status', type: 'select', options: 'task_status', required: true },
   { key: 'task_type', label: 'Task Type', type: 'select', options: 'task_type', required: true }
 ];
+
+// Industries always read in the agreed order (core 7 by relevance to Details' assets, then non-core
+// alphabetical, "Other" last), never as a frequency leaderboard.
+export function sortByIndustryOrder(values) {
+  const order = OPTIONS.industry;
+  const known = order.filter(v => values.includes(v));
+  return [...known, ...values.filter(v => !order.includes(v))];
+}
