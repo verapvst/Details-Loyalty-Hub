@@ -118,14 +118,14 @@ export const OPTIONS = {
     'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
     'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe', 'Other'
   ],
-  // Industries (final, 2026-10): the first 7 are the Core Industries (Hotels, Golf, Wellness, Beach, Marine,
-  // Nightlife, Food & Beverage); the rest are non-core. One industry per programme, no secondary.
+  // Industries (final, 2026-10): the first 7 are the Core Industries (ordered by relevance to Details' assets: Hotels, Golf,
+  // Food & Beverage, Wellness, Beach, Marine, Nightlife); the rest are non-core, alphabetical. One industry per programme, no secondary.
   // Leisure destinations (ski, parks) sit in Leisure & Entertainment, consumer packaged
   // goods sit in Retail (not Food & Beverage), education sits in Leisure & Entertainment.
   industry: [
-    'Hotels', 'Golf', 'Wellness', 'Beach', 'Marine', 'Nightlife', 'Food & Beverage',
-    'Retail', 'Travel & Mobility', 'Automotive', 'Banking & Financial Services',
-    'Leisure & Entertainment', 'Other'
+    'Hotels', 'Golf', 'Food & Beverage', 'Wellness', 'Beach', 'Marine', 'Nightlife',
+    'Automotive', 'Banking & Financial Services', 'Leisure & Entertainment', 'Retail', 'Travel & Mobility',
+    'Other'
   ],
   // Data & Insights: what KIND of information this is (see INSIGHT_TYPE_DEFINITIONS
   // below for the shared team definitions) — orthogonal to Scope, which is what it's about.
