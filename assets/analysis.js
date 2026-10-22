@@ -206,7 +206,8 @@ function rerenderAll() {
 
 try {
   allProgrammes = await loadAnalysisDataset();
+  rerenderAll();
 } catch (e) {
-  showToast(`Could not load programmes: ${e.message}`, true);
+  // Never render an empty analysis as if it were real: say what happened and offer a retry.
+  document.querySelector('.lab-main').innerHTML = `<div class="error-state" style="margin:40px 0;text-align:center;">Could not load the programmes (${escapeHtml(e.message || 'network error')}). <button type="button" class="btn-primary" onclick="location.reload()">Try again</button></div>`;
 }
-rerenderAll();

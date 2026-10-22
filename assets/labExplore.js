@@ -127,7 +127,7 @@ function dataQualityNoteHTML(programmes) {
   if (!programmes.length) return '';
   const parts = [];
   if (priceRow && priceRow.total) parts.push(`Price known for ${fmtPct(priceRow.pct)} of Paid/Subscription/Hybrid programmes (${fmtNum(priceRow.present)}/${fmtNum(priceRow.total)}) — pricing splits below this line are directional, not a benchmark`);
-  if (benefitsRow) parts.push(`Benefits (final 17) coded for ${fmtPct(benefitsRow.pct)} of programmes`);
+  if (benefitsRow) parts.push(`Benefits (final 16) coded for ${fmtPct(benefitsRow.pct)} of programmes`);
   if (launchRow) parts.push(`Launch year known for ${fmtPct(launchRow.pct)} — Trends reflect under half the sample`);
   if (!parts.length) return '';
   return `<div class="chart-card-note" style="margin: -8px 0 20px;">${parts.join(' · ')}</div>`;

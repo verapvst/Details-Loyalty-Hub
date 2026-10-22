@@ -139,10 +139,15 @@ function applyFiltersAndRender() {
 }
 
 async function loadProgrammes() {
-  const { data, error } = await supabase
+  let data, error;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    ({ data, error } = await supabase
     .from('programmes')
     .select('id,programme_name,company,industry,country,geographic_scope,programme_positioning,membership_type,mechanisms_14,benefits_18,recode_status,created_by,cover_image_url,points_expires,points_expiration_period,points_notes,partner_companies,discount_types')
-    .order('programme_name', { ascending: true });
+    .order('programme_name', { ascending: true }));
+    if (!error) break;
+    await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+  }
 
   if (error) {
     cardGrid.innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">Couldn't load programmes: ${escapeHtml(error.message)}</div>`;

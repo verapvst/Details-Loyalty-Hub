@@ -37,12 +37,19 @@ let cachedDataset = null;
 
 export async function loadAnalysisDataset({ force = false } = {}) {
   if (cachedDataset && !force) return cachedDataset;
-  const { data, error } = await supabase
+  // Retries: the free-tier database can be slow or briefly unavailable right after being idle, and a single
+  // failed request used to leave Analysis showing zeros.
+  let data, error;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    ({ data, error } = await supabase
     .from('programmes')
     .select('id,created_by,programme_name,company,parent_company,country,geography_market,industry,sub_industry,primary_programme_type,secondary_programme_type,membership_model,free_vs_paid,number_of_fee_tiers,fee_range,main_target_customer,programme_positioning,primary_benefit,secondary_benefit,tertiary_benefit,discount_type,number_of_tiers,tier_qualification_basis,single_brand_vs_ecosystem,primary_partner_industry,secondary_partner_industry,date_checked,cover_image_url,launch_year,target_customer,geographic_scope,membership_type,access_registration,mechanisms,benefits,points_expires,points_expiration_period,points_notes,discount_types,source_url,partner_companies,ecosystem_type,mechanisms_14,benefits_18,recode_status, programme_tiers(*), programme_features(*)')
-    .order('programme_name', { ascending: true });
+    .order('programme_name', { ascending: true }));
+    if (!error) break;
+    await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+  }
   if (error) throw error;
-  // The final taxonomy (14 mechanisms, 17 benefits) is the only one used in analysis: expose it as
+  // The final taxonomy (14 mechanisms, 16 benefits) is the only one used in analysis: expose it as
   // p.mechanisms / p.benefits. The legacy v3 coding stays available as mechanisms_v3 / benefits_v3.
   cachedDataset = (data || []).map(p => ({ ...p, mechanisms_v3: p.mechanisms, benefits_v3: p.benefits, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }));
   return cachedDataset;
@@ -769,7 +776,7 @@ const DATA_QUALITY_FIELDS = [
   { key: 'membership_type', label: 'Membership Type', has: p => !!p.membership_type },
   { key: 'geographic_scope', label: 'Geographic Scope', has: p => arr(p.geographic_scope).length > 0 },
   { key: 'source_url', label: 'Source URL', has: p => !!p.source_url },
-  { key: 'benefits', label: 'Benefits coded (final 17)', has: p => arr(p.benefits).length > 0 },
+  { key: 'benefits', label: 'Benefits coded (final 16)', has: p => arr(p.benefits).length > 0 },
   {
     key: 'price_when_paid', label: 'Price (of Paid / Subscription / Hybrid programmes)',
     // Scoped to its own denominator (priceable programmes), not the full 225 — a
