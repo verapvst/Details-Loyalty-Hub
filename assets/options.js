@@ -83,43 +83,6 @@ export const BENEFITS_16 = [
 ];
 export const BENEFIT_FAMILIES = [...new Set(BENEFITS_16.map(b => b.family))];
 
-// Scorecard results shown in Steering 1 (weighted score, rank, tier). Tier cut-offs are the mean of the
-// totals +/- 0.5 SD, so tiers are relative to the 14 mechanisms / 16 benefits compared.
-export const SCORECARD_MECHANISMS = {
-  "Lifetime for Spending": { score: 10.19, rank: 1, tier: "Prioritize" },
-  "Tenure / Legacy Recognition": { score: 9.21, rank: 2, tier: "Prioritize" },
-  "Temporary for Spending": { score: 8.94, rank: 3, tier: "Prioritize" },
-  "Accumulated by Spending": { score: 8.74, rank: 4, tier: "Prioritize" },
-  "Do X, Get Y": { score: 8.59, rank: 5, tier: "Prioritize" },
-  "Create Account": { score: 8.26, rank: 6, tier: "Consider" },
-  "Newsletter, Email, Phone": { score: 8.01, rank: 7, tier: "Consider" },
-  "Paid Subscription": { score: 7.99, rank: 8, tier: "Consider" },
-  "Access by Ownership": { score: 7.31, rank: 9, tier: "Consider" },
-  "Referral": { score: 6.61, rank: 10, tier: "Exclude" },
-  "Invite": { score: 6.23, rank: 11, tier: "Exclude" },
-  "Ambassador": { score: 5.89, rank: 12, tier: "Exclude" },
-  "Missions / Gamification": { score: 5.29, rank: 13, tier: "Exclude" },
-  "Accumulated by Actions": { score: 3.74, rank: 14, tier: "Exclude" },
-};
-export const SCORECARD_BENEFITS = {
-  "Family": { score: 12.71, rank: 1, tier: "Prioritize" },
-  "Social / Transferable": { score: 11.11, rank: 2, tier: "Prioritize" },
-  "Personalization": { score: 10.06, rank: 3, tier: "Prioritize" },
-  "Convenience": { score: 9.56, rank: 4, tier: "Prioritize" },
-  "Community & Networking": { score: 9.40, rank: 5, tier: "Consider" },
-  "Extra-service Exclusivity": { score: 9.04, rank: 6, tier: "Consider" },
-  "Partner Benefits": { score: 8.83, rank: 7, tier: "Consider" },
-  "Flexibility & Credit": { score: 8.69, rank: 8, tier: "Consider" },
-  "AI-powered": { score: 8.20, rank: 9, tier: "Consider" },
-  "ESG Donation": { score: 8.00, rank: 10, tier: "Consider" },
-  "Service Exclusivity": { score: 7.86, rank: 11, tier: "Consider" },
-  "Upgrades & Complementary": { score: 7.51, rank: 12, tier: "Exclude" },
-  "Personalized Gifts": { score: 7.03, rank: 13, tier: "Exclude" },
-  "Savings": { score: 6.73, rank: 14, tier: "Exclude" },
-  "Points Inflation": { score: 5.91, rank: 15, tier: "Exclude" },
-  "Contests & Prize Draws": { score: 5.36, rank: 16, tier: "Exclude" },
-};
-
 // Coding progress per programme while the Hub moves from the v3 taxonomy to the 14/18 one.
 export const RECODE_STATUS = ['To recode', 'Suggested', 'Recoded', 'Verified', 'Excluded'];
 // 'Excluded' hides a programme from the Database, Analysis and Favorites lists without deleting it.

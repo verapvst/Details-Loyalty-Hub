@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
-  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES, SCORECARD_MECHANISMS, SCORECARD_BENEFITS
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
@@ -40,17 +40,12 @@ function chipsOrEmpty(arr) {
   return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>`;
 }
 
-// Scorecard tier of a mechanism / benefit (Steering 1), shown as the chip colour.
-function scoreOf(targetType, v) { return (targetType === 'benefit' ? SCORECARD_BENEFITS : SCORECARD_MECHANISMS)[v]; }
-function tierClass(targetType, v) { const s = scoreOf(targetType, v); return s ? `tier-chip tier-${s.tier.toLowerCase()}` : 'badge-muted'; }
-function tierTitle(targetType, v) { const s = scoreOf(targetType, v); return s ? `${s.tier} · scorecard rank ${s.rank}, score ${s.score}` : ''; }
-
 // Like chips: same as chipsOrEmpty but each chip carries its own heart button.
 function likeableChipsHTML(targetType, arr) {
   if (!Array.isArray(arr) || !arr.length) return `<span class="value empty">—</span>`;
   return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `
     <span class="like-chip">
-      <span class="badge ${tierClass(targetType, v)}" title="${escapeHtml(tierTitle(targetType, v))}">${escapeHtml(v)}</span>
+      <span class="badge badge-muted">${escapeHtml(v)}</span>
       ${heartHTML(targetType, v, null, likeSummary(likes, targetType, v))}
     </span>
   `).join('')}</div>`;

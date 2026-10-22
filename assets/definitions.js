@@ -1,6 +1,6 @@
 // Hover definitions for every mechanism and benefit, on every page: rest the mouse on a name (chart label, bar,
-// table row, chip) and the Steering 1 definition (slides 24-25) plus its scorecard tier appears.
-import { DEFINITIONS, SCORECARD_MECHANISMS, SCORECARD_BENEFITS } from './options.js';
+// table row, chip) and the Steering 1 definition (slides 24-25) appears.
+import { DEFINITIONS } from './options.js';
 
 let tip = null;
 let current = null;
@@ -31,9 +31,8 @@ function lookup(el) {
 
 function show(found, x, y) {
   const d = DEFINITIONS[found.name];
-  const sc = (d.kind === 'Mechanism' ? SCORECARD_MECHANISMS : SCORECARD_BENEFITS)[found.name];
   const t = ensureTip();
-  t.innerHTML = `<div class="def-name">${esc(found.name)}</div><div class="def-meta">${esc(d.kind)} · ${esc(d.family)}</div><div class="def-text">${esc(d.text)}</div>${sc ? `<div class="def-score"><span class="sc-tier tier-${sc.tier.toLowerCase()}">${sc.tier}</span> scorecard rank ${sc.rank} of ${d.kind === 'Mechanism' ? 14 : 16} · score ${sc.score.toFixed(1)}</div>` : ''}`;
+  t.innerHTML = `<div class="def-name">${esc(found.name)}</div><div class="def-meta">${esc(d.kind)} · ${esc(d.family)}</div><div class="def-text">${esc(d.text)}</div>`;
   t.hidden = false;
   move(x, y);
 }

@@ -1369,42 +1369,16 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
   .filter-add-panel { width: calc(100vw - 40px); right: -20px; }
 }
 
-/* ---- Analysis: Scorecard workspace ---- */
-.sc-head { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
-.sc-toggle { display: inline-flex; background: var(--surface-alt); border-radius: 999px; padding: 4px; }
-.sc-pill { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; }
-.sc-pill.active { background: var(--white); color: var(--dark); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.sc-note { color: var(--muted); font-size: 13px; max-width: 760px; }
-.sc-legend { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
-.sc-tier { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.tier-prioritize { color: #1f5f3a; background: #dff0e5; }
-.tier-consider { color: #8a6a1c; background: #f6ecd2; }
-.tier-exclude { color: #6e6e73; background: #ececef; }
-.sc-table-wrap { overflow-x: auto; }
-.sc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.sc-table th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border, #e5e5ea); white-space: nowrap; }
-.sc-table td { padding: 9px 10px; border-bottom: 1px solid var(--border, #eee); vertical-align: middle; }
-.sc-n { display: block; font-weight: 400; font-size: 11px; }
-.sc-name { min-width: 230px; }
-.sc-family { display: block; color: var(--muted); font-size: 12px; }
-.sc-rank { color: var(--muted); width: 28px; }
-.sc-cell { text-align: center; min-width: 52px; font-variant-numeric: tabular-nums; }
-.sc-link { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
-
 /* ---- Identity: create profile ---- */
 .identity-create { display: flex; gap: 8px; margin-bottom: 8px; }
 .identity-create input { flex: 1; padding: 11px 14px; border: 1px solid var(--border, #d8d8de); border-radius: 10px; font: inherit; }
 .identity-error { color: var(--red); font-size: 13px; margin-bottom: 8px; }
 .identity-or { color: var(--muted); font-size: 12px; margin: 22px 0 10px; text-transform: uppercase; letter-spacing: .06em; }
-.tier-chip.tier-prioritize { color: #1f5f3a; background: #dff0e5; }
-.tier-chip.tier-consider { color: #8a6a1c; background: #f6ecd2; }
-.tier-chip.tier-exclude { color: #6e6e73; background: #ececef; }
 
 /* ---- Hover definitions (mechanisms / benefits) ---- */
 .def-tip { position: fixed; z-index: 10000; max-width: 340px; background: #1c1c1e; color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0,0,0,.28); pointer-events: none; }
 .def-tip .def-name { font-weight: 700; font-size: 14px; }
 .def-tip .def-meta { color: #b9b9c0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin: 2px 0 8px; }
-.def-tip .def-score { margin-top: 9px; font-size: 12px; color: #d8d8de; }
 
 .identity-pick.selected { background: var(--accent-light); outline: 2px solid var(--accent); }
 .identity-pick small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }

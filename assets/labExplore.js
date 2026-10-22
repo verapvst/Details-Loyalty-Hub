@@ -121,7 +121,7 @@ function dataQualityNoteHTML(programmes) {
   const pct = (n) => fmtPct((n / programmes.length) * 100);
   const m = programmes.filter(p => (p.mechanisms || []).length).length;
   const b = programmes.filter(p => (p.benefits || []).length).length;
-  return `<div class="chart-card-note" style="margin: -8px 0 20px;">Mechanisms coded for ${pct(m)} and benefits for ${pct(b)} of programmes. Hover a mechanism or benefit to see its Steering 1 definition.</div>`;
+  return `<div class="chart-card-note" style="margin: -8px 0 20px;">Mechanisms coded for ${pct(m)} and benefits for ${pct(b)} of programmes. Hover a mechanism or benefit to see its definition.</div>`;
 }
 
 export function mount(container, ctx) {
