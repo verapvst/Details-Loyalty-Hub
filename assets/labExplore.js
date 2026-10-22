@@ -15,7 +15,6 @@ import { DIMENSIONS, distribution, categoryProfile, snapshotKpis, dataQuality, i
 import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
 import { mechanismSpectrumColor } from './options.js';
 import { mountChartCard, showEmptyChartState, showTipOnce } from './chartToolbar.js';
-import { saveAnalysis, addNote } from './analysisSaved.js';
 
 const DIM_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'benefits'];
 const MEASURE_OPTIONS = [['count', 'Number of Programmes'], ['pct', '% of Programmes'], ['companies', 'Number of Companies']];
@@ -73,7 +72,7 @@ function programmeRowHTML(p) {
 // category is selected.
 function categorySectionHTML(dimKey, value, programmes) {
   const profile = categoryProfile(programmes, dimKey, value);
-  const isMechanismBridge = dimKey === 'mechanisms';
+  const isMechanismBridge = false;
   const rows = [...profile.subset].sort((a, b) => (a.programme_name || '').localeCompare(b.programme_name || ''));
 
   return `
@@ -180,7 +179,6 @@ export function mount(container, ctx) {
     if (!selectedValue) { el.hidden = true; el.innerHTML = ''; return; }
     el.hidden = false;
     el.innerHTML = categorySectionHTML(state.dimKey, selectedValue, lastProgrammes);
-    el.querySelector('#ex-drill-bridge-mechanisms')?.addEventListener('click', () => ctx.switchToMechanism(selectedValue));
   }
 
   function onSelect(value) {
@@ -242,11 +240,7 @@ export function mount(container, ctx) {
         rows: dist.rows.map(r => [r.value, state.measure === 'pct' ? Number(r.measureValue.toFixed(1)) : Math.round(r.measureValue), Number(r.pct.toFixed(1)), r.companies])
       }),
       filename: `${state.dimKey}-distribution`,
-      saveTitle: title,
-      onSave: async (name, takeaway) => {
-        const row = await saveAnalysis({ name, lab: 'explore', config: { ...state, globalFilters: ctx.getGlobalFilters() } });
-        if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
-      }
+      saveTitle: title
     });
 
     showTipOnce(cardRoot, 'clickthrough', 'Tip: click any bar to see the full breakdown and its programmes below.');

@@ -9,7 +9,6 @@ import { DIMENSIONS, crossTab, normaliseCell, timeSeries, programmesMatching } f
 import { mechanismSpectrumColor } from './options.js';
 import { renderHeatmap, renderBarChart, renderLineChart, compatibleChartTypes, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
-import { saveAnalysis, addNote } from './analysisSaved.js';
 
 const AXIS_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'benefits', 'feature', 'launch_year'];
 const CHART_TYPE_LABELS = { heatmap: 'Heatmap', groupedBar: 'Grouped Bar', stackedBar: 'Stacked Bar', stacked100Bar: '100% Stacked Bar', line: 'Line', area: 'Area', stackedArea: 'Stacked Area', bar: 'Bar' };
@@ -214,11 +213,7 @@ export function mount(container, ctx) {
       buildChart: (el) => buildChartInto(el, programmes),
       getTableData: () => getTableData(programmes),
       filename: `${state.yKey}-x-${state.xKey}`,
-      saveTitle: crossTitle(),
-      onSave: async (name, takeaway) => {
-        const row = await saveAnalysis({ name, lab: 'relate', config: { ...state, globalFilters: ctx.getGlobalFilters() } });
-        if (takeaway) await addNote({ title: name, note_text: takeaway, linked_analysis_id: row.id, tags: [] });
-      }
+      saveTitle: crossTitle()
     });
     maybeShowMechanismTip(cardRoot);
   }

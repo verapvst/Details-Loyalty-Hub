@@ -1,5 +1,5 @@
 // My Laboratory orchestrator. Loads the dataset once and drives four workspaces
-// (Scorecard / Explore / Relate / Saved) — only one visible at a time, all mounted once so
+// (Explore / Relate) — only one visible at a time, all mounted once so
 // switching tabs never loses in-progress state. Reuses assets/analysisData.js for every
 // aggregation; this file is purely page chrome (header, compact filters, tabs, persistence).
 import { initNav, showToast } from './app.js';
@@ -10,8 +10,6 @@ import { fmtNum } from './charts.js';
 
 import { mount as mountExplore } from './labExplore.js';
 import { mount as mountRelate } from './labRelate.js';
-import { mount as mountScorecard } from './labScorecard.js';
-import { mount as mountSaved } from './labSaved.js';
 
 await initNav('analysis');
 await loadCustomOptions();
@@ -133,10 +131,10 @@ function restoreFilterUI() {
 
 // ---------------- Workspace tabs ----------------
 
-const WORKSPACES = ['scorecard', 'explore', 'relate', 'saved'];
+const WORKSPACES = ['explore', 'relate'];
 const workspaces = {};
-let activeTab = loadPersisted('activeTab') || 'scorecard';
-if (!WORKSPACES.includes(activeTab)) activeTab = 'scorecard';
+let activeTab = loadPersisted('activeTab') || 'explore';
+if (!WORKSPACES.includes(activeTab)) activeTab = 'explore';
 
 function showTab(tab) {
   activeTab = tab;
@@ -175,7 +173,7 @@ function makeCtx(workspaceKey) {
     persist: (state) => savePersisted(workspaceKey, state),
     // Used by Explore's Mechanism drill-down to bridge into the Mechanisms workspace
     // with that exact mechanism already selected, instead of landing on it empty.
-    switchToMechanism: () => showTab('scorecard')
+    switchToMechanism: () => showTab('relate')
   };
 }
 
@@ -186,10 +184,8 @@ showTab(activeTab);
 
 workspaces.explore = mountExplore(document.getElementById('workspace-explore'), makeCtx('explore'));
 workspaces.relate = mountRelate(document.getElementById('workspace-relate'), makeCtx('relate'));
-workspaces.scorecard = mountScorecard(document.getElementById('workspace-scorecard'), makeCtx('scorecard'));
-workspaces.saved = mountSaved(makeCtx('saved'));
 
-const DATA_DRIVEN_WORKSPACES = ['scorecard', 'explore', 'relate'];
+const DATA_DRIVEN_WORKSPACES = ['explore', 'relate'];
 DATA_DRIVEN_WORKSPACES.forEach(key => {
   const persisted = loadPersisted(key);
   if (persisted) workspaces[key].applyConfig(persisted);
