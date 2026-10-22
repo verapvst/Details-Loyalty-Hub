@@ -1405,3 +1405,7 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .def-tip .def-name { font-weight: 700; font-size: 14px; }
 .def-tip .def-meta { color: #b9b9c0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin: 2px 0 8px; }
 .def-tip .def-score { margin-top: 9px; font-size: 12px; color: #d8d8de; }
+
+.identity-pick.selected { background: var(--accent-light); outline: 2px solid var(--accent); }
+.identity-pick small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
+.identity-grid { max-height: 280px; overflow-y: auto; }

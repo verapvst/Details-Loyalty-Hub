@@ -174,23 +174,34 @@ async function renderIdentityModal({ forceChoice }) {
   }
 
   await loadTeamMembers();
+  const me = getIdentity();
+  const names = getActiveTeamMembers();
+  const picks = names.map(name =>
+    `<button class="identity-pick ${name === me ? 'selected' : ''}" data-name="${escapeHtml(name)}" type="button">
+       <span class="identity-avatar">${avatarInnerHTML(name)}</span>
+       <span>${escapeHtml(name)}${name === me ? '<small>you</small>' : ''}</span>
+     </button>`
+  ).join('');
+
   root.innerHTML = `
     <div class="modal-overlay" id="identity-overlay">
       <div class="identity-modal">
-        <h2>${forceChoice ? 'Welcome to the Loyalty Hub' : 'Your profile'}</h2>
-        <p>Create your profile with your name. It is only used to tag what you save and comment on.</p>
+        <h2>${forceChoice ? 'Welcome to the Loyalty Hub' : 'Select profile'}</h2>
+        <p>${me ? `You are <strong>${escapeHtml(me)}</strong>. ` : ''}${names.length ? 'Pick your profile, or create one if you are not on the list. ' : 'Create your profile with your name. '}It is only used to tag what you save and comment on.</p>
+        ${names.length ? `<div class="identity-grid">${picks}</div>` : ''}
+        <div class="identity-or">${names.length ? 'Not on the list?' : 'New here?'}</div>
         <form class="identity-create" id="identity-create-form">
           <input type="text" id="identity-name-input" placeholder="Your name" maxlength="40" autocomplete="name" required />
           <button class="btn-primary" type="submit">Create profile</button>
         </form>
         <div class="identity-error" id="identity-error" hidden></div>
-        <div class="identity-or">Already have a profile? Type the same name to continue.</div>
       </div>
     </div>
   `;
 
   const overlay = document.getElementById('identity-overlay');
   const choose = (name) => { setIdentity(name); updateIdentityDisplay(); overlay.remove(); };
+  overlay.querySelectorAll('.identity-pick').forEach(btn => btn.addEventListener('click', () => choose(btn.dataset.name)));
 
   document.getElementById('identity-create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -204,7 +215,6 @@ async function renderIdentityModal({ forceChoice }) {
     await loadTeamMembers();
     choose(name);
   });
-  setTimeout(() => document.getElementById('identity-name-input')?.focus(), 50);
 
   if (!forceChoice) {
     overlay.addEventListener('click', (e) => {
