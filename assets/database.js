@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
-  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES, RECODE_STATUS
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES, RECODE_STATUS, NOT_EXCLUDED
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
@@ -144,6 +144,7 @@ async function loadProgrammes() {
     ({ data, error } = await supabase
     .from('programmes')
     .select('id,programme_name,company,industry,country,geographic_scope,programme_positioning,membership_type,mechanisms_14,benefits_18,recode_status,created_by,cover_image_url,points_expires,points_expiration_period,points_notes,partner_companies,discount_types')
+    .or(NOT_EXCLUDED)
     .order('programme_name', { ascending: true }));
     if (!error) break;
     await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));

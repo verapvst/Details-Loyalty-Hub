@@ -121,7 +121,9 @@ export const SCORECARD_BENEFITS = {
 };
 
 // Coding progress per programme while the Hub moves from the v3 taxonomy to the 14/18 one.
-export const RECODE_STATUS = ['To recode', 'Suggested', 'Recoded', 'Verified'];
+export const RECODE_STATUS = ['To recode', 'Suggested', 'Recoded', 'Verified', 'Excluded'];
+// 'Excluded' hides a programme from the Database, Analysis and Favorites lists without deleting it.
+export const NOT_EXCLUDED = 'recode_status.is.null,recode_status.neq.Excluded';
 
 export const OPTIONS = {
   country: [

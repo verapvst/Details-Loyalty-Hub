@@ -321,7 +321,7 @@ function openProgrammePickerModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
   const sel = document.getElementById('pp-programme');
-  supabase.from('programmes').select('id, programme_name').order('programme_name').then(({ data }) => {
+  supabase.from('programmes').select('id, programme_name').or('recode_status.is.null,recode_status.neq.Excluded').order('programme_name').then(({ data }) => {
     const programmes = data || [];
     sel.innerHTML = '<option value=""></option>' +
       programmes.map(p => `<option value="${p.id}">${escapeHtml(p.programme_name)}</option>`).join('');

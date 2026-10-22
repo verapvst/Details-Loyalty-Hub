@@ -7,7 +7,7 @@
 // mutually-exclusive buckets — a programme with 3 mechanisms contributes to 3
 // counts, and percentages for these fields are allowed to exceed 100%.
 import { supabase } from './supabase.js';
-import { MECHANISM_ANALYTICAL_ORDER, sortByMechanismOrder, sortByIndustryOrder } from './options.js';
+import { MECHANISM_ANALYTICAL_ORDER, sortByMechanismOrder, sortByIndustryOrder, NOT_EXCLUDED } from './options.js';
 
 // ---------------- Dimension registry ----------------
 // Single place describing every field Analysis can group/filter/cross-tab by.
@@ -44,6 +44,7 @@ export async function loadAnalysisDataset({ force = false } = {}) {
     ({ data, error } = await supabase
     .from('programmes')
     .select('id,created_by,programme_name,company,parent_company,country,geography_market,industry,sub_industry,primary_programme_type,secondary_programme_type,membership_model,free_vs_paid,number_of_fee_tiers,fee_range,main_target_customer,programme_positioning,primary_benefit,secondary_benefit,tertiary_benefit,discount_type,number_of_tiers,tier_qualification_basis,single_brand_vs_ecosystem,primary_partner_industry,secondary_partner_industry,date_checked,cover_image_url,launch_year,target_customer,geographic_scope,membership_type,access_registration,mechanisms,benefits,points_expires,points_expiration_period,points_notes,discount_types,source_url,partner_companies,ecosystem_type,mechanisms_14,benefits_18,recode_status, programme_tiers(*), programme_features(*)')
+    .or(NOT_EXCLUDED)
     .order('programme_name', { ascending: true }));
     if (!error) break;
     await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
