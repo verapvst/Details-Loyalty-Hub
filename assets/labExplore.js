@@ -120,13 +120,11 @@ function kpiRowHTML(programmes) {
 // buried in a report nobody re-opens.
 function dataQualityNoteHTML(programmes) {
   const dq = dataQuality(programmes);
-  const priceRow = dq.find(r => r.key === 'price_when_paid');
   const benefitsRow = dq.find(r => r.key === 'benefits');
   const launchRow = dq.find(r => r.key === 'launch_year');
   const cohort = importCohortSummary(programmes);
   if (!programmes.length) return '';
   const parts = [];
-  if (priceRow && priceRow.total) parts.push(`Price known for ${fmtPct(priceRow.pct)} of Paid/Subscription/Hybrid programmes (${fmtNum(priceRow.present)}/${fmtNum(priceRow.total)}) — pricing splits below this line are directional, not a benchmark`);
   if (benefitsRow) parts.push(`Benefits (final 16) coded for ${fmtPct(benefitsRow.pct)} of programmes`);
   if (launchRow) parts.push(`Launch year known for ${fmtPct(launchRow.pct)} — Trends reflect under half the sample`);
   if (!parts.length) return '';
