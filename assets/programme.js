@@ -222,7 +222,6 @@ function mechanismsBlockHTML() {
         <div class="record-grid">
           <div class="record-field full"><label>Mechanisms (how members unlock benefits)</label>${likeableChipsHTML('mechanism', mech14)}</div>
           <div class="record-field full"><label>Benefits (what members get)</label>${likeableChipsHTML('benefit', ben18)}</div>
-          ${programme.coding_notes ? `<details class="record-field full"><summary style="cursor:pointer;color:var(--muted);font-size:13px;">How this was coded</summary><span class="value">${escapeHtml(programme.coding_notes)}</span></details>` : ''}
           ${pointsInfo}${discountInfo}${partnerInfo}
         </div>
       </div>
@@ -243,7 +242,6 @@ function mechanismsBlockHTML() {
 
       <div class="form-grid" style="margin-top:20px;">
         <div class="form-field"><label>Recode status</label>${inputHTML({ key: 'recode_status', type: 'select', options: 'recode_status' }, status)}</div>
-        <div class="form-field full"><label>Coding notes (where on the official page each item was found)</label>${inputHTML({ key: 'coding_notes', type: 'textarea' }, programme.coding_notes)}</div>
       </div>
 
       <div id="r-block-points" class="mech-block" hidden>
@@ -333,17 +331,8 @@ function addFavouriteBlockHTML() {
 }
 
 function sourceBlockHTML() {
-  if (!editing) {
-    const isUrl = /^https?:\/\//i.test(programme.source_url || '');
-    return `
-      <div class="record-block">
-        <h3>Source</h3>
-        ${isUrl
-          ? `<a href="${escapeHtml(programme.source_url)}" target="_blank" rel="noopener" class="btn-outline">Visit Website</a>`
-          : valueOrEmpty(programme.source_url)}
-      </div>
-    `;
-  }
+  // View mode: the source is the "Visit website" button in the page header. Edit mode keeps the field.
+  if (!editing) return '';
   return simpleFieldsBlockHTML('Source', PROGRAMME_SOURCE_FIELDS);
 }
 
@@ -383,7 +372,7 @@ function render() {
             ${editing
               ? `<button type="button" class="btn-text" id="btn-cancel-edit">Cancel</button>
                  <button type="button" class="btn-primary" id="btn-save">Save</button>`
-              : `<button type="button" class="btn-outline" id="btn-edit">Edit</button>`}
+              : `${/^https?:\/\//i.test(programme.source_url || '') ? `<a href="${escapeHtml(programme.source_url)}" target="_blank" rel="noopener" class="btn-primary" id="btn-visit-website">Visit website &nearr;</a>` : ''}<button type="button" class="btn-outline" id="btn-edit">Edit</button>`}
           </div>
         </div>
       </div>
@@ -465,7 +454,6 @@ async function saveChanges() {
     mechanisms_14: readCheckboxGroup(form, 'mechanisms_14'),
     benefits_18: readCheckboxGroup(form, 'benefits_18'),
     recode_status: form.elements['recode_status'].value || 'To recode',
-    coding_notes: form.elements['coding_notes'].value.trim() || null,
     discount_types: readCheckboxGroup(form, 'discount_types'),
     points_expires: form.elements['points_expires'].value === 'Yes' ? true : (form.elements['points_expires'].value === 'No' ? false : null),
     points_expiration_period: form.elements['points_expiration_period'].value.trim() || null,

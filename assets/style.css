@@ -1409,3 +1409,4 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .identity-pick.selected { background: var(--accent-light); outline: 2px solid var(--accent); }
 .identity-pick small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); }
 .identity-grid { max-height: 280px; overflow-y: auto; }
+a.btn-primary { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
