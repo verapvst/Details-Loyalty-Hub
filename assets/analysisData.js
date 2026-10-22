@@ -54,8 +54,21 @@ export async function loadAnalysisDataset({ force = false } = {}) {
   if (error) throw error;
   // The final taxonomy (14 mechanisms, 16 benefits) is the only one used in analysis: expose it as
   // p.mechanisms / p.benefits. The legacy v3 coding stays available as mechanisms_v3 / benefits_v3.
-  cachedDataset = (data || []).map(p => ({ ...p, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }));
+  cachedDataset = (data || []).map(mapRow);
   return cachedDataset;
+}
+
+function mapRow(p) { return { ...p, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }; }
+
+// Static copy of the programmes (data/programmes.json, see snapshot.py): lets the page draw instantly, then the
+// live database replaces it. Returns null if the file is missing.
+export async function loadSnapshotDataset() {
+  try {
+    const r = await fetch('data/programmes.json', { cache: 'no-cache' });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length ? rows.map(mapRow) : null;
+  } catch { return null; }
 }
 
 export function getCachedDataset() {

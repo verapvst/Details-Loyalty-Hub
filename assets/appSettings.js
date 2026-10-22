@@ -2,13 +2,13 @@
 // picklists: nav tab display-label overrides ('nav_label:<technical key>') and Pinned
 // Countries ('pinned_countries'). One shared table rather than a dedicated one per
 // concern — see the Settings architecture proposal.
-import { supabase } from './supabase.js';
+import { supabase, withTimeout } from './supabase.js';
 
 const cache = {};
 let loaded = false;
 
 export async function loadAppSettings() {
-  const { data } = await supabase.from('app_settings').select('*');
+  const { data } = await withTimeout(supabase.from('app_settings').select('*'), 3500, { data: [] });
   Object.keys(cache).forEach(k => delete cache[k]);
   (data || []).forEach(row => { cache[row.key] = row.value; });
   loaded = true;

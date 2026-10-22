@@ -7,7 +7,7 @@
 // any record that already used the value keeps it — deactivation only affects what's
 // offered when creating/editing going forward (see selectOptionsHTML/checkboxGroupHTML
 // in fields.js, which always keep an already-selected value visible even if inactive).
-import { supabase } from './supabase.js';
+import { supabase, withTimeout } from './supabase.js';
 import { OPTIONS, SCOPE_GROUPS, SCOPE_OTHER } from './options.js';
 
 const cache = {};
@@ -64,10 +64,10 @@ const LIST_USAGE = {
 };
 
 export async function loadCustomOptions() {
-  const [{ data: customData }, { data: deactivatedData }] = await Promise.all([
+  const [{ data: customData }, { data: deactivatedData }] = await withTimeout(Promise.all([
     supabase.from('custom_options').select('*').order('value'),
     supabase.from('deactivated_options').select('*')
-  ]);
+  ]), 3500, [{ data: [] }, { data: [] }]);
 
   Object.keys(cache).forEach(k => delete cache[k]);
   (customData || []).forEach(row => {

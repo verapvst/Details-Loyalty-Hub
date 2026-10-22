@@ -5,14 +5,14 @@
 import { initNav, showToast } from './app.js';
 import { escapeHtml } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
-import { loadAnalysisDataset, applyGlobalFilters } from './analysisData.js';
+import { loadAnalysisDataset, loadSnapshotDataset, applyGlobalFilters } from './analysisData.js';
 import { fmtNum } from './charts.js';
 
 import { mount as mountExplore } from './labExplore.js';
 import { mount as mountRelate } from './labRelate.js';
 
-await initNav('analysis');
-await loadCustomOptions();
+const snapshotPromise = loadSnapshotDataset();
+await Promise.all([initNav('analysis'), loadCustomOptions()]);
 
 // ---------------- Lightweight persistence (session always; localStorage best-effort) ----------------
 
@@ -227,11 +227,17 @@ loadingEl.className = 'loading-state';
 loadingEl.style.cssText = 'padding:24px 0;text-align:center;';
 loadingEl.textContent = 'Loading programmes…';
 document.querySelector('.lab-main').prepend(loadingEl);
+
+// 1) Draw immediately from the static copy; 2) replace with the live database when it answers.
+const snapshot = await snapshotPromise;
+if (snapshot) { allProgrammes = snapshot; loadingEl.remove(); rerenderAll(); }
 try {
   allProgrammes = await loadAnalysisDataset();
   loadingEl.remove();
   rerenderAll();
 } catch (e) {
-  // Never render an empty analysis as if it were real: say what happened and offer a retry.
-  document.querySelector('.lab-main').innerHTML = `<div class="error-state" style="margin:40px 0;text-align:center;">Could not load the programmes (${escapeHtml(e.message || 'network error')}). <button type="button" class="btn-primary" onclick="location.reload()">Try again</button></div>`;
+  if (!snapshot) {
+    // Never render an empty analysis as if it were real: say what happened and offer a retry.
+    document.querySelector('.lab-main').innerHTML = `<div class="error-state" style="margin:40px 0;text-align:center;">Could not load the programmes (${escapeHtml(e.message || 'network error')}). <button type="button" class="btn-primary" onclick="location.reload()">Try again</button></div>`;
+  }
 }

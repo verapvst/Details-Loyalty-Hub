@@ -9,8 +9,7 @@ import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckb
 import { loadCustomOptions, getOptionList } from './customOptions.js';
 import { syncFiltersToURL, restoreFiltersFromURL } from './filterUrlSync.js';
 
-await initNav('database');
-await loadCustomOptions();
+await Promise.all([initNav('database'), loadCustomOptions()]);
 
 let allProgrammes = [];
 
@@ -138,7 +137,29 @@ function applyFiltersAndRender() {
   });
 }
 
+let urlFiltersRestored = false;
+function showProgrammes(list) {
+  allProgrammes = list;
+  updateKPIs(allProgrammes);
+  populateFilterOptions();
+  if (!urlFiltersRestored) { restoreFiltersFromURL(URL_FILTER_FIELDS); urlFiltersRestored = true; }
+  applyFiltersAndRender();
+}
+
+async function loadSnapshot() {
+  try {
+    const r = await fetch('data/programmes.json', { cache: 'no-cache' });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length ? rows : null;
+  } catch { return null; }
+}
+
 async function loadProgrammes() {
+  // 1) Draw immediately from the static copy; 2) replace with the live database when it answers.
+  const snapshot = await loadSnapshot();
+  if (snapshot) showProgrammes(snapshot);
+
   let data, error;
   for (let attempt = 0; attempt < 3; attempt++) {
     ({ data, error } = await supabase
@@ -152,15 +173,10 @@ async function loadProgrammes() {
   }
 
   if (error) {
-    cardGrid.innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">Couldn't load programmes: ${escapeHtml(error.message)}</div>`;
+    if (!snapshot) cardGrid.innerHTML = `<div class="error-state" style="grid-column: 1 / -1;">Couldn't load programmes: ${escapeHtml(error.message)} <button type="button" class="btn-primary" onclick="location.reload()">Try again</button></div>`;
     return;
   }
-
-  allProgrammes = data || [];
-  updateKPIs(allProgrammes);
-  populateFilterOptions();
-  restoreFiltersFromURL(URL_FILTER_FIELDS);
-  applyFiltersAndRender();
+  showProgrammes(data || []);
 }
 
 [filterIndustry, filterGeography, filterType, filterAddedBy, filterRecode].forEach(el => el.addEventListener('change', applyFiltersAndRender));

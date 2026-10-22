@@ -6,7 +6,7 @@
 // Named app_team_members (not team_members): this Supabase project already has an
 // unrelated `team_members` table (full legal names, no `active` column) predating
 // this app — left completely untouched, see migration 017.
-import { supabase } from './supabase.js';
+import { supabase, withTimeout } from './supabase.js';
 import { escapeHtml } from './fields.js';
 
 // One Storage bucket, public-read — see supabase/025_team_avatar_and_rename.sql, same
@@ -22,7 +22,7 @@ export function teamAvatarUrl(path) {
 }
 
 export async function loadTeamMembers() {
-  const { data } = await supabase.from('app_team_members').select('*').order('created_at');
+  const { data } = await withTimeout(supabase.from('app_team_members').select('*').order('created_at'), 3500, { data: allRows });
   allRows = data || [];
   loaded = true;
 }
