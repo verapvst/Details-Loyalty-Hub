@@ -178,8 +178,6 @@ const NAV_ITEMS = [
   { key: 'research', label: 'Research' },
   { key: 'figures', label: 'Data Insights' },
   { key: 'sources', label: 'Sources' },
-  { key: 'tasks', label: 'Schedules & Tasks' },
-  { key: 'brainstorm', label: 'Brainstorms' },
   { key: 'map', label: 'Portfolio Map' },
   { key: 'settings', label: 'Settings' }
 ];
@@ -488,7 +486,6 @@ renderFlatListCard(programmesContainer, 'target_customer', 'Target Customer');
 renderFlatListCard(programmesContainer, 'geographic_scope', 'Geographic Scope');
 renderFlatListCard(programmesContainer, 'membership_type', 'Membership Type');
 renderFlatListCard(programmesContainer, 'access_registration', 'Access / Registration');
-renderFlatListCard(programmesContainer, 'mechanisms', 'Mechanisms');
 renderFlatListCard(programmesContainer, 'discount_type', 'Discount Types');
 renderFlatListCard(programmesContainer, 'qualification_unit', 'Tier Qualification Units');
 const pinnedHolder = document.createElement('div');
@@ -505,12 +502,6 @@ scopeHolder.className = 'settings-block';
 sourcesInsightsContainer.appendChild(scopeHolder);
 renderScopeCard();
 renderFlatListCard(sourcesInsightsContainer, 'insight_type', 'Information Type', { withNote: true });
-
-const calendarContainer = document.getElementById('calendar-settings-cards');
-renderFlatListCard(calendarContainer, 'meeting_type', 'Meeting Type');
-renderFlatListCard(calendarContainer, 'task_type', 'Task Type');
-renderFlatListCard(calendarContainer, 'brainstorm_vertical', 'Issue Vertical Relevance (Brainstorm)');
-renderFlatListCard(calendarContainer, 'brainstorm_audience', 'Issue Audience Relevance (Brainstorm)');
 
 // ---------------- Locked by default ----------------
 // Every field above saves itself immediately on interaction (no single form/Save

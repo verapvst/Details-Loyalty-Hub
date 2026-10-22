@@ -1,6 +1,7 @@
 import { loadTeamMembers, getActiveTeamMembers, getTeamMemberByName, teamAvatarUrl } from './teamMembers.js';
 import { loadAppSettings, getAppSetting } from './appSettings.js';
 import { escapeHtml } from './fields.js';
+import { supabase } from './supabase.js';
 
 const IDENTITY_KEY = 'dlh_identity';
 
@@ -29,19 +30,12 @@ const NAV_GROUPS = [
       { key: 'figures', label: 'Data Insights', href: 'figures.html' },
       { key: 'sources', label: 'Sources', href: 'sources.html' }
     ] },
-  // Lightly used — flat links (no children shown in the sidebar) rather than
-  // expandable groups. Their own in-page tab bars (tasks.html / brainstorm.html)
-  // still reach every sub-page; only the sidebar stopped listing them separately.
-  { key: 'tasks', label: 'Schedules & Tasks', href: 'tasks.html' },
-  { key: 'brainstorm', label: 'Brainstorms', href: 'brainstorm.html' },
-  { key: 'map', label: 'Portfolio Map', href: 'map.html' },
-  { key: 'settings', label: 'Settings', href: 'settings.html' }
+  { key: 'map', label: 'Portfolio Map', href: 'map.html' }
 ];
 
 // Children first, then each group's own key/label as a fallback — so navLabel(groupKey)
 // still resolves correctly for a group whose key isn't reused by any of its children
-// (e.g. "tasks", now that its children are Calendar/Tasks/Polls/Weekly Reports rather
-// than a same-keyed "Schedules & Tasks" child).
+// .
 const NAV_LEAVES = [...NAV_GROUPS.flatMap(g => g.children || [g]), ...NAV_GROUPS];
 
 export function navLabel(key) {
@@ -189,21 +183,35 @@ async function renderIdentityModal({ forceChoice }) {
   root.innerHTML = `
     <div class="modal-overlay" id="identity-overlay">
       <div class="identity-modal">
-        <h2>Who's this?</h2>
-        <p>Pick your name, it's used to tag what you add or edit.</p>
-        <div class="identity-grid">${picks}</div>
+        <h2>${forceChoice ? 'Welcome to the Loyalty Hub' : 'Your profile'}</h2>
+        <p>Create your profile with your name. It is only used to tag what you save and comment on.</p>
+        <form class="identity-create" id="identity-create-form">
+          <input type="text" id="identity-name-input" placeholder="Your name" maxlength="40" autocomplete="name" required />
+          <button class="btn-primary" type="submit">Create profile</button>
+        </form>
+        <div class="identity-error" id="identity-error" hidden></div>
+        ${picks ? `<div class="identity-or">Already have a profile? Continue as</div><div class="identity-grid">${picks}</div>` : ''}
       </div>
     </div>
   `;
 
   const overlay = document.getElementById('identity-overlay');
-  overlay.querySelectorAll('.identity-pick').forEach(btn => {
-    btn.addEventListener('click', () => {
-      setIdentity(btn.dataset.name);
-      updateIdentityDisplay();
-      overlay.remove();
-    });
+  const choose = (name) => { setIdentity(name); updateIdentityDisplay(); overlay.remove(); };
+  overlay.querySelectorAll('.identity-pick').forEach(btn => btn.addEventListener('click', () => choose(btn.dataset.name)));
+
+  document.getElementById('identity-create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('identity-name-input').value.trim().replace(/\s+/g, ' ');
+    const err = document.getElementById('identity-error');
+    if (!name) return;
+    const existing = getActiveTeamMembers().find(n => n.toLowerCase() === name.toLowerCase());
+    if (existing) { choose(existing); return; }
+    const { error } = await supabase.from('app_team_members').insert({ name });
+    if (error) { err.textContent = 'Could not create the profile. Try again.'; err.hidden = false; return; }
+    await loadTeamMembers();
+    choose(name);
   });
+  setTimeout(() => document.getElementById('identity-name-input')?.focus(), 50);
 
   if (!forceChoice) {
     overlay.addEventListener('click', (e) => {
@@ -214,7 +222,7 @@ async function renderIdentityModal({ forceChoice }) {
 
 function updateIdentityDisplay() {
   const name = getIdentity();
-  document.querySelectorAll('.identity-name').forEach(el => { el.textContent = name || 'Select name'; });
+  document.querySelectorAll('.identity-name').forEach(el => { el.textContent = name || 'Create profile'; });
   document.querySelectorAll('.identity-avatar').forEach(el => { el.innerHTML = name ? avatarInnerHTML(name) : '?'; });
 }
 

@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
-  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_18
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
@@ -174,8 +174,8 @@ function featureRowEditHTML(f = {}) {
 
 // Conditional detail blocks. They follow the new coding but also stay visible while a
 // programme still carries only the old (v3) coding, so existing detail data is never hidden.
-const POINTS_MECHS = ['Accumulated by Spending (redeemable for spending)', 'Accumulated by Actions (redeemable for spending)'];
-const DISCOUNT_BENEFIT = 'Cashback / Direct Discounts / Coupons';
+const POINTS_MECHS = ['Accumulated by Spending', 'Accumulated by Actions'];
+const DISCOUNT_BENEFIT = 'Savings';
 const PARTNER_BENEFIT = 'Partner Benefits';
 const BLOCK_RULES = [
   { id: 'r-block-points', test: (m, b, legacy) => m.some(v => POINTS_MECHS.includes(v)) || legacy.includes('Spend-based earning') },
@@ -246,7 +246,7 @@ function mechanismsBlockHTML() {
       ${groupedCheckboxHTML('mechanisms_14', mechanismGroups(), mech14)}
 
       <div class="form-section-label" style="margin-top:20px;">Benefits (what members get)</div>
-      ${groupedCheckboxHTML('benefits_18', [{ label: '', items: BENEFITS_18.map(b => ({ value: b.name, title: b.examples })) }], ben18)}
+      ${groupedCheckboxHTML('benefits_18', BENEFIT_FAMILIES.map(f => ({ label: f, items: BENEFITS_16.filter(b => b.family === f).map(b => ({ value: b.name, title: b.examples })) })), ben18)}
 
       <div class="form-grid" style="margin-top:20px;">
         <div class="form-field"><label>Recode status</label>${inputHTML({ key: 'recode_status', type: 'select', options: 'recode_status' }, status)}</div>

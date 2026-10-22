@@ -39,52 +39,86 @@ export const INSIGHT_TYPE_DEFINITIONS = {
   'Other': 'Information that does not clearly fit any of the categories above.'
 };
 
-// ---------------- Scorecard taxonomies (14 mechanisms, 17 benefits) ----------------
-// 2026-10-02: Early Access is folded into Service Exclusivity (W3 report), so the final list is 17 benefits.
-// The identifiers BENEFITS_18 / programmes.benefits_18 keep their old name to avoid a schema change; they hold the 17.
-// Source of truth: METHODOLOGY/Scorecards (Mechanisms_Scorecard_FINAL.xlsx, Benefits Scorecard.xlsx),
-// list confirmed by the team on 2026-10-01. Mechanisms answer "how do you unlock the benefits";
-// benefits answer "what does the member get". These REPLACE the v3 mechanisms (11) for coding and
-// analysis; v3 values stay on programmes.mechanisms / programmes.benefits as read-only legacy
-// for reference while programmes are recoded (see supabase/032_taxonomy_14_18.sql).
-// Scores and tiers are deliberately NOT stored here: the scorecard owns them.
+// ---------------- Scorecard taxonomies (14 mechanisms, 16 benefits) ----------------
+// Source of truth: Steering 1 (Oct 2026) and METHODOLOGY/Scorecards (Mechanisms_Scorecard.xlsx,
+// Benefits_Scorecard.xlsx). Names, families and definitions are exactly the ones on the steering slides.
+// Mechanisms answer "how do you unlock the benefits"; benefits answer "what does the member get".
+// The database columns are still called programmes.mechanisms_14 / programmes.benefits_18 (no schema
+// change); benefits_18 holds the 16 steering benefits.
 export const MECHANISMS_14 = [
-  { name: "Paid Subscription", family: "Tiers", definition: "Access to the tier is unlocked by paying a fixed subscription/fee, with no need to reach any spend or frequency threshold" },
-  { name: "Spending at Brand/Partners - Temporary", family: "Tiers", definition: "Spend X per year (own brand or/and partners) to obtain or maintain the tier; not cumulative - requires annual requalification" },
-  { name: "Spending at Brand/Partners - Lifetime & Cumulative", family: "Tiers", definition: "The tier advances as more money is accumulated over time (own brand or/and partners); once a threshold is reached, it is never lost" },
-  { name: "Accumulated by Spending (redeemable for spending)", family: "Points", definition: "Points accumulated by spending (own brand or/and partners), redeemable for spending on products/services - the classic \"earn & burn\" model" },
-  { name: "Accumulated by Actions (redeemable for spending)", family: "Points", definition: "Points accumulated through non-spend actions (e.g., completing a survey, visiting a partner's store, creating an account, donating to an NGO, etc etc), redeemable for spending" },
-  { name: "Do X, Get Y", family: "Points", definition: "Includes classic punch-card-style loyalty mechanism: buy X units and receive 1 free, do x times an activity and unlock y (e.g., go to all 5 golf courses in the region and get to visit one for free or an experience)" },
-  { name: "Newsletter, Email, Phone", family: "Free enrolment", definition: "Free enrollment by sharing contact details (newsletter, email or phone), with no need to create an account" },
-  { name: "Create Account (e.g. Card, App, automatic, etc)", family: "Free enrolment", definition: "Enrollment through creating an account, for example in the brand's app or issuance of a physical or digital membership card" },
-  { name: "Missions/Gamification", family: "Missions / Gamification", definition: "Access or progression unlocked by completing missions or gamified challenges, strictly with non-redeemable progression, such as badges, levels or unlocks status only, with no tangible value or monetary/experiential value." },
-  { name: "Referral", family: "Referral & Invite", definition: "Benefit unlocked by referring a new member" },
-  { name: "Invite", family: "Referral & Invite", definition: "Benefit unlocked by being invited by an existing member of the loyalty" },
-  { name: "Ambassador", family: "Ambassador", definition: "Status granted to selected members to represent the brand, typically by invitation/curation from the company" },
-  { name: "Access by Ownership", family: "Access by ownership", definition: "Access to the programme granted through ownership of an asset (eg, a residential property in the portfolio)" },
-  { name: "Tenure / Legacy Recognition", family: "Tenure / Legacy", definition: "Status or perks earned simply by years as a member, rewarding relationship and belonging over transactions" },
+  { name: "Paid Subscription", family: "Tiers", definition: "Access to the tier is unlocked by paying a fixed subscription/fee, with no need to reach any spend/frequency threshold" },
+  { name: "Temporary for Spending", family: "Tiers", definition: "Spend X per year (own brand or/and partners) to obtain or maintain the tier, requiring annual requalification" },
+  { name: "Lifetime for Spending", family: "Tiers", definition: "Tier advances as money is accumulated over time (brand or/and partners); once a threshold is reached, it is never lost" },
+  { name: "Accumulated by Spending", family: "Points", definition: "Points accumulated by spending (brand or/and partners) on products/services, e.g. through a brand credit card" },
+  { name: "Accumulated by Actions", family: "Points", definition: "Points accumulated through non-spend actions (e.g. completing a survey, visiting a store), redeemable for spending" },
+  { name: "Do X, Get Y", family: "Points", definition: "Includes classic buy X units and receive 1 free, do X times an activity and unlock Y (e.g. discount or experience)" },
+  { name: "Newsletter, Email, Phone", family: "Free enrolment", definition: "Free enrolment by sharing contact details (newsletter, email or phone), with no need to create an account" },
+  { name: "Create Account", family: "Free enrolment", definition: "Enrolment through creating an account, for example in the brand's app, or issuance of a physical/digital card" },
+  { name: "Missions / Gamification", family: "Missions / Gamification", definition: "Progression unlocked by completing missions, with non-redeemable progression, such as badges or levels" },
+  { name: "Referral", family: "Outreach", definition: "Benefit unlocked by referring a new member" },
+  { name: "Invite", family: "Outreach", definition: "Benefit unlocked by being invited by an existing member of the loyalty programme or by the company" },
+  { name: "Ambassador", family: "Outreach", definition: "Status granted to selected members to represent the brand, typically by invitation/curation from the company" },
+  { name: "Access by Ownership", family: "Recognition", definition: "Access to the programme granted through ownership of an asset (e.g. a residential property in the portfolio)" },
+  { name: "Tenure / Legacy Recognition", family: "Recognition", definition: "Status or perks earned simply by years as a member, rewarding relationship and belonging over transactions" },
 ];
 export const MECHANISM14_FAMILIES = [...new Set(MECHANISMS_14.map(m => m.family))];
 
-export const BENEFITS_18 = [
-  { name: "Upgrades & Complimentary Offers", examples: "Automatic Room/Suite Upgrade; Complimentary Welcome Amenity; Complimentary Night / Round After Streak" },
-  { name: "Service Exclusivity & Priority Access", examples: "Dedicated Concierge / Named Contact; Guaranteed Reservation (No Waitlist); Priority Service Line; Early Access (Tier-Based Priority Booking Window; Paid Early-Access Unlock)" },
-  { name: "Experiential Exclusivity", examples: "Access to Member-Only Events; Access to Exclusive Facilities; Curated Experience Catalogue Access" },
-  { name: "Convenience Benefits", examples: "Late Checkout / Early Check-in; Complimentary Parking / Valet; Fast-Track Check-in / Check-out" },
-  { name: "Community & Networking", examples: "Member Directory / Networking Access; Alumni / Legacy Community Access" },
-  { name: "Partner Benefits", examples: "Curated External Partner Perks; Reciprocal Travel Partner Benefits" },
-  { name: "Flexibility & Credit", examples: "No Blackout Dates; Credit / Points Rollover; Annual Resort / F&B Statement Credit" },
-  { name: "Social / Transferable Benefits", examples: "Guest Privileges; Status or Credit Gifting; Bring a friend" },
-  { name: "Personalised Gifts", examples: "Birthday / Anniversary Gift; Milestone Gift" },
-  { name: "Personalisation", examples: "Personalised Recommendations; Tailored Communications & Offers; Preference-Based Service Delivery" },
-  { name: "Points Inflation", examples: "Extra points when spending at the brand; higher earning rate at premium assets; extra points when using multiple services; bonus points for cross-asset spending" },
-  { name: "Family Benefits", examples: "Family Membership Extension; Family Programming Access" },
-  { name: "Cashback / Direct Discounts / Coupons", examples: "Member-Rate Discount; Cash-Equivalent Account Credit" },
-  { name: "Sustainability & Charitable Giving", examples: "Points-to-Donation Conversion; Sustainable-Choice Recognition Credit" },
-  { name: "Proprietary Credit Card Benefits", examples: "Card Purchase Protection & Travel Insurance; Card-Exclusive Statement Credits" },
-  { name: "AI-Powered Benefits", examples: "AI Concierge / Trip Planning Assistant; AI-Curated Personal Offers" },
-  { name: "Sweepstakes, Contests & Prize Draws", examples: "Automatic Entry into Prize Draws; Challenge-Linked Contest Entry" },
+export const BENEFITS_16 = [
+  { name: "Savings", family: "Financial & Commercial", examples: "Direct monetary savings (e.g. member-rate discount, cashback, coupons)" },
+  { name: "Points Inflation", family: "Financial & Commercial", examples: "Accelerated earn rates and multipliers to drive spend volume" },
+  { name: "Flexibility & Credit", family: "Financial & Commercial", examples: "Liquidity solutions and credit advances that eliminate barriers to booking (e.g. no blackout dates, points rollover)" },
+  { name: "Partner Benefits", family: "Financial & Commercial", examples: "Alliances with external brands" },
+  { name: "Contests & Prize Draws", family: "Financial & Commercial", examples: "Gamified opportunities offering chances to win prizes (e.g. automatic entry into prize draws)" },
+  { name: "Upgrades & Complementary", family: "Stay & Convenience", examples: "Complimentary service or tier elevations (e.g. automatic room upgrade, complimentary welcome amenity)" },
+  { name: "Convenience", family: "Stay & Convenience", examples: "Perks to save time (e.g. late checkout / early check-in, complimentary parking / valet)" },
+  { name: "AI-powered", family: "Stay & Convenience", examples: "AI-driven automation for planning, discovery and assistance" },
+  { name: "Service Exclusivity", family: "Exclusivity", examples: "Privileged access to dedicated service, priority channels and enhanced availability (e.g. dedicated concierge, reservation with no waitlist, priority service line, early access)" },
+  { name: "Extra-service Exclusivity", family: "Exclusivity", examples: "Access to restricted events and spaces" },
+  { name: "Community & Networking", family: "Community", examples: "Platforms and events fostering networking and belonging among brand members" },
+  { name: "Social / Transferable", family: "Community", examples: "Extension of privileges with guests (e.g. bring a friend)" },
+  { name: "Family", family: "Community", examples: "Multi-user access extending perks to immediate family" },
+  { name: "ESG Donation", family: "Impact", examples: "Options to convert value into ESG impact or reward sustainable choices" },
+  { name: "Personalization", family: "Recognition & Personalization", examples: "Tailored communications and adaptive services shaped by preferences (e.g. personalized recommendations, choice of offers)" },
+  { name: "Personalized Gifts", family: "Recognition & Personalization", examples: "Tangible recognition items (e.g. birthday gift, milestone gift)" },
 ];
+export const BENEFIT_FAMILIES = [...new Set(BENEFITS_16.map(b => b.family))];
+
+// Scorecard results shown in Steering 1 (weighted score, rank, tier). Tier cut-offs are the mean of the
+// totals +/- 0.5 SD, so tiers are relative to the 14 mechanisms / 16 benefits compared.
+export const SCORECARD_MECHANISMS = {
+  "Lifetime for Spending": { score: 10.19, rank: 1, tier: "Prioritize" },
+  "Tenure / Legacy Recognition": { score: 9.21, rank: 2, tier: "Prioritize" },
+  "Temporary for Spending": { score: 8.94, rank: 3, tier: "Prioritize" },
+  "Accumulated by Spending": { score: 8.74, rank: 4, tier: "Prioritize" },
+  "Do X, Get Y": { score: 8.59, rank: 5, tier: "Prioritize" },
+  "Create Account": { score: 8.26, rank: 6, tier: "Consider" },
+  "Newsletter, Email, Phone": { score: 8.01, rank: 7, tier: "Consider" },
+  "Paid Subscription": { score: 7.99, rank: 8, tier: "Consider" },
+  "Access by Ownership": { score: 7.31, rank: 9, tier: "Consider" },
+  "Referral": { score: 6.61, rank: 10, tier: "Exclude" },
+  "Invite": { score: 6.23, rank: 11, tier: "Exclude" },
+  "Ambassador": { score: 5.89, rank: 12, tier: "Exclude" },
+  "Missions / Gamification": { score: 5.29, rank: 13, tier: "Exclude" },
+  "Accumulated by Actions": { score: 3.74, rank: 14, tier: "Exclude" },
+};
+export const SCORECARD_BENEFITS = {
+  "Family": { score: 12.71, rank: 1, tier: "Prioritize" },
+  "Social / Transferable": { score: 11.11, rank: 2, tier: "Prioritize" },
+  "Personalization": { score: 10.06, rank: 3, tier: "Prioritize" },
+  "Convenience": { score: 9.56, rank: 4, tier: "Prioritize" },
+  "Community & Networking": { score: 9.40, rank: 5, tier: "Consider" },
+  "Extra-service Exclusivity": { score: 9.04, rank: 6, tier: "Consider" },
+  "Partner Benefits": { score: 8.83, rank: 7, tier: "Consider" },
+  "Flexibility & Credit": { score: 8.69, rank: 8, tier: "Consider" },
+  "AI-powered": { score: 8.20, rank: 9, tier: "Consider" },
+  "ESG Donation": { score: 8.00, rank: 10, tier: "Consider" },
+  "Service Exclusivity": { score: 7.86, rank: 11, tier: "Consider" },
+  "Upgrades & Complementary": { score: 7.51, rank: 12, tier: "Exclude" },
+  "Personalized Gifts": { score: 7.03, rank: 13, tier: "Exclude" },
+  "Savings": { score: 6.73, rank: 14, tier: "Exclude" },
+  "Points Inflation": { score: 5.91, rank: 15, tier: "Exclude" },
+  "Contests & Prize Draws": { score: 5.36, rank: 16, tier: "Exclude" },
+};
 
 // Coding progress per programme while the Hub moves from the v3 taxonomy to the 14/18 one.
 export const RECODE_STATUS = ['To recode', 'Suggested', 'Recoded', 'Verified'];
@@ -174,7 +208,7 @@ export const OPTIONS = {
   ],
   // New coding taxonomies (see MECHANISMS_14 / BENEFITS_18 / RECODE_STATUS below).
   mechanisms14: MECHANISMS_14.map(m => m.name),
-  benefits18: BENEFITS_18.map(b => b.name),
+  benefits18: BENEFITS_16.map(b => b.name),
   recode_status: RECODE_STATUS,
   discount_type: [
     'Percentage discount', 'Fixed discount', 'Member-only pricing', 'Tiered discount',

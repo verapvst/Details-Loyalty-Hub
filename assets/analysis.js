@@ -1,5 +1,5 @@
 // My Laboratory orchestrator. Loads the dataset once and drives four workspaces
-// (Explore / Relate / Tiers / Saved) — only one visible at a time, all mounted once so
+// (Scorecard / Explore / Relate / Saved) — only one visible at a time, all mounted once so
 // switching tabs never loses in-progress state. Reuses assets/analysisData.js for every
 // aggregation; this file is purely page chrome (header, compact filters, tabs, persistence).
 import { initNav, showToast } from './app.js';
@@ -10,9 +10,7 @@ import { fmtNum } from './charts.js';
 
 import { mount as mountExplore } from './labExplore.js';
 import { mount as mountRelate } from './labRelate.js';
-import { mount as mountTrends } from './labTrends.js';
-import { mount as mountTiers } from './labPricing.js';
-import { mount as mountMechanisms } from './labMechanisms.js';
+import { mount as mountScorecard } from './labScorecard.js';
 import { mount as mountSaved } from './labSaved.js';
 
 await initNav('analysis');
@@ -135,10 +133,10 @@ function restoreFilterUI() {
 
 // ---------------- Workspace tabs ----------------
 
-const WORKSPACES = ['explore', 'relate', 'trends', 'tiers', 'mechanisms', 'saved'];
+const WORKSPACES = ['scorecard', 'explore', 'relate', 'saved'];
 const workspaces = {};
-let activeTab = loadPersisted('activeTab') || 'explore';
-if (!WORKSPACES.includes(activeTab)) activeTab = 'explore';
+let activeTab = loadPersisted('activeTab') || 'scorecard';
+if (!WORKSPACES.includes(activeTab)) activeTab = 'scorecard';
 
 function showTab(tab) {
   activeTab = tab;
@@ -163,7 +161,7 @@ function reopenAnalysis(row) {
 
   const ws = workspaces[row.lab];
   if (ws) { ws.applyConfig(config); savePersisted(row.lab, ws.getConfig()); }
-  showTab(row.lab);
+  if (WORKSPACES.includes(row.lab)) showTab(row.lab);
   showToast(`Reopened "${row.name}".`);
 }
 
@@ -177,10 +175,7 @@ function makeCtx(workspaceKey) {
     persist: (state) => savePersisted(workspaceKey, state),
     // Used by Explore's Mechanism drill-down to bridge into the Mechanisms workspace
     // with that exact mechanism already selected, instead of landing on it empty.
-    switchToMechanism: (mechanism) => {
-      workspaces.mechanisms.applyConfig({ selectedMechanism: mechanism });
-      showTab('mechanisms');
-    }
+    switchToMechanism: () => showTab('scorecard')
   };
 }
 
@@ -191,12 +186,10 @@ showTab(activeTab);
 
 workspaces.explore = mountExplore(document.getElementById('workspace-explore'), makeCtx('explore'));
 workspaces.relate = mountRelate(document.getElementById('workspace-relate'), makeCtx('relate'));
-workspaces.trends = mountTrends(document.getElementById('workspace-trends'), makeCtx('trends'));
-workspaces.tiers = mountTiers(document.getElementById('workspace-tiers'), makeCtx('tiers'));
-workspaces.mechanisms = mountMechanisms(document.getElementById('workspace-mechanisms'), makeCtx('mechanisms'));
+workspaces.scorecard = mountScorecard(document.getElementById('workspace-scorecard'), makeCtx('scorecard'));
 workspaces.saved = mountSaved(makeCtx('saved'));
 
-const DATA_DRIVEN_WORKSPACES = ['explore', 'relate', 'trends', 'tiers', 'mechanisms'];
+const DATA_DRIVEN_WORKSPACES = ['scorecard', 'explore', 'relate'];
 DATA_DRIVEN_WORKSPACES.forEach(key => {
   const persisted = loadPersisted(key);
   if (persisted) workspaces[key].applyConfig(persisted);

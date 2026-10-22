@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
-  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_18, RECODE_STATUS
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES, RECODE_STATUS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
@@ -213,10 +213,10 @@ function wireRepeatingRows(container, addBtn, rowHTML, rowSelector) {
 
 // Tier Structure is deliberately not here: it is driven by the programme_tiers table,
 // so its block is always visible. The three detail blocks follow the new coding.
-const POINTS_MECHS = ['Accumulated by Spending (redeemable for spending)', 'Accumulated by Actions (redeemable for spending)'];
+const POINTS_MECHS = ['Accumulated by Spending', 'Accumulated by Actions'];
 const BLOCK_RULES = [
   { id: 'block-points', test: (m, b) => m.some(v => POINTS_MECHS.includes(v)) },
-  { id: 'block-discounts', test: (m, b) => b.includes('Cashback / Direct Discounts / Coupons') },
+  { id: 'block-discounts', test: (m, b) => b.includes('Savings') },
   { id: 'block-partnerships', test: (m, b) => b.includes('Partner Benefits') }
 ];
 
@@ -240,7 +240,7 @@ function mechanismsSectionHTML(p = {}) {
     ${groupedCheckboxHTML('mechanisms_14', MECHANISM14_FAMILIES.map(f => ({ label: f, items: MECHANISMS_14.filter(m => m.family === f).map(m => ({ value: m.name, title: m.definition })) })), p.mechanisms_14)}
 
     <div class="form-section-label" style="margin-top:20px;">Benefits (what members get)</div>
-    ${groupedCheckboxHTML('benefits_18', [{ label: '', items: BENEFITS_18.map(b => ({ value: b.name, title: b.examples })) }], p.benefits_18)}
+    ${groupedCheckboxHTML('benefits_18', BENEFIT_FAMILIES.map(f => ({ label: f, items: BENEFITS_16.filter(b => b.family === f).map(b => ({ value: b.name, title: b.examples })) })), p.benefits_18)}
 
     <div id="block-points" class="mech-block" hidden>
       <div class="form-section-label" style="margin-top:20px;">Points / Earning</div>
