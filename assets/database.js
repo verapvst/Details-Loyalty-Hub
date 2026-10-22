@@ -145,6 +145,7 @@ async function loadProgrammes() {
     .from('programmes')
     .select('id,programme_name,company,industry,country,geographic_scope,programme_positioning,membership_type,mechanisms_14,benefits_18,recode_status,created_by,cover_image_url,points_expires,points_expiration_period,points_notes,partner_companies,discount_types')
     .or(NOT_EXCLUDED)
+    .abortSignal(AbortSignal.timeout(20000))
     .order('programme_name', { ascending: true }));
     if (!error) break;
     await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));

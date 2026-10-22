@@ -204,8 +204,14 @@ function rerenderAll() {
   });
 }
 
+const loadingEl = document.createElement('div');
+loadingEl.className = 'loading-state';
+loadingEl.style.cssText = 'padding:24px 0;text-align:center;';
+loadingEl.textContent = 'Loading programmes…';
+document.querySelector('.lab-main').prepend(loadingEl);
 try {
   allProgrammes = await loadAnalysisDataset();
+  loadingEl.remove();
   rerenderAll();
 } catch (e) {
   // Never render an empty analysis as if it were real: say what happened and offer a retry.

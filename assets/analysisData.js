@@ -43,7 +43,9 @@ export async function loadAnalysisDataset({ force = false } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     ({ data, error } = await supabase
     .from('programmes')
-    .select('id,created_by,programme_name,company,parent_company,country,geography_market,industry,sub_industry,primary_programme_type,secondary_programme_type,membership_model,free_vs_paid,number_of_fee_tiers,fee_range,main_target_customer,programme_positioning,primary_benefit,secondary_benefit,tertiary_benefit,discount_type,number_of_tiers,tier_qualification_basis,single_brand_vs_ecosystem,primary_partner_industry,secondary_partner_industry,date_checked,cover_image_url,launch_year,target_customer,geographic_scope,membership_type,access_registration,mechanisms,benefits,points_expires,points_expiration_period,points_notes,discount_types,source_url,partner_companies,ecosystem_type,mechanisms_14,benefits_18,recode_status, programme_tiers(*), programme_features(*)')
+    
+    .select('id,programme_name,company,country,industry,programme_positioning,membership_type,access_registration,geographic_scope,target_customer,mechanisms_14,benefits_18,launch_year,source_url,created_at,programme_tiers(id),programme_features(feature_name)')
+    .abortSignal(AbortSignal.timeout(20000))
     .or(NOT_EXCLUDED)
     .order('programme_name', { ascending: true }));
     if (!error) break;
@@ -52,7 +54,7 @@ export async function loadAnalysisDataset({ force = false } = {}) {
   if (error) throw error;
   // The final taxonomy (14 mechanisms, 16 benefits) is the only one used in analysis: expose it as
   // p.mechanisms / p.benefits. The legacy v3 coding stays available as mechanisms_v3 / benefits_v3.
-  cachedDataset = (data || []).map(p => ({ ...p, mechanisms_v3: p.mechanisms, benefits_v3: p.benefits, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }));
+  cachedDataset = (data || []).map(p => ({ ...p, mechanisms: p.mechanisms_14 || [], benefits: p.benefits_18 || [] }));
   return cachedDataset;
 }
 
