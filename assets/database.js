@@ -19,6 +19,7 @@ const sectionCount = document.getElementById('section-count');
 const filterIndustry = document.getElementById('filter-industry');
 const filterGeography = document.getElementById('filter-geography');
 const filterType = document.getElementById('filter-type');
+const filterBenefit = document.getElementById('filter-benefit');
 const filterAddedBy = document.getElementById('filter-added-by');
 const filterRecode = document.getElementById('filter-recode');
 const searchInput = document.getElementById('search-input');
@@ -27,6 +28,7 @@ const URL_FILTER_FIELDS = [
   { key: 'industry', get: () => filterIndustry.value, set: v => { filterIndustry.value = v; } },
   { key: 'geography', get: () => filterGeography.value, set: v => { filterGeography.value = v; } },
   { key: 'type', get: () => filterType.value, set: v => { filterType.value = v; } },
+  { key: 'benefit', get: () => filterBenefit.value, set: v => { filterBenefit.value = v; } },
   { key: 'added_by', get: () => filterAddedBy.value, set: v => { filterAddedBy.value = v; } },
   { key: 'recode', get: () => filterRecode.value, set: v => { filterRecode.value = v; } },
   { key: 'q', get: () => searchInput.value.trim(), set: v => { searchInput.value = v; } }
@@ -53,6 +55,7 @@ function populateFilterOptions() {
   fill(filterGeography, distinctFromArrays(allProgrammes, 'geographic_scope'));
   // Mechanism filter lists the full scorecard taxonomy (in scorecard order), not just values already used.
   fill(filterType, MECHANISMS_14.map(m => m.name));
+  fill(filterBenefit, BENEFITS_16.map(b => b.name));
   fill(filterRecode, RECODE_STATUS);
   fill(filterAddedBy, distinctSorted(allProgrammes, 'created_by'));
 }
@@ -99,12 +102,14 @@ function applyFiltersAndRender() {
   const type = filterType.value;
   const addedBy = filterAddedBy.value;
   const recode = filterRecode.value;
+  const benefit = filterBenefit.value;
   const q = searchInput.value.trim().toLowerCase();
 
   const filtered = allProgrammes.filter(p => {
     if (industry && p.industry !== industry) return false;
     if (geography && !(p.geographic_scope || []).includes(geography)) return false;
     if (type && !(p.mechanisms_14 || []).includes(type)) return false;
+    if (benefit && !(p.benefits_18 || []).includes(benefit)) return false;
     if (recode && (p.recode_status || 'To recode') !== recode) return false;
     if (addedBy && p.created_by !== addedBy) return false;
     if (q) {
@@ -157,6 +162,7 @@ document.getElementById('btn-clear-filters').addEventListener('click', () => {
   filterIndustry.value = '';
   filterGeography.value = '';
   filterType.value = '';
+  filterBenefit.value = '';
   filterAddedBy.value = '';
   filterRecode.value = '';
   searchInput.value = '';

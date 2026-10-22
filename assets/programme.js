@@ -3,7 +3,7 @@ import { initNav, showToast } from './app.js';
 import {
   PROGRAMME_IDENTITY_FIELDS, PROGRAMME_CLASSIFICATION_FIELDS, PROGRAMME_GEOGRAPHY_FIELDS,
   PROGRAMME_MEMBERSHIP_FIELDS, PROGRAMME_SOURCE_FIELDS,
-  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES
+  MECHANISMS_14, MECHANISM14_FAMILIES, BENEFITS_16, BENEFIT_FAMILIES, SCORECARD_MECHANISMS, SCORECARD_BENEFITS
 } from './options.js';
 import { inputHTML, readFormValues, readCheckboxGroup, escapeHtml, groupedCheckboxHTML } from './fields.js';
 import { loadCustomOptions, getOptionList } from './customOptions.js';
@@ -40,12 +40,17 @@ function chipsOrEmpty(arr) {
   return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>`;
 }
 
+// Scorecard tier of a mechanism / benefit (Steering 1), shown as the chip colour.
+function scoreOf(targetType, v) { return (targetType === 'benefit' ? SCORECARD_BENEFITS : SCORECARD_MECHANISMS)[v]; }
+function tierClass(targetType, v) { const s = scoreOf(targetType, v); return s ? `tier-chip tier-${s.tier.toLowerCase()}` : 'badge-muted'; }
+function tierTitle(targetType, v) { const s = scoreOf(targetType, v); return s ? `${s.tier} · scorecard rank ${s.rank}, score ${s.score}` : ''; }
+
 // Like chips: same as chipsOrEmpty but each chip carries its own heart button.
 function likeableChipsHTML(targetType, arr) {
   if (!Array.isArray(arr) || !arr.length) return `<span class="value empty">—</span>`;
   return `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `
     <span class="like-chip">
-      <span class="badge badge-muted">${escapeHtml(v)}</span>
+      <span class="badge ${tierClass(targetType, v)}" title="${escapeHtml(tierTitle(targetType, v))}">${escapeHtml(v)}</span>
       ${heartHTML(targetType, v, null, likeSummary(likes, targetType, v))}
     </span>
   `).join('')}</div>`;
@@ -178,9 +183,9 @@ const POINTS_MECHS = ['Accumulated by Spending', 'Accumulated by Actions'];
 const DISCOUNT_BENEFIT = 'Savings';
 const PARTNER_BENEFIT = 'Partner Benefits';
 const BLOCK_RULES = [
-  { id: 'r-block-points', test: (m, b, legacy) => m.some(v => POINTS_MECHS.includes(v)) || legacy.includes('Spend-based earning') },
-  { id: 'r-block-discounts', test: (m, b, legacy) => b.includes(DISCOUNT_BENEFIT) || legacy.includes('Member pricing') },
-  { id: 'r-block-partnerships', test: (m, b, legacy) => b.includes(PARTNER_BENEFIT) || legacy.includes('External partner network') }
+  { id: 'r-block-points', test: (m, b, legacy) => m.some(v => POINTS_MECHS.includes(v)) },
+  { id: 'r-block-discounts', test: (m, b, legacy) => b.includes(DISCOUNT_BENEFIT) },
+  { id: 'r-block-partnerships', test: (m, b, legacy) => b.includes(PARTNER_BENEFIT) }
 ];
 
 function mechanismGroups() {
@@ -191,19 +196,7 @@ function mechanismGroups() {
 }
 
 function legacyBlockHTML() {
-  const legacyMech = programme.mechanisms || [];
-  const legacyBen = (programme.benefits || []).filter(Boolean);
-  if (!legacyMech.length && !legacyBen.length) return '';
-  const chips = arr => arr.length ? `<div class="chip-row" style="margin-bottom:0;">${arr.map(v => `<span class="badge badge-muted">${escapeHtml(v)}</span>`).join('')}</div>` : '<span class="value empty">—</span>';
-  return `
-    <details class="record-block" ${editing ? 'open' : ''}>
-      <summary style="cursor:pointer;font-weight:600;">Previous coding (v3), reference while recoding</summary>
-      <div class="record-grid" style="margin-top:12px;">
-        <div class="record-field full"><label>Old mechanisms (11 values)</label>${chips(legacyMech)}</div>
-        <div class="record-field full"><label>Old benefits</label>${chips(legacyBen)}</div>
-      </div>
-    </details>
-  `;
+  return '';
 }
 
 function mechanismsBlockHTML() {
@@ -213,23 +206,23 @@ function mechanismsBlockHTML() {
   const status = programme.recode_status || 'To recode';
 
   if (!editing) {
-    const pointsInfo = (mech14.some(v => POINTS_MECHS.includes(v)) || legacy.includes('Spend-based earning')) && (programme.points_expires !== null || programme.points_notes)
+    const pointsInfo = (mech14.some(v => POINTS_MECHS.includes(v))) && (programme.points_expires !== null || programme.points_notes)
       ? `<div class="record-field full"><label>Points Details</label><span class="value">${
           programme.points_expires === true ? `Expires${programme.points_expiration_period ? ` (${escapeHtml(programme.points_expiration_period)})` : ''}` :
           programme.points_expires === false ? 'Does not expire' : ''
         }${programme.points_notes ? ` · ${escapeHtml(programme.points_notes)}` : ''}</span></div>` : '';
-    const discountInfo = (ben18.includes(DISCOUNT_BENEFIT) || legacy.includes('Member pricing')) && programme.discount_types && programme.discount_types.length
+    const discountInfo = (ben18.includes(DISCOUNT_BENEFIT)) && programme.discount_types && programme.discount_types.length
       ? `<div class="record-field full"><label>Discount Type</label>${chipsOrEmpty(programme.discount_types)}</div>` : '';
-    const partnerInfo = (ben18.includes(PARTNER_BENEFIT) || legacy.includes('External partner network')) && programme.partner_companies && programme.partner_companies.length
+    const partnerInfo = (ben18.includes(PARTNER_BENEFIT)) && programme.partner_companies && programme.partner_companies.length
       ? `<div class="record-field full"><label>Partner Companies</label>${chipsOrEmpty(programme.partner_companies)}</div>` : '';
 
     return `
       <div class="record-block">
-        <h3>Mechanisms and Benefits <span class="badge ${status === 'Verified' || status === 'Recoded' ? 'badge-green' : 'badge-muted'}" style="margin-left:8px;">${escapeHtml(status)}</span></h3>
+        <h3>Mechanisms and Benefits</h3>
         <div class="record-grid">
           <div class="record-field full"><label>Mechanisms (how members unlock benefits)</label>${likeableChipsHTML('mechanism', mech14)}</div>
-          <div class="record-field full"><label>Benefits (what members get)</label>${chipsOrEmpty(ben18)}</div>
-          ${programme.coding_notes ? `<div class="record-field full"><label>Coding notes</label><span class="value">${escapeHtml(programme.coding_notes)}</span></div>` : ''}
+          <div class="record-field full"><label>Benefits (what members get)</label>${likeableChipsHTML('benefit', ben18)}</div>
+          ${programme.coding_notes ? `<details class="record-field full"><summary style="cursor:pointer;color:var(--muted);font-size:13px;">How this was coded</summary><span class="value">${escapeHtml(programme.coding_notes)}</span></details>` : ''}
           ${pointsInfo}${discountInfo}${partnerInfo}
         </div>
       </div>

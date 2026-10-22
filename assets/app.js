@@ -92,7 +92,7 @@ function identityButtonHTML() {
   return `
     <button class="identity-btn" type="button">
       <span class="identity-avatar">?</span>
-      <span class="identity-name">Select name</span>
+      <span class="identity-name">Create profile</span>
     </button>
   `;
 }
@@ -173,13 +173,6 @@ async function renderIdentityModal({ forceChoice }) {
   }
 
   await loadTeamMembers();
-  const picks = getActiveTeamMembers().map(name =>
-    `<button class="identity-pick" data-name="${escapeHtml(name)}" type="button">
-       <span class="identity-avatar">${avatarInnerHTML(name)}</span>
-       <span>${escapeHtml(name)}</span>
-     </button>`
-  ).join('');
-
   root.innerHTML = `
     <div class="modal-overlay" id="identity-overlay">
       <div class="identity-modal">
@@ -190,14 +183,13 @@ async function renderIdentityModal({ forceChoice }) {
           <button class="btn-primary" type="submit">Create profile</button>
         </form>
         <div class="identity-error" id="identity-error" hidden></div>
-        ${picks ? `<div class="identity-or">Already have a profile? Continue as</div><div class="identity-grid">${picks}</div>` : ''}
+        <div class="identity-or">Already have a profile? Type the same name to continue.</div>
       </div>
     </div>
   `;
 
   const overlay = document.getElementById('identity-overlay');
   const choose = (name) => { setIdentity(name); updateIdentityDisplay(); overlay.remove(); };
-  overlay.querySelectorAll('.identity-pick').forEach(btn => btn.addEventListener('click', () => choose(btn.dataset.name)));
 
   document.getElementById('identity-create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
