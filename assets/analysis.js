@@ -17,6 +17,15 @@ await loadCustomOptions();
 // ---------------- Lightweight persistence (session always; localStorage best-effort) ----------------
 
 const STORAGE_PREFIX = 'lab_state_';
+// Saved views from older versions of this page (removed tabs, renamed dimensions/industries) used to
+// leave Analysis empty. Drop everything saved by a previous version once.
+const STATE_VERSION = '3';
+try {
+  if (localStorage.getItem(STORAGE_PREFIX + 'version') !== STATE_VERSION) {
+    Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX)).forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(STORAGE_PREFIX + 'version', STATE_VERSION);
+  }
+} catch { /* private mode etc. */ }
 function loadPersisted(key) {
   try { const raw = localStorage.getItem(STORAGE_PREFIX + key); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
@@ -39,6 +48,11 @@ const defaultFilters = { yearMin: null, yearMax: null };
 FILTER_FIELDS.forEach(f => { defaultFilters[f.key] = []; });
 const persistedFilters = loadPersisted('filters');
 const globalFilters = persistedFilters ? { ...defaultFilters, ...persistedFilters } : { ...defaultFilters };
+// Keep only filter values that still exist (an industry renamed since the view was saved must not hide everything).
+FILTER_FIELDS.forEach(f => {
+  const valid = getOptionList(f.optionKey);
+  globalFilters[f.key] = (Array.isArray(globalFilters[f.key]) ? globalFilters[f.key] : []).filter(v => valid.includes(v));
+});
 
 function filtersSummaryText() {
   const parts = [];
@@ -188,7 +202,7 @@ workspaces.relate = mountRelate(document.getElementById('workspace-relate'), mak
 const DATA_DRIVEN_WORKSPACES = ['explore', 'relate'];
 DATA_DRIVEN_WORKSPACES.forEach(key => {
   const persisted = loadPersisted(key);
-  if (persisted) workspaces[key].applyConfig(persisted);
+  if (persisted) { try { workspaces[key].applyConfig(persisted); } catch { savePersisted(key, null); } }
 });
 
 let allProgrammes = [];
@@ -200,7 +214,11 @@ function rerenderAll() {
   // workspace stuck showing stale/empty data.
   DATA_DRIVEN_WORKSPACES.forEach(key => {
     try { workspaces[key].render(filtered); }
-    catch (e) { console.error(`${key} workspace failed to render:`, e); }
+    catch (e) {
+      console.error(`${key} workspace failed to render:`, e);
+      document.getElementById(`workspace-${key}`).innerHTML = `<div class="error-state" style="margin:30px 0;text-align:center;">This view could not be drawn (${escapeHtml(e.message || 'error')}). <button type="button" class="btn-primary" id="reset-view-${key}">Reset view</button></div>`;
+      document.getElementById(`reset-view-${key}`).addEventListener('click', () => { try { Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX)).forEach(k => localStorage.removeItem(k)); } catch {} location.reload(); });
+    }
   });
 }
 
