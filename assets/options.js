@@ -46,40 +46,40 @@ export const INSIGHT_TYPE_DEFINITIONS = {
 // The database columns are still called programmes.mechanisms_14 / programmes.benefits_18 (no schema
 // change); benefits_18 holds the 16 steering benefits.
 export const MECHANISMS_14 = [
-  { name: "Paid Subscription", family: "Tiers", definition: "Access to the tier is unlocked by paying a fixed subscription/fee, with no need to reach any spend/frequency threshold" },
-  { name: "Temporary for Spending", family: "Tiers", definition: "Spend X per year (own brand or/and partners) to obtain or maintain the tier, requiring annual requalification" },
-  { name: "Lifetime for Spending", family: "Tiers", definition: "Tier advances as money is accumulated over time (brand or/and partners); once a threshold is reached, it is never lost" },
-  { name: "Accumulated by Spending", family: "Points", definition: "Points accumulated by spending (brand or/and partners) on products/services, e.g. through a brand credit card" },
-  { name: "Accumulated by Actions", family: "Points", definition: "Points accumulated through non-spend actions (e.g. completing a survey, visiting a store), redeemable for spending" },
-  { name: "Do X, Get Y", family: "Points", definition: "Includes classic buy X units and receive 1 free, do X times an activity and unlock Y (e.g. discount or experience)" },
-  { name: "Newsletter, Email, Phone", family: "Free enrolment", definition: "Free enrolment by sharing contact details (newsletter, email or phone), with no need to create an account" },
-  { name: "Create Account", family: "Free enrolment", definition: "Enrolment through creating an account, for example in the brand's app, or issuance of a physical/digital card" },
-  { name: "Missions / Gamification", family: "Missions / Gamification", definition: "Progression unlocked by completing missions, with non-redeemable progression, such as badges or levels" },
-  { name: "Referral", family: "Outreach", definition: "Benefit unlocked by referring a new member" },
-  { name: "Invite", family: "Outreach", definition: "Benefit unlocked by being invited by an existing member of the loyalty programme or by the company" },
-  { name: "Ambassador", family: "Outreach", definition: "Status granted to selected members to represent the brand, typically by invitation/curation from the company" },
-  { name: "Access by Ownership", family: "Recognition", definition: "Access to the programme granted through ownership of an asset (e.g. a residential property in the portfolio)" },
-  { name: "Tenure / Legacy Recognition", family: "Recognition", definition: "Status or perks earned simply by years as a member, rewarding relationship and belonging over transactions" },
+  { name: "Paid Subscription", family: "Tiers", definition: "Access to the tier is unlocked by paying a fixed subscription/fee, with no need to reach any spend/frequency threshold." },
+  { name: "Temporary for Spending", family: "Tiers", definition: "Spend X per year (own brand or/and partners) to obtain or maintain the tier, requiring annual requalification." },
+  { name: "Lifetime for Spending", family: "Tiers", definition: "Tier advances as money is accumulated over time (brand or/and partners); once a threshold is reached, it is never lost." },
+  { name: "Accumulated by Spending", family: "Points", definition: "Points accumulated by spending (brand or/and partners) on products/services through e.g. brand credit card." },
+  { name: "Accumulated by Actions", family: "Points", definition: "Points accumulated through non-spend actions (e.g. completing a survey, visiting a store), redeemable for spending." },
+  { name: "Do X, Get Y", family: "Points", definition: "Includes classic buy X units and receive 1 free, do X times an activity and unlock Y (e.g. discount or experience)." },
+  { name: "Newsletter, Email, Phone", family: "Free enrollment", definition: "Free enrollment by sharing contact details (newsletter, email or phone), with no need to create an account." },
+  { name: "Create Account", family: "Free enrollment", definition: "Enrollment through creating an account, for example in the brand's app, or issuance of a physical/digital card." },
+  { name: "Missions / Gamification", family: "Missions / Gamification", definition: "Progression unlocked by completing missions, with non-redeemable progression, such as badges or levels." },
+  { name: "Referral", family: "Referral & Invite", definition: "Benefit unlocked by referring a new member." },
+  { name: "Invite", family: "Referral & Invite", definition: "Benefit unlocked by being invited by an existing member of the loyalty programme or by the company." },
+  { name: "Ambassador", family: "Recognition", definition: "Status granted to selected members to represent the brand, typically by invitation/curation from the company." },
+  { name: "Access by Ownership", family: "Recognition", definition: "Access to the programme granted through ownership of an asset (e.g. a residential property in the portfolio)." },
+  { name: "Tenure / Legacy Recognition", family: "Recognition", definition: "Status or perks earned simply by years as a member, rewarding relationship and belonging over transactions." },
 ];
 export const MECHANISM14_FAMILIES = [...new Set(MECHANISMS_14.map(m => m.family))];
 
 export const BENEFITS_16 = [
-  { name: "Savings", family: "Financial & Commercial", examples: "Direct monetary savings (e.g. member-rate discount, cashback, coupons)" },
-  { name: "Points Inflation", family: "Financial & Commercial", examples: "Accelerated earn rates and multipliers to drive spend volume" },
-  { name: "Flexibility & Credit", family: "Financial & Commercial", examples: "Liquidity solutions and credit advances that eliminate barriers to booking (e.g. no blackout dates, points rollover)" },
-  { name: "Partner Benefits", family: "Financial & Commercial", examples: "Alliances with external brands" },
-  { name: "Contests & Prize Draws", family: "Financial & Commercial", examples: "Gamified opportunities offering chances to win prizes (e.g. automatic entry into prize draws)" },
-  { name: "Upgrades & Complementary", family: "Stay & Convenience", examples: "Complimentary service or tier elevations (e.g. automatic room upgrade, complimentary welcome amenity)" },
-  { name: "Convenience", family: "Stay & Convenience", examples: "Perks to save time (e.g. late checkout / early check-in, complimentary parking / valet)" },
-  { name: "AI-powered", family: "Stay & Convenience", examples: "AI-driven automation for planning, discovery and assistance" },
-  { name: "Service Exclusivity", family: "Exclusivity", examples: "Privileged access to dedicated service, priority channels and enhanced availability (e.g. dedicated concierge, reservation with no waitlist, priority service line, early access)" },
-  { name: "Extra-service Exclusivity", family: "Exclusivity", examples: "Access to restricted events and spaces" },
-  { name: "Community & Networking", family: "Community", examples: "Platforms and events fostering networking and belonging among brand members" },
-  { name: "Social / Transferable", family: "Community", examples: "Extension of privileges with guests (e.g. bring a friend)" },
-  { name: "Family", family: "Community", examples: "Multi-user access extending perks to immediate family" },
-  { name: "ESG Donation", family: "Impact", examples: "Options to convert value into ESG impact or reward sustainable choices" },
-  { name: "Personalization", family: "Recognition & Personalization", examples: "Tailored communications and adaptive services shaped by preferences (e.g. personalized recommendations, choice of offers)" },
-  { name: "Personalized Gifts", family: "Recognition & Personalization", examples: "Tangible recognition items (e.g. birthday gift, milestone gift)" },
+  { name: "Savings", family: "Financial & Commercial", examples: "Direct monetary savings (e.g. member-rate discount; cashback, coupons)." },
+  { name: "Points Inflation", family: "Financial & Commercial", examples: "Accelerated earn rates and multipliers to drive spend volume." },
+  { name: "Flexibility & Credit", family: "Financial & Commercial", examples: "Liquidity solutions and credit advances that eliminate barriers to booking (e.g. top up or borrow points)." },
+  { name: "Partner Benefits", family: "Financial & Commercial", examples: "Alliances with external brands." },
+  { name: "Contests & Prize Draws", family: "Financial & Commercial", examples: "Gamified opportunities offering chances to win prizes (e.g. automatic entry into prize draws)." },
+  { name: "Upgrades & Complementary", family: "Stay & Convenience", examples: "Complimentary service or tier elevations (e.g. automatic room upgrade; complimentary welcome amenity)." },
+  { name: "Convenience", family: "Stay & Convenience", examples: "Perks to save time (e.g. late checkout / early check-in; complimentary parking / valet)." },
+  { name: "AI-powered", family: "Stay & Convenience", examples: "AI-driven automation for planning, discovery and assistance." },
+  { name: "Service Exclusivity", family: "Exclusivity", examples: "Privileged access to dedicated service, priority channels and enhanced availability (e.g. dedicated concierge, reservation with no waitlist, priority service line, early access)." },
+  { name: "Extra-service Exclusivity", family: "Exclusivity", examples: "Access to restricted events and spaces." },
+  { name: "Community & Networking", family: "Community", examples: "Platforms and events fostering networking and belonging among brand members." },
+  { name: "Social / Transferable", family: "Community", examples: "Extension of privileges with guests (e.g. bring a friend)." },
+  { name: "Family", family: "Community", examples: "Multi-user access extending perks to immediate family." },
+  { name: "ESG Donation", family: "Impact", examples: "Options to convert value into ESG impact or reward sustainable choices." },
+  { name: "Personalization", family: "Recognition & Personalization", examples: "Tailored communications and adaptive services shaped by preferences (e.g. personalized recommendations; option to choose offers, preference-based service delivery)." },
+  { name: "Personalized Gifts", family: "Recognition & Personalization", examples: "Tangible recognition items (e.g. birthday gift; milestone gift)." },
 ];
 export const BENEFIT_FAMILIES = [...new Set(BENEFITS_16.map(b => b.family))];
 
@@ -396,3 +396,9 @@ export function sortByIndustryOrder(values) {
   const known = order.filter(v => values.includes(v));
   return [...known, ...values.filter(v => !order.includes(v))];
 }
+
+// Hover definitions: name -> steering definition (slides 24-25), used by tooltips on every page.
+export const DEFINITIONS = Object.fromEntries([
+  ...MECHANISMS_14.map(m => [m.name, { kind: 'Mechanism', family: m.family, text: m.definition }]),
+  ...BENEFITS_16.map(b => [b.name, { kind: 'Benefit', family: b.family, text: b.examples }])
+]);

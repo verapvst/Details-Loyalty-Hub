@@ -1399,3 +1399,9 @@ a.list-row:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translate
 .tier-chip.tier-prioritize { color: #1f5f3a; background: #dff0e5; }
 .tier-chip.tier-consider { color: #8a6a1c; background: #f6ecd2; }
 .tier-chip.tier-exclude { color: #6e6e73; background: #ececef; }
+
+/* ---- Hover definitions (mechanisms / benefits) ---- */
+.def-tip { position: fixed; z-index: 10000; max-width: 340px; background: #1c1c1e; color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0,0,0,.28); pointer-events: none; }
+.def-tip .def-name { font-weight: 700; font-size: 14px; }
+.def-tip .def-meta { color: #b9b9c0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin: 2px 0 8px; }
+.def-tip .def-score { margin-top: 9px; font-size: 12px; color: #d8d8de; }

@@ -37,11 +37,7 @@ function savePersisted(key, value) {
 
 const FILTER_FIELDS = [
   { key: 'industry', label: 'Industry', optionKey: 'industry' },
-  { key: 'geographic_scope', label: 'Geography', optionKey: 'geographic_scope' },
-  { key: 'programme_positioning', label: 'Positioning', optionKey: 'programme_positioning' },
-  { key: 'membership_type', label: 'Membership', optionKey: 'membership_type' },
-  { key: 'target_customer', label: 'Target Customer', optionKey: 'target_customer' },
-  { key: 'access_registration', label: 'Access', optionKey: 'access_registration' }
+  { key: 'programme_positioning', label: 'Positioning', optionKey: 'programme_positioning' }
 ];
 
 const defaultFilters = { yearMin: null, yearMax: null };
@@ -72,14 +68,6 @@ function filterAddPanelHTML() {
   `).join('');
   return `
     ${multi}
-    <div class="filter-add-field">
-      <div class="filter-add-field-label">Launch Year</div>
-      <div class="year-range">
-        <input type="number" id="gf-year-min" placeholder="Min" value="${globalFilters.yearMin ?? ''}" />
-        <span>–</span>
-        <input type="number" id="gf-year-max" placeholder="Max" value="${globalFilters.yearMax ?? ''}" />
-      </div>
-    </div>
   `;
 }
 
@@ -121,14 +109,6 @@ function wireFilterAddPanel() {
       onFiltersChanged();
     }
   });
-  const commitYear = () => {
-    const yMin = document.getElementById('gf-year-min'), yMax = document.getElementById('gf-year-max');
-    globalFilters.yearMin = yMin.value ? Number(yMin.value) : null;
-    globalFilters.yearMax = yMax.value ? Number(yMax.value) : null;
-    onFiltersChanged();
-  };
-  panel.querySelector('#gf-year-min').addEventListener('change', commitYear);
-  panel.querySelector('#gf-year-max').addEventListener('change', commitYear);
 }
 
 function onFiltersChanged() {

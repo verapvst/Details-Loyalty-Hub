@@ -16,7 +16,7 @@ import { renderHBarChart, renderDonutChart, fmtNum, fmtPct } from './charts.js';
 import { mechanismSpectrumColor } from './options.js';
 import { mountChartCard, showEmptyChartState, showTipOnce } from './chartToolbar.js';
 
-const DIM_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'benefits'];
+const DIM_KEYS = ['industry', 'programme_positioning', 'country', 'mechanisms', 'benefits'];
 const MEASURE_OPTIONS = [['count', 'Number of Programmes'], ['pct', '% of Programmes'], ['companies', 'Number of Companies']];
 
 function measureLabel(measure) {
@@ -103,9 +103,7 @@ function kpiRowHTML(programmes) {
     ['Programmes', fmtNum(k.total)],
     ['Companies', fmtNum(k.companies)],
     ['Industries', fmtNum(k.industries)],
-    ['Geographic Markets', fmtNum(k.geoMarkets)],
-    ['Paid', fmtPct(k.paidPct)],
-    ['Tiered', fmtPct(k.tieredPct)]
+    ['Countries', fmtNum(k.countries)]
   ];
   return `
     <div class="kpi-row" style="grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); margin-bottom: 24px;">
@@ -119,16 +117,11 @@ function kpiRowHTML(programmes) {
 // reading of this dataset, so the warning lives where every session starts, not
 // buried in a report nobody re-opens.
 function dataQualityNoteHTML(programmes) {
-  const dq = dataQuality(programmes);
-  const benefitsRow = dq.find(r => r.key === 'benefits');
-  const launchRow = dq.find(r => r.key === 'launch_year');
-  const cohort = importCohortSummary(programmes);
   if (!programmes.length) return '';
-  const parts = [];
-  if (benefitsRow) parts.push(`Benefits (final 16) coded for ${fmtPct(benefitsRow.pct)} of programmes`);
-  if (launchRow) parts.push(`Launch year known for ${fmtPct(launchRow.pct)} — Trends reflect under half the sample`);
-  if (!parts.length) return '';
-  return `<div class="chart-card-note" style="margin: -8px 0 20px;">${parts.join(' · ')}</div>`;
+  const pct = (n) => fmtPct((n / programmes.length) * 100);
+  const m = programmes.filter(p => (p.mechanisms || []).length).length;
+  const b = programmes.filter(p => (p.benefits || []).length).length;
+  return `<div class="chart-card-note" style="margin: -8px 0 20px;">Mechanisms coded for ${pct(m)} and benefits for ${pct(b)} of programmes. Hover a mechanism or benefit to see its Steering 1 definition.</div>`;
 }
 
 export function mount(container, ctx) {

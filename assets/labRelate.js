@@ -10,15 +10,15 @@ import { mechanismSpectrumColor } from './options.js';
 import { renderHeatmap, renderBarChart, renderLineChart, compatibleChartTypes, fmtNum, fmtPct } from './charts.js';
 import { mountChartCard, showEmptyChartState, openProgrammeListModal, showTipOnce } from './chartToolbar.js';
 
-const AXIS_KEYS = ['industry', 'programme_positioning', 'membership_type', 'geographic_scope', 'country', 'target_customer', 'access_registration', 'mechanisms', 'benefits', 'feature', 'launch_year'];
+const AXIS_KEYS = ['industry', 'programme_positioning', 'country', 'mechanisms', 'benefits'];
 const CHART_TYPE_LABELS = { heatmap: 'Heatmap', groupedBar: 'Grouped Bar', stackedBar: 'Stacked Bar', stacked100Bar: '100% Stacked Bar', line: 'Line', area: 'Area', stackedArea: 'Stacked Area', bar: 'Bar' };
 const DEFAULT_CHART_TYPE = { categorical: 'heatmap', time: 'line' };
 
 const TRY_EXAMPLES = [
-  { label: 'Industry × Positioning', xKey: 'programme_positioning', yKey: 'industry' },
   { label: 'Mechanism × Industry', xKey: 'mechanisms', yKey: 'industry' },
-  { label: 'Mechanism × Mechanism', xKey: 'mechanisms', yKey: 'mechanisms' },
-  { label: 'Membership × Launch Year', xKey: 'launch_year', yKey: 'membership_type' }
+  { label: 'Benefit × Industry', xKey: 'benefits', yKey: 'industry' },
+  { label: 'Industry × Positioning', xKey: 'programme_positioning', yKey: 'industry' },
+  { label: 'Mechanism × Benefit', xKey: 'mechanisms', yKey: 'benefits' }
 ];
 
 function isTime(key) { return DIMENSIONS[key].kind === 'time'; }

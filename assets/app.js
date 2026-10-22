@@ -2,6 +2,7 @@ import { loadTeamMembers, getActiveTeamMembers, getTeamMemberByName, teamAvatarU
 import { loadAppSettings, getAppSetting } from './appSettings.js';
 import { escapeHtml } from './fields.js';
 import { supabase } from './supabase.js';
+import './definitions.js';
 
 const IDENTITY_KEY = 'dlh_identity';
 
