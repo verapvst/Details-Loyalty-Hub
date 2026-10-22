@@ -72,7 +72,7 @@ function initial(name) {
 
 function renderCard(p) {
   const logo = p.cover_image_url
-    ? `<div class="compact-card-logo"><img src="${escapeHtml(p.cover_image_url)}" alt="" onerror="this.parentElement.remove()" /></div>`
+    ? `<div class="compact-card-logo"><img src="${escapeHtml(p.cover_image_url)}" alt="" loading="lazy" decoding="async" onerror="this.parentElement.remove()" /></div>`
     : `<div class="compact-card-logo-fallback">${escapeHtml(initial(p.programme_name))}</div>`;
 
   const meta = [
@@ -141,7 +141,7 @@ function applyFiltersAndRender() {
 async function loadProgrammes() {
   const { data, error } = await supabase
     .from('programmes')
-    .select('*, programme_tiers(*), programme_features(*)')
+    .select('id,programme_name,company,industry,country,geographic_scope,programme_positioning,membership_type,mechanisms_14,benefits_18,recode_status,created_by,cover_image_url,points_expires,points_expiration_period,points_notes,partner_companies,discount_types')
     .order('programme_name', { ascending: true });
 
   if (error) {
