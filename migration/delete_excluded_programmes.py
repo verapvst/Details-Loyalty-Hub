@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Deletes the programmes the team decided to exclude from the benchmark (2026-10-02):
-Member Hotel, CopaCoins, QdL Employee Benefits (B2B / employee schemes) and Monte Rei Golf & Country Club.
+11 programmes (see NAMES): the 4 agreed on 2026-10-02 plus 7 more, leaving the 221 programmes of Steering 1.
 
 Dry run by default. Deleting is permanent: with --apply the rows are first saved to
-migration/deleted_programmes_2026-10-02.json, then deleted (tiers etc. cascade via ON DELETE CASCADE).
+migration/deleted_programmes_2026-10-22.json, then deleted (tiers etc. cascade via ON DELETE CASCADE).
 Usage:  python3 delete_excluded_programmes.py [--apply]      Needs: pip install requests
 """
 import json
@@ -13,7 +13,12 @@ import requests
 URL = "https://dyuflyhkanmczwshmbyh.supabase.co/rest/v1"
 KEY = "sb_publishable_M3BltV-qjx1gED6_ktciuw_9FhwK4G5"
 H = {"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json", "Prefer": "return=minimal"}
-NAMES = ["Member Hotel", "CopaCoins", "QdL Employee Benefits", "Monte Rei Golf & Country Club"]
+NAMES = [
+    # agreed 2026-10-02: B2B / employee schemes and Monte Rei
+    "Member Hotel", "CopaCoins", "QdL Employee Benefits", "Monte Rei Golf & Country Club",
+    # agreed 2026-10-22 to bring the benchmark to the 221 programmes of Steering 1 (31 countries, all 14 mechanisms and 16 benefits kept)
+    "Six Senses Discovery", "Loews YouFirst", "SANA Card", "AAdvantage Business", "Jotun Master Painter", "Range Rover Owner", "GSV Coaching Packages",
+]
 
 
 def main(apply):
@@ -24,7 +29,7 @@ def main(apply):
     if not apply:
         print("DRY RUN: nothing deleted. Re-run with --apply.")
         return
-    json.dump(rows, open("deleted_programmes_2026-10-02.json", "w"), indent=1)
+    json.dump(rows, open("deleted_programmes_2026-10-22.json", "w"), indent=1)
     for r in rows:
         resp = requests.delete(f"{URL}/programmes", params={"id": f"eq.{r['id']}"}, headers=H, timeout=60)
         print("deleted" if resp.ok else f"FAILED {resp.status_code}", r["programme_name"])
